@@ -42,8 +42,8 @@ runcmd:
   # Shared zsh functions
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh
-  - mkdir -p /etc/zsh/functions
-  - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /etc/zsh/functions/
+  - mkdir -p /usr/local/share/zsh/site-functions
+  - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
   - rm -rf /tmp/wsl-cloud-init
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
@@ -55,7 +55,7 @@ runcmd:
     [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
     eval "$(direnv hook zsh)"
     export PROJECT_PATHS=(~/projects)
-    for f in /etc/zsh/functions/*.zsh(N); do source "$f"; done
+    for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
     EOF
   - echo 'cd ~' >> /home/myuser/.zshrc
   # Git
