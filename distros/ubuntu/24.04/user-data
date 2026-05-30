@@ -40,7 +40,7 @@ runcmd:
   - chsh -s $(which zsh) myuser
   - sudo -u myuser sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/myuser/.zshrc
   # Shared zsh functions
-  - git clone --filter=blob:none --sparse https://github.com/you/wsl-cloud-init.git /tmp/wsl-cloud-init
+  - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh
   - mkdir -p /etc/zsh/functions
   - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /etc/zsh/functions/
@@ -55,7 +55,7 @@ runcmd:
     [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
     eval "$(direnv hook zsh)"
     export PROJECT_PATHS=(~/projects)
-    for f in /etc/zsh/functions/*.zsh; do source "$f"; done
+    for f in /etc/zsh/functions/*.zsh(N); do source "$f"; done
     EOF
   - echo 'cd ~' >> /home/myuser/.zshrc
   # Git
