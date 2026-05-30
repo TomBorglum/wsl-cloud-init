@@ -39,16 +39,23 @@ runcmd:
   - sudo -u myuser git clone https://github.com/zsh-users/zsh-autosuggestions /home/myuser/.oh-my-zsh/custom/plugins/zsh-autosuggestions
   - chsh -s $(which zsh) myuser
   - sudo -u myuser sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/myuser/.zshrc
+  # Shared zsh functions
+  - git clone --filter=blob:none --sparse https://github.com/you/wsl-cloud-init.git /tmp/wsl-cloud-init
+  - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh
+  - mkdir -p /etc/zsh/functions
+  - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /etc/zsh/functions/
+  - rm -rf /tmp/wsl-cloud-init
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u myuser SDKMAN_DIR=/home/myuser/.sdkman bash /tmp/sdkman-install.sh
-  # SDKMAN and direnv hooks at the bottom of .zshrc
+  # SDKMAN, direnv hooks, zsh functions and project paths at the bottom of .zshrc
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
     export SDKMAN_DIR="$HOME/.sdkman"
     [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
     eval "$(direnv hook zsh)"
     export PROJECT_PATHS=(~/projects)
+    for f in /etc/zsh/functions/*.zsh; do source "$f"; done
     EOF
   - echo 'cd ~' >> /home/myuser/.zshrc
   # Git
@@ -59,55 +66,6 @@ runcmd:
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
     export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
-    EOF
-  # gcl function (GitHub clone with tab completion)
-  - |
-    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
-    unalias gcl 2>/dev/null || true
-    gcl() {
-      if [[ -z "$1" ]]; then
-        echo "Usage: gcl <owner/repo>" >&2
-        return 1
-      fi
-      local repo="$1"
-      local dir
-      dir="$(basename "$repo" .git)"
-      local target=~/projects/$dir
-      mkdir -p ~/projects
-      if [[ -d "$target" ]]; then
-        echo "Already cloned: $dir — cd'ing into it"
-        cd "$target"
-        return
-      fi
-      gh repo clone "$repo" "$target" || return 1
-      cd "$target"
-    }
-    _gcl_complete() {
-      local cache owner
-      if [[ ${words[2]} == */* ]]; then
-        owner="${words[2]%%/*}"
-      elif [[ -n ${words[2]} ]]; then
-        owner="${words[2]}"
-      else
-        owner="$(gh api user -q .login 2>/dev/null || echo '')"
-        [[ -z "$owner" ]] && return
-      fi
-      cache=~/.cache/gh_repos_${owner}
-      if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
-        mkdir -p ~/.cache
-        zle -R "Fetching repos for $owner..."
-        local tmp
-        if tmp="$(gh repo list "$owner" --limit 100 --json nameWithOwner -q '.[].nameWithOwner' 2>/dev/null)"; then
-          echo "$tmp" > "$cache"
-        fi
-        zle -R ""
-      fi
-      [[ -f "$cache" ]] || return
-      local -a repos
-      repos=(${(f)"$(cat "$cache")"})
-      compadd "${repos[@]}"
-    }
-    compdef _gcl_complete gcl
     EOF
   # VS Code
   - |
