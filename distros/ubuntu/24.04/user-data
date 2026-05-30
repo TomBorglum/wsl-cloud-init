@@ -1,0 +1,116 @@
+#cloud-config
+locale: en_US.UTF-8
+users:
+  - name: myuser
+    gecos: My User
+    groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/zsh
+write_files:
+  - path: /etc/wsl.conf
+    content: |
+      [boot]
+      systemd=true
+      [user]
+      default=myuser
+      [interop]
+        appendWindowsPath=false
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - curl
+  - build-essential
+  - unzip
+  - zip
+  - zsh
+  - docker.io
+  - docker-compose
+  - direnv
+  - gh
+runcmd:
+  # Docker
+  - systemctl enable docker
+  - systemctl start docker
+  # Directories
+  - sudo -u myuser mkdir -p /home/myuser/projects
+  # Oh My Zsh
+  - sudo -u myuser sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  - sudo -u myuser git clone https://github.com/zsh-users/zsh-autosuggestions /home/myuser/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+  - chsh -s $(which zsh) myuser
+  - sudo -u myuser sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/myuser/.zshrc
+  # SDKMAN
+  - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
+  - sudo -u myuser SDKMAN_DIR=/home/myuser/.sdkman bash /tmp/sdkman-install.sh
+  # SDKMAN and direnv hooks at the bottom of .zshrc
+  - |
+    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    export SDKMAN_DIR="$HOME/.sdkman"
+    [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+    eval "$(direnv hook zsh)"
+    export PROJECT_PATHS=(~/projects)
+    EOF
+  - echo 'cd ~' >> /home/myuser/.zshrc
+  # Git
+  - sudo -u myuser git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"
+  - sudo -u myuser git config --global user.name "Tom Borglum"
+  - sudo -u myuser git config --global user.email "tom.borglum@gmail.com"
+  # GitHub CLI - source token from Windows gh.exe installation
+  - |
+    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
+    EOF
+  # gcl function (GitHub clone with tab completion)
+  - |
+    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    unalias gcl 2>/dev/null || true
+    gcl() {
+      if [[ -z "$1" ]]; then
+        echo "Usage: gcl <owner/repo>" >&2
+        return 1
+      fi
+      local repo="$1"
+      local dir
+      dir="$(basename "$repo" .git)"
+      local target=~/projects/$dir
+      mkdir -p ~/projects
+      if [[ -d "$target" ]]; then
+        echo "Already cloned: $dir — cd'ing into it"
+        cd "$target"
+        return
+      fi
+      gh repo clone "$repo" "$target" || return 1
+      cd "$target"
+    }
+    _gcl_complete() {
+      local cache owner
+      if [[ ${words[2]} == */* ]]; then
+        owner="${words[2]%%/*}"
+      elif [[ -n ${words[2]} ]]; then
+        owner="${words[2]}"
+      else
+        owner="$(gh api user -q .login 2>/dev/null || echo '')"
+        [[ -z "$owner" ]] && return
+      fi
+      cache=~/.cache/gh_repos_${owner}
+      if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
+        mkdir -p ~/.cache
+        zle -R "Fetching repos for $owner..."
+        local tmp
+        if tmp="$(gh repo list "$owner" --limit 100 --json nameWithOwner -q '.[].nameWithOwner' 2>/dev/null)"; then
+          echo "$tmp" > "$cache"
+        fi
+        zle -R ""
+      fi
+      [[ -f "$cache" ]] || return
+      local -a repos
+      repos=(${(f)"$(cat "$cache")"})
+      compadd "${repos[@]}"
+    }
+    compdef _gcl_complete gcl
+    EOF
+  # VS Code
+  - |
+    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    alias code='/mnt/c/Users/tombo/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+    EOF
