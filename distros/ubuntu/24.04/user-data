@@ -21,8 +21,11 @@ write_files:
         local version=$1
         if [ -n "$version" ]; then
           fnm list | grep -q "v${version}" || fnm install "$version"
-          eval "$(fnm env --shell bash)"
           fnm use "$version"
+          local full_version
+          full_version=$(fnm current)
+          eval "$(fnm env --shell bash | grep -v PATH)"
+          PATH_add "$HOME/.fnm/node-versions/${full_version}/installation/bin"
         fi
       }
   - path: /home/myuser/.config/direnv/lib/sdk.sh
