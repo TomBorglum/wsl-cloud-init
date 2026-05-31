@@ -16,7 +16,6 @@ write_files:
       [interop]
         appendWindowsPath=false
   - path: /home/myuser/.config/direnv/lib/fnm.sh
-    owner: myuser:myuser
     content: |
       use_fnm() {
         local version=${1:-$(cat .node-version 2>/dev/null || cat .nvmrc 2>/dev/null)}
