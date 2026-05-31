@@ -18,9 +18,9 @@ write_files:
   - path: /home/myuser/.config/direnv/lib/fnm.sh
     content: |
       use_fnm() {
-        local version=${1:-$(cat .node-version 2>/dev/null || cat .nvmrc 2>/dev/null)}
+        local version=$1
         if [ -n "$version" ]; then
-          fnm install "$version" 2>/dev/null
+          fnm list | grep -q "v${version}" || fnm install "$version"
           eval "$(fnm env --shell bash)"
           fnm use "$version"
         fi
