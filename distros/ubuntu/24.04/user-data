@@ -104,5 +104,4 @@ runcmd:
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
     export PATH="$HOME/.fnm:$PATH"
-    eval "$(fnm env --shell zsh)"
     EOF
