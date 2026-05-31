@@ -104,4 +104,5 @@ runcmd:
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
     export PATH="$HOME/.fnm:$PATH"
+    fnm alias system default
     EOF
