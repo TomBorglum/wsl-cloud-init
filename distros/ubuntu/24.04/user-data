@@ -15,6 +15,16 @@ write_files:
       default=myuser
       [interop]
         appendWindowsPath=false
+  - path: /usr/local/share/direnv/lib/fnm.sh
+    content: |
+      use_fnm() {
+        local version=${1:-$(cat .node-version 2>/dev/null || cat .nvmrc 2>/dev/null)}
+        if [ -n "$version" ]; then
+          fnm install "$version" 2>/dev/null
+          eval "$(fnm env --shell bash)"
+          fnm use "$version"
+        fi
+      }
 package_update: true
 package_upgrade: true
 packages:
@@ -71,4 +81,11 @@ runcmd:
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
     alias code='/mnt/c/Users/tombo/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+    EOF
+  # fnm
+  - sudo -u myuser curl -fsSL https://fnm.vercel.app/install | sudo -u myuser bash -s -- --install-dir /home/myuser/.fnm --skip-shell
+  - |
+    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    export PATH="$HOME/.fnm:$PATH"
+    eval "$(fnm env --shell zsh)"
     EOF
