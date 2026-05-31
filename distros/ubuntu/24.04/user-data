@@ -40,6 +40,8 @@ packages:
   - direnv
   - gh
 runcmd:
+  # Fix ownership of home directory created by write_files
+  - chown -R myuser:myuser /home/myuser/.config
   # Docker
   - systemctl enable docker
   - systemctl start docker
