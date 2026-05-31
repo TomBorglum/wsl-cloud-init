@@ -41,7 +41,7 @@ packages:
   - gh
 runcmd:
   # Fix ownership of home directory created by write_files
-  - chown -R myuser:myuser /home/myuser/.config
+  - chown -R myuser:myuser /home/myuser
   # Docker
   - systemctl enable docker
   - systemctl start docker
