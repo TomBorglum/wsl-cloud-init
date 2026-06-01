@@ -1,4 +1,4 @@
-use_fnm() {
+use_node() {
   local version=$1
   if [ -n "$version" ]; then
     eval "$(fnm env --shell bash)"
