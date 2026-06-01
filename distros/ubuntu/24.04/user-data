@@ -15,31 +15,6 @@ write_files:
       default=myuser
       [interop]
         appendWindowsPath=false
-  - path: /home/myuser/.config/direnv/lib/fnm.sh
-    content: |
-      use_fnm() {
-        local version=$1
-        if [ -n "$version" ]; then
-          eval "$(fnm env --shell bash)"
-          fnm list | grep -q "v${version}" || fnm install "$version"
-          fnm use "$version"
-          local full_version
-          full_version=$(fnm current)
-          PATH_add "$HOME/.fnm/node-versions/${full_version}/installation/bin"
-        fi
-      }
-  - path: /home/myuser/.config/direnv/lib/sdk.sh
-    content: |
-      use_sdk() {
-        source "$HOME/.sdkman/bin/sdkman-init.sh"
-        while [ $# -gt 0 ]; do
-          local candidate=$1
-          local version=$2
-          sdk install "$candidate" "$version" 2>/dev/null
-          sdk use "$candidate" "$version"
-          shift 2
-        done
-      }
 package_update: true
 package_upgrade: true
 packages:
@@ -66,11 +41,14 @@ runcmd:
   - sudo -u myuser git clone https://github.com/zsh-users/zsh-autosuggestions /home/myuser/.oh-my-zsh/custom/plugins/zsh-autosuggestions
   - chsh -s $(which zsh) myuser
   - sudo -u myuser sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/myuser/.zshrc
-  # Shared zsh functions
+  # Shared zsh functions + direnv lib (single clone)
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
-  - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh
+  - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
   - mkdir -p /usr/local/share/zsh/site-functions
   - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
+  - sudo -u myuser mkdir -p /home/myuser/.config/direnv/lib
+  - cp /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/myuser/.config/direnv/lib/
+  - chown myuser:myuser /home/myuser/.config/direnv/lib/*.sh
   - rm -rf /tmp/wsl-cloud-init
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
