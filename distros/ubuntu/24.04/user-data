@@ -53,6 +53,8 @@ runcmd:
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u myuser SDKMAN_DIR=/home/myuser/.sdkman bash /tmp/sdkman-install.sh
+  # Pixi
+  - sudo -u myuser curl -fsSL https://pixi.sh/install.sh | sudo -u myuser bash
   # SDKMAN, direnv hooks, zsh functions and project paths at the bottom of .zshrc
   - |
     sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
