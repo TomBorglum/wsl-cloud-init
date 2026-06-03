@@ -4,10 +4,12 @@ use_node() {
     return 1
   fi
   local version=$1
-  eval "$(fnm env --shell bash)"
-  fnm list | grep -q "v${version}" || fnm install "$version"
-  fnm use "$version"
+  fnm install "$version"
   local full_version
-  full_version=$(fnm current)
+  full_version=$(fnm list | awk -v v="v${version}" '$2 == v {print $2; exit}')
+  if [ -z "$full_version" ]; then
+    echo "Error: node v${version} not found after install — only fully qualified versions are permitted (e.g. 22.14.0)" >&2
+    return 1
+  fi
   PATH_add "$HOME/.fnm/node-versions/${full_version}/installation/bin"
 }
