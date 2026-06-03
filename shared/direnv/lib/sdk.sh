@@ -6,6 +6,6 @@ use_sdk() {
   fi
   local candidate=$1
   local version=$2
-  sdk install "$candidate" "$version" 2>/dev/null
+  sdk install "$candidate" "$version" || return 1
   sdk use "$candidate" "$version"
 }
