@@ -1,6 +1,6 @@
 gclone() {
   if [[ -z "$1" ]]; then
-    echo "Usage: gcl <owner/repo>" >&2
+    echo "Usage: gclone <owner/repo>" >&2
     return 1
   fi
   local repo="$1"
@@ -41,4 +41,4 @@ _gclone_complete() {
   repos=(${(f)"$(cat "$cache")"})
   compadd "${repos[@]}"
 }
-compdef _gcl_complete gcl
+compdef _gclone_complete gclone
