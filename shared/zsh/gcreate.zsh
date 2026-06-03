@@ -1,4 +1,4 @@
-gnew() {
+gcreate() {
   if [[ -z "$1" ]]; then
     echo "Usage: gnew <[owner/]repo-name>" >&2
     return 1
