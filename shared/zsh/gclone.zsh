@@ -1,5 +1,4 @@
-unalias gcl 2>/dev/null || true
-gcl() {
+gclone() {
   if [[ -z "$1" ]]; then
     echo "Usage: gcl <owner/repo>" >&2
     return 1
