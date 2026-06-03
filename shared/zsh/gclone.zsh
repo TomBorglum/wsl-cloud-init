@@ -16,7 +16,7 @@ gclone() {
   gh repo clone "$repo" "$target" || return 1
   cd "$target"
 }
-_gcl_complete() {
+_gclone_complete() {
   local cache owner
   if [[ ${words[2]} == */* ]]; then
     owner="${words[2]%%/*}"
