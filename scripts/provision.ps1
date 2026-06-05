@@ -16,6 +16,9 @@ $GitEmail = git config --global user.email
 if (-not $GitName)  { Write-Error "git config --global user.name is not set"; exit 1 }
 if (-not $GitEmail) { Write-Error "git config --global user.email is not set"; exit 1 }
 
+# Detect VS Code
+$VsCodeExe = (Get-Command code -ErrorAction SilentlyContinue)?.Source
+
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
@@ -24,6 +27,17 @@ $template = $template `
     -replace '__GIT_NAME__',         $GitName `
     -replace '__GIT_EMAIL__',        $GitEmail `
     -replace '__WINDOWS_USERNAME__', $WindowsUsername
+
+if ($VsCodeExe) {
+    $VsCodePathUnix = ($VsCodeExe -replace '\\', '/') -replace ' ', '\ '
+    $template = $template `
+        -replace '(?s)\s*#\s*__VSCODE_START__\s*', '' `
+        -replace '(?s)\s*#\s*__VSCODE_END__\s*',   '' `
+        -replace '__VSCODE_PATH__', $VsCodePathUnix
+} else {
+    Write-Warning "VS Code not found on PATH — skipping alias"
+    $template = $template -replace '(?s)\s*# __VSCODE_START__.*?# __VSCODE_END__\s*', ''
+}
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
