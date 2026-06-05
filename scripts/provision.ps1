@@ -17,7 +17,8 @@ if (-not $GitName)  { Write-Error "git config --global user.name is not set"; ex
 if (-not $GitEmail) { Write-Error "git config --global user.email is not set"; exit 1 }
 
 # Detect VS Code
-$VsCodeExe = (Get-Command code -ErrorAction SilentlyContinue)?.Source
+$VsCodeCmd = Get-Command code -ErrorAction SilentlyContinue
+$VsCodeExe = if ($VsCodeCmd) { $VsCodeCmd.Source } else { $null }
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
@@ -25,8 +26,7 @@ $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.
 $template = $template `
     -replace '__LINUX_USERNAME__',   $LinuxUsername `
     -replace '__GIT_NAME__',         $GitName `
-    -replace '__GIT_EMAIL__',        $GitEmail `
-    -replace '__WINDOWS_USERNAME__', $WindowsUsername
+    -replace '__GIT_EMAIL__',        $GitEmail
 
 if ($VsCodeExe) {
     $VsCodePathUnix = ($VsCodeExe -replace '\\', '/') -replace ' ', '\ '
