@@ -2,10 +2,12 @@ param(
   [Parameter(Mandatory)][string]$InstanceConfig
 )
 
+$ErrorActionPreference = "Stop"
+
 . "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
 # Substitute template
-$template = Get-Content "$PSScriptRoot\..\distros\ubuntu\24.04\user-data.template" -Raw
+$template = Get-Content "$PSScriptRoot\..\distros\$Distro\user-data.template" -Raw
 
 $template = $template `
     -replace '__LINUX_USERNAME__',   $LinuxUsername `
@@ -30,10 +32,12 @@ wsl --unregister $InstanceName
 Write-Host "[3/6] Copying cloud-init user-data..."
 $cloudInitDir = "$env:USERPROFILE\.cloud-init"
 New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
+Remove-Item -Force "$cloudInitDir\*" -ErrorAction SilentlyContinue
 Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
 
-Write-Host "[4/6] Installing Ubuntu-24.04 as $InstanceName..."
-wsl --install Ubuntu-24.04 --name $InstanceName --no-launch
+$DistroName = Split-Path $Distro -Leaf
+Write-Host "[4/6] Installing $DistroName as $InstanceName..."
+wsl --install $DistroName --name $InstanceName --no-launch
 if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
 Write-Host "[5/6] Waiting for cloud-init to finish..."
