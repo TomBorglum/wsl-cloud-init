@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
 # Substitute template
-$template = Get-Content "$PSScriptRoot\..\distros\$Distro\user-data.template" -Raw
+$template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 $template = $template `
     -replace '__LINUX_USERNAME__',   $LinuxUsername `
@@ -35,9 +35,8 @@ New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
 Remove-Item -Force "$cloudInitDir\*" -ErrorAction SilentlyContinue
 Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
 
-$DistroName = Split-Path $Distro -Leaf
-Write-Host "[4/6] Installing $DistroName as $InstanceName..."
-wsl --install $DistroName --name $InstanceName --no-launch
+Write-Host "[4/6] Installing $DistroInstallName as $InstanceName..."
+wsl --install $DistroInstallName --name $InstanceName --no-launch
 if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
 Write-Host "[5/6] Waiting for cloud-init to finish..."
