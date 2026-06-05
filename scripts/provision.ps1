@@ -1,11 +1,10 @@
-# User-specific variables — edit these before running
-$LinuxUsername   = "myuser"
-$LinuxGecos      = "My User"
-$GitName         = "Tom Borglum"
-$GitEmail        = "tom.borglum@gmail.com"
-$WindowsUsername = "tombo"
+param(
+  [Parameter(Mandatory)][string]$InstanceConfig
+)
 
-# Substitute and write user-data
+. "$PSScriptRoot\..\instances\config\$InstanceConfig.ps1"
+
+# Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\ubuntu\24.04\user-data.template" -Raw
 
 $template = $template `
@@ -15,5 +14,30 @@ $template = $template `
     -replace '__GIT_EMAIL__',        $GitEmail `
     -replace '__WINDOWS_USERNAME__', $WindowsUsername
 
-$template | Set-Content "$PSScriptRoot\user-data" -NoNewline
-Write-Host "Generated user-data for $LinuxUsername"
+$userDataDir = "$PSScriptRoot\..\instances\user-data"
+New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
+$userDataPath = "$userDataDir\$InstanceName.user-data"
+$template | Set-Content $userDataPath -NoNewline
+Write-Host "Generated user-data for $InstanceName"
+
+# Provision
+Write-Host "[1/6] Terminating $InstanceName..."
+wsl --terminate $InstanceName
+
+Write-Host "[2/6] Unregistering $InstanceName..."
+wsl --unregister $InstanceName
+
+Write-Host "[3/6] Copying cloud-init user-data..."
+$cloudInitDir = "$env:USERPROFILE\.cloud-init"
+New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
+Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
+
+Write-Host "[4/6] Installing Ubuntu-24.04 as $InstanceName..."
+wsl --install Ubuntu-24.04 --name $InstanceName --no-launch
+if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
+
+Write-Host "[5/6] Waiting for cloud-init to finish..."
+wsl -d $InstanceName --user root -- cloud-init status --wait
+
+Write-Host "[6/6] Launching $InstanceName..."
+wsl -d $InstanceName
