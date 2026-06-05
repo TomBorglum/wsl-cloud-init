@@ -21,7 +21,7 @@ $GitExe = (Get-Command git).Source
 $GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
 $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
 if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
-$CredManagerWsl = '/mnt/' + ($CredManager -replace '\\', '/' -replace '^([A-Z]):', { $_.Groups[1].Value.ToLower() } -replace ' ', '\ ')
+$CredManagerWsl = '/mnt/' + $CredManager[0].ToString().ToLower() + '/' + $CredManager.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
