@@ -1,4 +1,5 @@
 $InstanceName    = "MyInstance"
+$Distro          = "ubuntu\24.04"
 $LinuxUsername   = "myuser"
 $LinuxGecos      = "My User"
 $GitName         = "Tom Borglum"
