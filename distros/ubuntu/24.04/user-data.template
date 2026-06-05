@@ -75,10 +75,12 @@ runcmd:
     export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
     EOF
   # VS Code
+  # __VSCODE_START__
   - |
     sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
     alias code='/mnt/c/Users/__WINDOWS_USERNAME__/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
     EOF
+  # __VSCODE_END__
   # fnm
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
   - |
