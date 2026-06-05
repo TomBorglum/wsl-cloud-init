@@ -2,7 +2,7 @@ param(
   [Parameter(Mandatory)][string]$InstanceConfig
 )
 
-. "$PSScriptRoot\..\instances\config\$InstanceConfig.ps1"
+. "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\ubuntu\24.04\user-data.template" -Raw
@@ -14,7 +14,7 @@ $template = $template `
     -replace '__GIT_EMAIL__',        $GitEmail `
     -replace '__WINDOWS_USERNAME__', $WindowsUsername
 
-$userDataDir = "$PSScriptRoot\..\instances\user-data"
+$userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 $userDataPath = "$userDataDir\$InstanceName.user-data"
 $template | Set-Content $userDataPath -NoNewline
