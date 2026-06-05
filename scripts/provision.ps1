@@ -7,6 +7,8 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
 $WindowsUsername = $env:USERNAME
+$LinuxUsername = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
+if (-not $LinuxUsername) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
