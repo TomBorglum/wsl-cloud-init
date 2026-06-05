@@ -6,6 +6,8 @@ $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
+$WindowsUsername = $env:USERNAME
+
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
