@@ -10,6 +10,12 @@ $WindowsUsername = $env:USERNAME
 $LinuxUsername = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
 if (-not $LinuxUsername) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
+# Read Git identity from Windows Git installation
+$GitName  = git config --global user.name
+$GitEmail = git config --global user.email
+if (-not $GitName)  { Write-Error "git config --global user.name is not set"; exit 1 }
+if (-not $GitEmail) { Write-Error "git config --global user.email is not set"; exit 1 }
+
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
