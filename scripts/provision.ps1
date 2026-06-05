@@ -6,7 +6,7 @@ $GitEmail        = "tom.borglum@gmail.com"
 $WindowsUsername = "tombo"
 
 # Substitute and write user-data
-$template = Get-Content "$PSScriptRoot\user-data.template" -Raw
+$template = Get-Content "$PSScriptRoot\..\distos\ubuntu\24.04\user-data.template" -Raw
 
 $template = $template `
     -replace '__LINUX_USERNAME__',   $LinuxUsername `
