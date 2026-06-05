@@ -9,13 +9,14 @@ $ErrorActionPreference = "Stop"
 $WindowsUsername = $env:USERNAME
 $LinuxUsername = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
 if (-not $LinuxUsername) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
+$LinuxGecos = (Get-LocalUser -Name $WindowsUsername).FullName
+if (-not $LinuxGecos) { $LinuxGecos = $WindowsUsername }
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 $template = $template `
     -replace '__LINUX_USERNAME__',   $LinuxUsername `
-    -replace '__LINUX_GECOS__',      $LinuxGecos `
     -replace '__GIT_NAME__',         $GitName `
     -replace '__GIT_EMAIL__',        $GitEmail `
     -replace '__WINDOWS_USERNAME__', $WindowsUsername
