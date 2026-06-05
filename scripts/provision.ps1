@@ -16,28 +16,22 @@ $GitEmail = git config --global user.email
 if (-not $GitName)  { Write-Error "git config --global user.name is not set"; exit 1 }
 if (-not $GitEmail) { Write-Error "git config --global user.email is not set"; exit 1 }
 
-# Detect VS Code
-$VsCodeCmd = Get-Command code -ErrorAction SilentlyContinue
-$VsCodeExe = if ($VsCodeCmd) { $VsCodeCmd.Source } else { $null }
+# Derive Git credential manager path from the git.exe location
+$GitExe = (Get-Command git).Source
+$GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
+$CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
+if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
+$CredManagerWsl = '/mnt/' + ($CredManager -replace '\\', '/' -replace '^([A-Z]):', { $_.Groups[1].Value.ToLower() } -replace ' ', '\ ')
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 $template = $template `
-    -replace '__LINUX_USERNAME__',   $LinuxUsername `
-    -replace '__GIT_NAME__',         $GitName `
-    -replace '__GIT_EMAIL__',        $GitEmail
-
-if ($VsCodeExe) {
-    $VsCodePathUnix = ($VsCodeExe -replace '\\', '/') -replace ' ', '\ '
-    $template = $template `
-        -replace '(?s)\s*#\s*__VSCODE_START__\s*', '' `
-        -replace '(?s)\s*#\s*__VSCODE_END__\s*',   '' `
-        -replace '__VSCODE_PATH__', $VsCodePathUnix
-} else {
-    Write-Warning "VS Code not found on PATH — skipping alias"
-    $template = $template -replace '(?s)\s*# __VSCODE_START__.*?# __VSCODE_END__\s*', ''
-}
+    -replace '__LINUX_USERNAME__',      $LinuxUsername `
+    -replace '__GIT_NAME__',            $GitName `
+    -replace '__GIT_EMAIL__',           $GitEmail `
+    -replace '__WINDOWS_USERNAME__',    $WindowsUsername `
+    -replace '__GIT_CREDENTIAL_MANAGER__', $CredManagerWsl
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
