@@ -2,7 +2,6 @@
 locale: en_US.UTF-8
 users:
   - name: __LINUX_USERNAME__
-    gecos: __LINUX_GECOS__
     groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
