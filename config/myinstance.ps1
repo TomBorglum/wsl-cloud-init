@@ -1,0 +1,6 @@
+$InstanceName    = "MyInstance"
+$LinuxUsername   = "myuser"
+$LinuxGecos      = "My User"
+$GitName         = "Tom Borglum"
+$GitEmail        = "tom.borglum@gmail.com"
+$WindowsUsername = "tombo"
