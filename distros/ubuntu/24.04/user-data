@@ -1,8 +1,8 @@
 #cloud-config
 locale: en_US.UTF-8
 users:
-  - name: myuser
-    gecos: My User
+  - name: __LINUX_USERNAME__
+    gecos: __LINUX_GECOS__
     groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
@@ -12,7 +12,7 @@ write_files:
       [boot]
       systemd=true
       [user]
-      default=myuser
+      default=__LINUX_USERNAME__
       [interop]
         appendWindowsPath=false
 package_update: true
@@ -30,59 +30,59 @@ packages:
   - gh
 runcmd:
   # Fix ownership of home directory created by write_files
-  - chown -R myuser:myuser /home/myuser
+  - chown -R __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__
   # Docker
   - systemctl enable docker
   - systemctl start docker
   # Directories
-  - sudo -u myuser mkdir -p /home/myuser/projects
+  - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/projects
   # Oh My Zsh
-  - sudo -u myuser sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
-  - sudo -u myuser git clone https://github.com/zsh-users/zsh-autosuggestions /home/myuser/.oh-my-zsh/custom/plugins/zsh-autosuggestions
-  - chsh -s $(which zsh) myuser
-  - sudo -u myuser sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/myuser/.zshrc
+  - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  - sudo -u __LINUX_USERNAME__ git clone https://github.com/zsh-users/zsh-autosuggestions /home/__LINUX_USERNAME__/.oh-my-zsh/custom/plugins/zsh-autosuggestions
+  - chsh -s $(which zsh) __LINUX_USERNAME__
+  - sudo -u __LINUX_USERNAME__ sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/__LINUX_USERNAME__/.zshrc
   # Shared zsh functions + direnv lib (single clone)
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
   - mkdir -p /usr/local/share/zsh/site-functions
   - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
-  - sudo -u myuser mkdir -p /home/myuser/.config/direnv/lib
-  - cp /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/myuser/.config/direnv/lib/
-  - chown myuser:myuser /home/myuser/.config/direnv/lib/*.sh
+  - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/.config/direnv/lib
+  - cp /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/__LINUX_USERNAME__/.config/direnv/lib/
+  - chown __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__/.config/direnv/lib/*.sh
   - rm -rf /tmp/wsl-cloud-init
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
-  - sudo -u myuser SDKMAN_DIR=/home/myuser/.sdkman bash /tmp/sdkman-install.sh
+  - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
   # Pixi
-  - sudo -u myuser curl -fsSL https://pixi.sh/install.sh | sudo -u myuser bash
+  - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ bash
   # SDKMAN, direnv hooks, zsh functions and project paths at the bottom of .zshrc
   - |
-    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
     export SDKMAN_DIR="$HOME/.sdkman"
     [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
     eval "$(direnv hook zsh)"
     export PROJECT_PATHS=(~/projects)
     for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
     EOF
-  - echo 'cd ~' >> /home/myuser/.zshrc
+  - echo 'cd ~' >> /home/__LINUX_USERNAME__/.zshrc
   # Git
-  - sudo -u myuser git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"
-  - sudo -u myuser git config --global user.name "Tom Borglum"
-  - sudo -u myuser git config --global user.email "tom.borglum@gmail.com"
-  - sudo -u myuser git config --global init.defaultBranch main
+  - sudo -u __LINUX_USERNAME__ git config --global credential.helper "/mnt/c/Program\ Files/Git/mingw64/bin/git-credential-manager.exe"
+  - sudo -u __LINUX_USERNAME__ git config --global user.name "__GIT_NAME__"
+  - sudo -u __LINUX_USERNAME__ git config --global user.email "__GIT_EMAIL__"
+  - sudo -u __LINUX_USERNAME__ git config --global init.defaultBranch main
   # GitHub CLI - source token from Windows gh.exe installation
   - |
-    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
     export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
     EOF
   # VS Code
   - |
-    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
-    alias code='/mnt/c/Users/tombo/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
+    alias code='/mnt/c/Users/__WINDOWS_USERNAME__/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
     EOF
   # fnm
-  - sudo -u myuser curl -fsSL https://fnm.vercel.app/install | sudo -u myuser bash -s -- --install-dir /home/myuser/.fnm --skip-shell
+  - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
   - |
-    sudo -u myuser tee -a /home/myuser/.zshrc > /dev/null <<'EOF'
+    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
     export PATH="$HOME/.fnm:$PATH"
     EOF
