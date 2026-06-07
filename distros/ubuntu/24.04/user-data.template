@@ -23,6 +23,26 @@ write_files:
       default=__LINUX_USERNAME__
       [interop]
         appendWindowsPath=false
+  - path: /home/__LINUX_USERNAME__/.zshrc
+    content: |
+      export ZSH="$HOME/.oh-my-zsh"
+      ZSH_THEME="robbyrussell"
+      plugins=(git z sudo docker zsh-autosuggestions pj)
+      source $ZSH/oh-my-zsh.sh
+
+      export SDKMAN_DIR="$HOME/.sdkman"
+      [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
+
+      eval "$(direnv hook zsh)"
+
+      export PROJECT_PATHS=(~/projects)
+      for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
+
+      export PATH="$HOME/.fnm:$PATH"
+      export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
+      alias code='__VSCODE__'
+
+      cd ~
 package_update: true
 package_upgrade: true
 packages:
@@ -35,7 +55,7 @@ packages:
   - direnv
   - gh
 runcmd:
-  # Fix ownership of home directory created by write_files
+  # Fix ownership of home directory (and .zshrc) created by write_files
   - chown -R __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__
   # Docker — official repo
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -47,12 +67,10 @@ runcmd:
   - systemctl start docker
   # Directories
   - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/projects
-  # Oh My Zsh
-  - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+  # Oh My Zsh — --keep-zshrc preserves the file written above
+  - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
   - sudo -u __LINUX_USERNAME__ git clone https://github.com/zsh-users/zsh-autosuggestions /home/__LINUX_USERNAME__/.oh-my-zsh/custom/plugins/zsh-autosuggestions
-  - chsh -s $(which zsh) __LINUX_USERNAME__
-  - sudo -u __LINUX_USERNAME__ sed -i 's/plugins=(git)/plugins=(git z sudo docker zsh-autosuggestions pj)/' /home/__LINUX_USERNAME__/.zshrc
-  # Shared zsh functions + direnv lib (single clone)
+  # Shared zsh functions + direnv lib (single sparse clone)
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
   - mkdir -p /usr/local/share/zsh/site-functions
@@ -66,34 +84,10 @@ runcmd:
   - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
   # Pixi
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ bash
-  # SDKMAN, direnv hooks, zsh functions and project paths at the bottom of .zshrc
-  - |
-    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
-    export SDKMAN_DIR="$HOME/.sdkman"
-    [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-    eval "$(direnv hook zsh)"
-    export PROJECT_PATHS=(~/projects)
-    for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
-    EOF
-  - echo 'cd ~' >> /home/__LINUX_USERNAME__/.zshrc
+  # fnm
+  - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
   # Git
   - sudo -u __LINUX_USERNAME__ git config --global credential.helper "__GIT_CREDENTIAL_MANAGER__"
   - sudo -u __LINUX_USERNAME__ git config --global user.name "__GIT_NAME__"
   - sudo -u __LINUX_USERNAME__ git config --global user.email "__GIT_EMAIL__"
   - sudo -u __LINUX_USERNAME__ git config --global init.defaultBranch main
-  # GitHub CLI - source token from Windows gh.exe installation
-  - |
-    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
-    export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
-    EOF
-  # VS Code
-  - |
-    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
-    alias code='__VSCODE__'
-    EOF
-  # fnm
-  - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
-  - |
-    sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
-    export PATH="$HOME/.fnm:$PATH"
-    EOF
