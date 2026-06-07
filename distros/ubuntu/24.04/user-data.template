@@ -6,6 +6,15 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
 write_files:
+  - path: /etc/docker/daemon.json
+    content: |
+      {
+        "log-driver": "local",
+        "log-opts": {
+          "max-size": "10m",
+          "max-file": "3"
+        }
+      }
   - path: /etc/wsl.conf
     content: |
       [boot]
