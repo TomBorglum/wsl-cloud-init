@@ -35,7 +35,6 @@ $template = $template `
     -replace '__LINUX_USERNAME__',            $LinuxUsername `
     -replace '__GIT_NAME__',                  $GitName `
     -replace '__GIT_EMAIL__',                 $GitEmail `
-    -replace '__WINDOWS_USERNAME__',          $WindowsUsername `
     -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
     -replace '__VSCODE__',                    $VsCodeWsl
 
