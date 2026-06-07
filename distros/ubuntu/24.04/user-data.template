@@ -77,7 +77,7 @@ runcmd:
   # VS Code
   - |
     sudo -u __LINUX_USERNAME__ tee -a /home/__LINUX_USERNAME__/.zshrc > /dev/null <<'EOF'
-    alias code='/mnt/c/Users/__WINDOWS_USERNAME__/AppData/Local/Programs/Microsoft\ VS\ Code/bin/code'
+    alias code='__VSCODE__'
     EOF
   # fnm
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
