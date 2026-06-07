@@ -23,15 +23,21 @@ $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
 if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
 $CredManagerWsl = '/mnt/' + $CredManager[0].ToString().ToLower() + '/' + $CredManager.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
+# Derive VS Code path from the installed executable
+$VsCodeExe = (Get-Command code -ErrorAction SilentlyContinue).Source
+if (-not $VsCodeExe) { Write-Error "code (VS Code) not found in PATH"; exit 1 }
+$VsCodeWsl = '/mnt/' + $VsCodeExe[0].ToString().ToLower() + '/' + $VsCodeExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 $template = $template `
-    -replace '__LINUX_USERNAME__',      $LinuxUsername `
-    -replace '__GIT_NAME__',            $GitName `
-    -replace '__GIT_EMAIL__',           $GitEmail `
-    -replace '__WINDOWS_USERNAME__',    $WindowsUsername `
-    -replace '__GIT_CREDENTIAL_MANAGER__', $CredManagerWsl
+    -replace '__LINUX_USERNAME__',            $LinuxUsername `
+    -replace '__GIT_NAME__',                  $GitName `
+    -replace '__GIT_EMAIL__',                 $GitEmail `
+    -replace '__WINDOWS_USERNAME__',          $WindowsUsername `
+    -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
+    -replace '__VSCODE__',                    $VsCodeWsl
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
