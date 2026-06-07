@@ -23,10 +23,10 @@ $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
 if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
 $CredManagerWsl = '/mnt/' + $CredManager[0].ToString().ToLower() + '/' + $CredManager.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
-# Derive VS Code path from the installed executable
-$VsCodeExe = (Get-Command code -ErrorAction SilentlyContinue).Source
-if (-not $VsCodeExe) { Write-Error "code (VS Code) not found in PATH"; exit 1 }
-$VsCodeWsl = '/mnt/' + $VsCodeExe[0].ToString().ToLower() + '/' + $VsCodeExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+# Derive VS Code path from the installed executable (resolve the bash wrapper alongside code.cmd)
+$VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
+if (-not (Test-Path $VsCodeShell)) { Write-Error "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
+$VsCodeWsl = '/mnt/' + $VsCodeShell[0].ToString().ToLower() + '/' + $VsCodeShell.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
