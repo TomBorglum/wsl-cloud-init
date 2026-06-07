@@ -46,20 +46,17 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-$out = wsl --terminate $InstanceName 2>&1
-if ($LASTEXITCODE -ne 0) {
-  if ($out -match "WSL_E_DISTRO_NOT_FOUND") {
-    Write-Host "$InstanceName not registered - skipping"
-  } else {
-    Write-Error ($out -join "`n")
-    exit 1
-  }
-}
+wsl --terminate $InstanceName 2>$null
+# --terminate on a non-existent instance exits non-zero but is harmless
 
 Write-Host "[2/6] Unregistering $InstanceName..."
 wsl --unregister $InstanceName 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "$InstanceName not registered - skipping"
+  # 1 = instance not found — fine on first run; anything else is a real failure
+  if ($LASTEXITCODE -ne 1) {
+    Write-Error "wsl --unregister failed with exit code $LASTEXITCODE"
+    exit 1
+  }
 }
 
 Write-Host "[3/6] Copying cloud-init user-data..."
