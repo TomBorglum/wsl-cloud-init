@@ -71,6 +71,8 @@ runcmd:
   - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
   - sudo -u __LINUX_USERNAME__ git clone https://github.com/zsh-users/zsh-autosuggestions /home/__LINUX_USERNAME__/.oh-my-zsh/custom/plugins/zsh-autosuggestions
   # Shared zsh functions + direnv lib (single sparse clone)
+  # NOTE: wsl-cloud-init must remain a public repo — this clone runs before
+  # any auth is available in the provisioned instance.
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
   - mkdir -p /usr/local/share/zsh/site-functions
