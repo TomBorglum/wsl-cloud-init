@@ -46,9 +46,14 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-wsl --terminate $InstanceName 2>$null
+$out = wsl --terminate $InstanceName 2>&1
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "$InstanceName not running - skipping"
+  if ($out -match "WSL_E_DISTRO_NOT_FOUND") {
+    Write-Host "$InstanceName not registered - skipping"
+  } else {
+    Write-Error $out
+    exit 1
+  }
 }
 
 Write-Host "[2/6] Unregistering $InstanceName..."
