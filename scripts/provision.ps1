@@ -51,7 +51,7 @@ if ($LASTEXITCODE -ne 0) {
   if ($out -match "WSL_E_DISTRO_NOT_FOUND") {
     Write-Host "$InstanceName not registered - skipping"
   } else {
-    Write-Error $out
+    Write-Error ($out -join "`n")
     exit 1
   }
 }
