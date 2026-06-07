@@ -46,7 +46,10 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-wsl --terminate $InstanceName
+wsl --terminate $InstanceName 2>$null
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "$InstanceName not running - skipping"
+}
 
 Write-Host "[2/6] Unregistering $InstanceName..."
 wsl --unregister $InstanceName 2>$null
