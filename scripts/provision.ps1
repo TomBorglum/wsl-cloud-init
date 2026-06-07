@@ -51,7 +51,7 @@ wsl --terminate $InstanceName
 Write-Host "[2/6] Unregistering $InstanceName..."
 wsl --unregister $InstanceName 2>$null
 if ($LASTEXITCODE -ne 0) {
-  Write-Host "$InstanceName not registered — skipping"
+  Write-Host "$InstanceName not registered - skipping"
 }
 
 Write-Host "[3/6] Copying cloud-init user-data..."
