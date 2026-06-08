@@ -38,8 +38,8 @@ write_files:
       export PROJECT_PATHS=(~/projects)
       for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
 
-      export PATH="$HOME/.fnm:$PATH"
-      export GITHUB_TOKEN=$(/mnt/c/Program\ Files/GitHub\ CLI/gh.exe auth token 2>/dev/null)
+      export PATH="$HOME/.fnm:$PATH"      
+      export GITHUB_TOKEN=$(__GH__ auth token 2>/dev/null)
       alias code='__VSCODE__'
 
       cd ~
