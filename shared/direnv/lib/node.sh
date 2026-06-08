@@ -4,6 +4,7 @@ use_node() {
     return 1
   fi
   local version=$1
+  PATH_add "$HOME/.fnm"
   fnm install "$version"
   local full_version
   full_version=$(fnm list | awk -v v="v${version}" '$2 == v {print $2; exit}')
