@@ -46,23 +46,20 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-wsl --terminate $InstanceName 2>$null
-# --terminate on a non-existent instance exits non-zero but is harmless
+wsl --terminate $InstanceName | Out-Null
+if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
+    Write-Error "Unexpected error terminating $InstanceName (exit code $LASTEXITCODE)"; exit 1
+}
 
 Write-Host "[2/6] Unregistering $InstanceName..."
-wsl --unregister $InstanceName 2>$null
-if ($LASTEXITCODE -ne 0) {
-  # 1 = instance not found — fine on first run; anything else is a real failure
-  if ($LASTEXITCODE -ne 1) {
-    Write-Error "wsl --unregister failed with exit code $LASTEXITCODE"
-    exit 1
-  }
+wsl --unregister $InstanceName | Out-Null
+if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
+    Write-Error "Unexpected error unregistering $InstanceName (exit code $LASTEXITCODE)"; exit 1
 }
 
 Write-Host "[3/6] Copying cloud-init user-data..."
 $cloudInitDir = "$env:USERPROFILE\.cloud-init"
 New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
-Remove-Item -Force "$cloudInitDir\*" -ErrorAction SilentlyContinue
 Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
 
 Write-Host "[4/6] Installing $DistroInstallName as $InstanceName..."
