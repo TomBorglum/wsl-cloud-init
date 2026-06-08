@@ -84,7 +84,7 @@ runcmd:
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
   # Pixi
-  - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ bash
+  - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ bash -s -- --no-path-update
   # fnm
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
   # Git
