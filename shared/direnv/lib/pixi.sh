@@ -20,5 +20,4 @@ EOF
   local env_bin
   env_bin="$(pwd)/.pixi/envs/default/bin"
   PATH_add "$env_bin"
-  eval "$("$pixi_bin" completion --shell zsh)"
 }

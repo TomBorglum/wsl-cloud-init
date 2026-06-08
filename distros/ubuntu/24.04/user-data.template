@@ -41,6 +41,8 @@ write_files:
       export GITHUB_TOKEN=$(__GH__ auth token 2>/dev/null)
       alias code='__VSCODE__'
 
+      eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
+
       cd ~
 package_update: true
 package_upgrade: true
