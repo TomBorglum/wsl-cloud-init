@@ -28,6 +28,11 @@ $VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
 if (-not (Test-Path $VsCodeShell)) { Write-Error "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
 $VsCodeWsl = '/mnt/' + $VsCodeShell[0].ToString().ToLower() + '/' + $VsCodeShell.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
+# Derive gh.exe path from the installed executable
+$GhExe = (Get-Command gh).Source
+if (-not (Test-Path $GhExe)) { Write-Error "gh.exe not found at $GhExe"; exit 1 }
+$GhWsl = '/mnt/' + $GhExe[0].ToString().ToLower() + '/' + $GhExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
@@ -36,7 +41,8 @@ $template = $template `
     -replace '__GIT_NAME__',                  $GitName `
     -replace '__GIT_EMAIL__',                 $GitEmail `
     -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
-    -replace '__VSCODE__',                    $VsCodeWsl
+    -replace '__VSCODE__',                    $VsCodeWsl `
+    -replace '__GH__',                        $GhWsl
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
