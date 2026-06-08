@@ -46,15 +46,15 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-$null = wsl --terminate $InstanceName
-if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
-    Write-Error "Unexpected error terminating $InstanceName (exit code $LASTEXITCODE)"; exit 1
+$result = Start-Process wsl -ArgumentList "--terminate", $InstanceName -Wait -PassThru -WindowStyle Hidden
+if ($result.ExitCode -ne 0 -and $result.ExitCode -ne -1) {
+    Write-Error "Unexpected error terminating $InstanceName (exit code $($result.ExitCode))"; exit 1
 }
 
 Write-Host "[2/6] Unregistering $InstanceName..."
-$null = wsl --unregister $InstanceName
-if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
-    Write-Error "Unexpected error unregistering $InstanceName (exit code $LASTEXITCODE)"; exit 1
+$result = Start-Process wsl -ArgumentList "--unregister", $InstanceName -Wait -PassThru -WindowStyle Hidden
+if ($result.ExitCode -ne 0 -and $result.ExitCode -ne -1) {
+    Write-Error "Unexpected error unregistering $InstanceName (exit code $($result.ExitCode))"; exit 1
 }
 
 Write-Host "[3/6] Copying cloud-init user-data..."
