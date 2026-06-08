@@ -46,13 +46,13 @@ Write-Host "Generated user-data for $InstanceName"
 
 # Provision
 Write-Host "[1/6] Terminating $InstanceName..."
-wsl --terminate $InstanceName | Out-Null
+$null = wsl --terminate $InstanceName
 if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
     Write-Error "Unexpected error terminating $InstanceName (exit code $LASTEXITCODE)"; exit 1
 }
 
 Write-Host "[2/6] Unregistering $InstanceName..."
-wsl --unregister $InstanceName | Out-Null
+$null = wsl --unregister $InstanceName
 if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne -1) {
     Write-Error "Unexpected error unregistering $InstanceName (exit code $LASTEXITCODE)"; exit 1
 }
