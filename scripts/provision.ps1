@@ -36,7 +36,7 @@ $GhWsl = '/mnt/' + $GhExe[0].ToString().ToLower() + '/' + $GhExe.Substring(3) -r
 # Derive Edge path from the installed executable
 $EdgeExe = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
 if (-not $EdgeExe) { Write-Error "msedge.exe not found"; exit 1 }
-$EdgeWsl = '/mnt/' + $EdgeExe[0].ToString().ToLower() + '/' + $EdgeExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+$EdgeWsl = '/mnt/' + $EdgeExe[0].ToString().ToLower() + '/' + $EdgeExe.Substring(3) -replace '\\', '/' -replace ' ', '\ ' -replace '\(', '\(' -replace '\)', '\)'
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
