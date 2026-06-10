@@ -57,6 +57,9 @@ packages:
   - direnv
   - gh
 runcmd:
+  # Home directory
+  - chown __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__
+
   # Docker
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   - chmod a+r /etc/apt/keyrings/docker.asc
