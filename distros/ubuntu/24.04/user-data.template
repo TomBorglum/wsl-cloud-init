@@ -30,9 +30,6 @@ write_files:
       plugins=(git z sudo docker zsh-autosuggestions pj)
       source $ZSH/oh-my-zsh.sh
 
-      export SDKMAN_DIR="$HOME/.sdkman"
-      [[ -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-
       eval "$(direnv hook zsh)"
 
       export PROJECT_PATHS=(~/projects)
@@ -92,6 +89,7 @@ runcmd:
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
   - rm -rf /tmp/sdkman-install.sh
+  - sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' /home/__LINUX_USERNAME__/.zshrc
 
   # Pixi
   - curl -fsSL https://pixi.sh/install.sh -o /tmp/pixi-install.sh
@@ -99,7 +97,9 @@ runcmd:
   - rm -rf /tmp/pixi-install.sh
 
   # fnm
-  - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
+  - curl -fsSL https://fnm.vercel.app/install -o /tmp/fnm-install.sh
+  - sudo -u __LINUX_USERNAME__ bash /tmp/fnm-install.sh --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
+  - rm -rf /tmp/fnm-install.sh
 
   # Git
   - sudo -u __LINUX_USERNAME__ git config --global credential.helper "__GIT_CREDENTIAL_MANAGER__"
