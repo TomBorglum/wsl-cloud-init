@@ -58,6 +58,7 @@ packages:
   - gh
 runcmd:
   - |
+    #!/bin/bash
     set -euo pipefail
 
     # Home directory
