@@ -37,6 +37,7 @@ write_files:
 
       export GITHUB_TOKEN=$(__GH__ auth token 2>/dev/null)
       alias code='__VSCODE__'
+      edge() { __EDGE__ "$(wslpath -w "${1:-.}" 2>/dev/null || echo "$1")"; }
 
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
