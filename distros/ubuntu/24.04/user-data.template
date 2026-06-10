@@ -79,9 +79,8 @@ runcmd:
   - mkdir -p /usr/local/share/zsh/site-functions
   - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
 
-  - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/.config/direnv/lib
-  - cp /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/__LINUX_USERNAME__/.config/direnv/lib/
-  - chown __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__/.config/direnv/lib/*.sh
+  - install -d -o __LINUX_USERNAME__ -g __LINUX_USERNAME__ -m 755 /home/__LINUX_USERNAME__/.config/direnv/lib
+  - install -o __LINUX_USERNAME__ -g __LINUX_USERNAME__ -m 644 /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/__LINUX_USERNAME__/.config/direnv/lib/
 
   - rm -rf /tmp/wsl-cloud-init
 
