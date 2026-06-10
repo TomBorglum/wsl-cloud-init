@@ -89,7 +89,7 @@ runcmd:
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
   - rm -rf /tmp/sdkman-install.sh
-  - sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' /home/__LINUX_USERNAME__/.zshrc
+  #- sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' /home/__LINUX_USERNAME__/.zshrc
 
   # Pixi
   - curl -fsSL https://pixi.sh/install.sh -o /tmp/pixi-install.sh
