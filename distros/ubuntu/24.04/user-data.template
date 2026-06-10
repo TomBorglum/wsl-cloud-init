@@ -94,7 +94,9 @@ runcmd:
   - rm -rf /tmp/sdkman-install.sh
 
   # Pixi
-  - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ PIXI_NO_PATH_UPDATE=1 bash
+  - curl -fsSL https://pixi.sh/install.sh -o /tmp/pixi-install.sh
+  - sudo -u __LINUX_USERNAME__ PIXI_NO_PATH_UPDATE=1 bash /tmp/pixi-install.sh
+  - rm -rf /tmp/pixi-install.sh
 
   # fnm
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
