@@ -22,7 +22,7 @@ write_files:
       [user]
       default=__LINUX_USERNAME__
       [interop]
-        appendWindowsPath=false
+      appendWindowsPath=false
   - path: /home/__LINUX_USERNAME__/.zshrc
     content: |
       export ZSH="$HOME/.oh-my-zsh"
@@ -56,9 +56,10 @@ packages:
   - direnv
   - gh
 runcmd:
-  # Fix ownership of home directory (and .zshrc) created by write_files
+  # Set ownership of home directory
   - chown -R __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__
-  # Docker — official repo
+  
+  # Docker
   - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
   - chmod a+r /etc/apt/keyrings/docker.asc
   - echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
@@ -66,29 +67,37 @@ runcmd:
   - apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
   - systemctl enable docker
   - systemctl start docker
-  # Directories
+  
+  # GIT projects
   - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/projects
-  # Oh My Zsh — --keep-zshrc preserves the file written above
+
+  # Oh My Zsh
   - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
   - sudo -u __LINUX_USERNAME__ git clone https://github.com/zsh-users/zsh-autosuggestions /home/__LINUX_USERNAME__/.oh-my-zsh/custom/plugins/zsh-autosuggestions
-  # Shared zsh functions + direnv lib (single sparse clone)
-  # NOTE: wsl-cloud-init must remain a public repo — this clone runs before
-  # any auth is available in the provisioned instance.
+
+  # Shared functions
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
   - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
+
   - mkdir -p /usr/local/share/zsh/site-functions
   - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
+
   - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/.config/direnv/lib
   - cp /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/__LINUX_USERNAME__/.config/direnv/lib/
   - chown __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__/.config/direnv/lib/*.sh
+
   - rm -rf /tmp/wsl-cloud-init
+
   # SDKMAN
   - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
   - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
+
   # Pixi
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://pixi.sh/install.sh | sudo -u __LINUX_USERNAME__ PIXI_NO_PATH_UPDATE=1 bash
+
   # fnm
   - sudo -u __LINUX_USERNAME__ curl -fsSL https://fnm.vercel.app/install | sudo -u __LINUX_USERNAME__ bash -s -- --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
+
   # Git
   - sudo -u __LINUX_USERNAME__ git config --global credential.helper "__GIT_CREDENTIAL_MANAGER__"
   - sudo -u __LINUX_USERNAME__ git config --global user.name "__GIT_NAME__"
