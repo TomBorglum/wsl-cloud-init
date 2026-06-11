@@ -1,5 +1,6 @@
 param(
-  [Parameter(Mandatory)][string]$InstanceConfig
+  [Parameter(Mandatory)][string]$InstanceConfig,
+  [string]$Branch = "main"
 )
 
 $ErrorActionPreference = "Stop"
@@ -48,7 +49,8 @@ $template = $template `
     -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
     -replace '__VSCODE__',                    $VsCodeWsl `
     -replace '__GH__',                        $GhWsl `
-    -replace '__EDGE__',                      $EdgeWsl
+    -replace '__EDGE__',                      $EdgeWsl `
+    -replace '__BRANCH__',                    $Branch
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
