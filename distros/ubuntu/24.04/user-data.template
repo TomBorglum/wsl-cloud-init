@@ -6,6 +6,12 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
 write_files:
+  - path: /opt/wsl-cloud-init-config.sh
+    content: |
+      LINUX_USERNAME="__LINUX_USERNAME__"
+      GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
+      GIT_NAME="__GIT_NAME__"
+      GIT_EMAIL="__GIT_EMAIL__"
   - path: /etc/docker/daemon.json
     content: |
       {
@@ -54,55 +60,6 @@ packages:
   - direnv
   - gh
 runcmd:
-  # Set ownership of home directory
-  - chown -R __LINUX_USERNAME__:__LINUX_USERNAME__ /home/__LINUX_USERNAME__
-  
-  # Docker
-  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
-  - chmod a+r /etc/apt/keyrings/docker.asc
-  - echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable" > /etc/apt/sources.list.d/docker.list
-  - apt-get update -qq
-  - apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
-  - systemctl enable docker
-  - systemctl start docker
-  
-  # GIT projects
-  - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/projects
-
-  # Oh My Zsh
-  - sudo -u __LINUX_USERNAME__ sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
-  - sudo -u __LINUX_USERNAME__ git clone https://github.com/zsh-users/zsh-autosuggestions /home/__LINUX_USERNAME__/.oh-my-zsh/custom/plugins/zsh-autosuggestions
-
-  # Shared functions
-  - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /tmp/wsl-cloud-init
-  - git -C /tmp/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv
-
-  - mkdir -p /usr/local/share/zsh/site-functions
-  - cp /tmp/wsl-cloud-init/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
-
-  - sudo -u __LINUX_USERNAME__ mkdir -p /home/__LINUX_USERNAME__/.config/direnv/lib
-  - install -o __LINUX_USERNAME__ -g __LINUX_USERNAME__ -m 644 /tmp/wsl-cloud-init/shared/direnv/lib/*.sh /home/__LINUX_USERNAME__/.config/direnv/lib/
-
-  - rm -rf /tmp/wsl-cloud-init
-
-  # SDKMAN
-  - curl -s https://get.sdkman.io -o /tmp/sdkman-install.sh
-  - sudo -u __LINUX_USERNAME__ SDKMAN_DIR=/home/__LINUX_USERNAME__/.sdkman bash /tmp/sdkman-install.sh
-  - rm -rf /tmp/sdkman-install.sh
-  - sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' /home/__LINUX_USERNAME__/.zshrc
-
-  # Pixi
-  - curl -fsSL https://pixi.sh/install.sh -o /tmp/pixi-install.sh
-  - sudo -u __LINUX_USERNAME__ PIXI_NO_PATH_UPDATE=1 bash /tmp/pixi-install.sh
-  - rm -rf /tmp/pixi-install.sh
-
-  # fnm
-  - curl -fsSL https://fnm.vercel.app/install -o /tmp/fnm-install.sh
-  - sudo -u __LINUX_USERNAME__ bash /tmp/fnm-install.sh --install-dir /home/__LINUX_USERNAME__/.fnm --skip-shell
-  - rm -rf /tmp/fnm-install.sh
-
-  # Git
-  - sudo -u __LINUX_USERNAME__ git config --global credential.helper "__GIT_CREDENTIAL_MANAGER__"
-  - sudo -u __LINUX_USERNAME__ git config --global user.name "__GIT_NAME__"
-  - sudo -u __LINUX_USERNAME__ git config --global user.email "__GIT_EMAIL__"
-  - sudo -u __LINUX_USERNAME__ git config --global init.defaultBranch main
+  - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
+  - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv distros/ubuntu/24.04/scripts
+  - for script in /opt/wsl-cloud-init/distros/ubuntu/24.04/scripts/*.sh; do bash "$script"; done
