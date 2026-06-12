@@ -61,5 +61,5 @@ packages:
   - gh
 runcmd:
   - GIT_TERMINAL_PROMPT=0 git clone --branch __BRANCH__ --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
-  - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv distros/ubuntu/24.04/scripts
+  - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv distros/ubuntu/24.04/scripts distros/ubuntu/24.04/tests
   - for script in /opt/wsl-cloud-init/distros/ubuntu/24.04/scripts/*.sh; do bash "$script"; done
