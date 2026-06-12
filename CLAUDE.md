@@ -38,7 +38,7 @@ sudo -u "$LINUX_USERNAME" PIXI_NO_PATH_UPDATE=1 bash /tmp/pixi-install.sh
 rm -f /tmp/pixi-install.sh
 ```
 
-Tools must not depend on other tools being installed first (e.g. node). If the standard install method requires a dependency, search for a standalone or self-contained installer before writing any code.
+Each script must install exactly one tool. A script must not install any dependencies (e.g. runtimes, package managers) as a prerequisite — if the tool's installer requires a dependency, find a bundled or standalone installer that includes everything needed.
 
 ## Cloud Init Test Scripts
 To verify the WSL instance has been provisioned as expected the `user-data` file places a number of test scripts in `/opt/wsl-cloud-init/distros/ubuntu/24.04/tests/`. 
