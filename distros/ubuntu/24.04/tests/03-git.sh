@@ -32,6 +32,3 @@ if [[ "$PWD" == "$HOME/projects/wsl-cloud-init" ]]; then
 else
   fail "gclone: did not cd into the cloned directory (PWD=$PWD)"
 fi
-
-# Cleanup
-rm -rf ~/projects/wsl-cloud-init
