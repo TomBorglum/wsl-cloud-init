@@ -47,6 +47,9 @@ write_files:
 
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
+      export PATH="$HOME/.local/bin:$PATH"
+      export ENABLE_CLAUDEAI_MCP_SERVERS=false
+
       cd ~
 package_update: true
 package_upgrade: true
