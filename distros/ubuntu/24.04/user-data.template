@@ -7,11 +7,13 @@ users:
     shell: /bin/zsh
 write_files:
   - path: /opt/wsl-cloud-init-config.sh
+    permissions: '0600'
     content: |
       LINUX_USERNAME="__LINUX_USERNAME__"
       GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
       GIT_NAME="__GIT_NAME__"
       GIT_EMAIL="__GIT_EMAIL__"
+      CONTEXT7_API_KEY="__CONTEXT7_API_KEY__"
   - path: /etc/docker/daemon.json
     content: |
       {
@@ -53,7 +55,6 @@ write_files:
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
       export PATH="$HOME/.local/bin:$PATH"
-      export ENABLE_CLAUDEAI_MCP_SERVERS=false
 
       cd ~
 package_update: true

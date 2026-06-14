@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
   [Parameter(Mandatory)][string]$InstanceName,
+  [Parameter(Mandatory)][string]$Context7ApiKey,
   [string]$Branch = "main"
 )
 
@@ -50,7 +51,8 @@ $template = $template `
     -replace '__VSCODE__',                    $VsCodeWsl `
     -replace '__GH__',                        $GhWsl `
     -replace '__POWERSHELL__',               $PwshWsl `
-    -replace '__BRANCH__',                    $Branch
+    -replace '__BRANCH__',                    $Branch `
+    -replace '__CONTEXT7_API_KEY__',          $Context7ApiKey
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
