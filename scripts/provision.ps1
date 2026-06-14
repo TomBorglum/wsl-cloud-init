@@ -34,10 +34,10 @@ $GhExe = (Get-Command gh).Source
 if (-not (Test-Path $GhExe)) { Write-Error "gh.exe not found at $GhExe"; exit 1 }
 $GhWsl = '/mnt/' + $GhExe[0].ToString().ToLower() + '/' + $GhExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
-# Derive Edge path from the installed executable
-$EdgeExe = "${env:ProgramFiles(x86)}\Microsoft\Edge\Application\msedge.exe"
-if (-not $EdgeExe) { Write-Error "msedge.exe not found"; exit 1 }
-$EdgeWsl = '/mnt/' + $EdgeExe[0].ToString().ToLower() + '/' + $EdgeExe.Substring(3) -replace '\\', '/' -replace ' ', '\ ' -replace '\(', '\(' -replace '\)', '\)'
+# Derive PowerShell path from the installed executable
+$PwshExe = (Get-Command powershell).Source
+if (-not (Test-Path $PwshExe)) { Write-Error "powershell.exe not found at $PwshExe"; exit 1 }
+$PwshWsl = '/mnt/' + $PwshExe[0].ToString().ToLower() + '/' + $PwshExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
@@ -49,7 +49,7 @@ $template = $template `
     -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
     -replace '__VSCODE__',                    $VsCodeWsl `
     -replace '__GH__',                        $GhWsl `
-    -replace '__EDGE__',                      $EdgeWsl `
+    -replace '__POWERSHELL__',               $PwshWsl `
     -replace '__BRANCH__',                    $Branch
 
 $userDataDir = "$PSScriptRoot\..\user-data"
