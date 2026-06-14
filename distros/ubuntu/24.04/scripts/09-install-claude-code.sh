@@ -7,4 +7,4 @@ sudo -u "$LINUX_USERNAME" bash /tmp/claude-install.sh
 rm -f /tmp/claude-install.sh
 
 export ENABLE_CLAUDEAI_MCP_SERVERS=false
-sudo -u "$LINUX_USERNAME" /home/"$LINUX_USERNAME"/.local/bin/claude mcp add --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY" context7 https://mcp.context7.com/mcp
+sudo -u "$LINUX_USERNAME" /home/"$LINUX_USERNAME"/.local/bin/claude mcp add context7 https://mcp.context7.com/mcp --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
