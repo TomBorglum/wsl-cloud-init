@@ -1,11 +1,11 @@
 param(
-  [Parameter(Mandatory)][string]$InstanceConfig,
+  [Parameter(Mandatory)][string]$DistroTemplatePath,
+  [Parameter(Mandatory)][string]$DistroInstallName,
+  [Parameter(Mandatory)][string]$InstanceName,
   [string]$Branch = "main"
 )
 
 $ErrorActionPreference = "Stop"
-
-. "$PSScriptRoot\..\config\$InstanceConfig.ps1"
 
 $WindowsUsername = $env:USERNAME
 $LinuxUsername = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
