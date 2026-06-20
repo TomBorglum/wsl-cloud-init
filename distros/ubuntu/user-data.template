@@ -1,0 +1,57 @@
+#cloud-config
+locale: en_US.UTF-8
+users:
+  - name: __LINUX_USERNAME__
+    groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/zsh
+write_files:
+  - path: /etc/wsl.conf
+    content: |
+      [boot]
+      systemd=true
+      [user]
+      default=__LINUX_USERNAME__
+      [interop]
+      appendWindowsPath=false
+  - path: /home/__LINUX_USERNAME__/.zshrc
+    content: |
+      export ZSH="$HOME/.oh-my-zsh"
+      ZSH_THEME="robbyrussell"
+      plugins=(git z sudo docker zsh-autosuggestions pj)
+      source $ZSH/oh-my-zsh.sh
+
+      eval "$(direnv hook zsh)"
+
+      export PROJECT_PATHS=(~/projects)
+      for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
+
+
+      eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
+
+      cd ~
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - curl
+  - build-essential
+  - unzip
+  - zip
+  - zsh
+  - direnv
+  - gh
+  - jq
+runcmd:
+  - GIT_TERMINAL_PROMPT=0 git clone --branch __BRANCH__ --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
+  - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv shared/claude distros/ubuntu/scripts distros/ubuntu/tests
+  - |
+    export LINUX_USERNAME="__LINUX_USERNAME__"
+    export VSCODE="__VSCODE__"
+    export POWERSHELL="__POWERSHELL__"
+    export GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
+    export GIT_NAME="__GIT_NAME__"
+    export GIT_EMAIL="__GIT_EMAIL__"
+    export CONTEXT7_API_KEY="__CONTEXT7_API_KEY__"
+    for script in /opt/wsl-cloud-init/distros/ubuntu/scripts/*.sh; do bash "$script"; done
+    echo "__GH_TOKEN__" | sudo -u "__LINUX_USERNAME__" gh auth login --with-token
