@@ -1,15 +1,15 @@
-gclone() {
+repo-clone() {
   local owner=""
   if [[ "$1" == "--owner" ]]; then
     if [[ -z "$2" ]]; then
-      echo "Usage: gclone [--owner <owner>] <repo>" >&2
+      echo "Usage: repo-clone [--owner <owner>] <repo>" >&2
       return 1
     fi
     owner="$2"
     shift 2
   fi
   if [[ $# -ne 1 || -z "$1" ]]; then
-    echo "Usage: gclone [--owner <owner>] <repo>" >&2
+    echo "Usage: repo-clone [--owner <owner>] <repo>" >&2
     return 1
   fi
   local repo="$1"
@@ -27,7 +27,7 @@ gclone() {
   gh repo clone "$spec" "$target" || return 1
   cd "$target"
 }
-_gclone_complete() {
+_repo-clone_complete() {
   local cache owner
   if [[ ${words[CURRENT-1]} == "--owner" ]]; then
     [[ -n ${words[CURRENT]} ]] && compadd -S ' ' -- "${words[CURRENT]}"
@@ -35,16 +35,16 @@ _gclone_complete() {
   fi
   local cachekey
   local -a listargs
-  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/gclone"
+  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/repo-clone"
   if [[ ${words[2]} == "--owner" ]]; then
-    # gclone --owner <owner> <repo> : repo is word 4
+    # repo-clone --owner <owner> <repo> : repo is word 4
     (( CURRENT == 4 )) || return
     owner="${words[3]}"
     [[ -z "$owner" ]] && return
     cachekey="${(L)owner}"
     listargs=("$owner")
   else
-    # gclone <repo> : repo is word 2. Resolve the gh login (cached to a file)
+    # repo-clone <repo> : repo is word 2. Resolve the gh login (cached to a file)
     # so this shares a cache with an explicit --owner <self>.
     (( CURRENT == 2 )) || return
     local logincache="$cachedir/login"
@@ -75,4 +75,4 @@ _gclone_complete() {
   repos=(${(f)"$(cat "$cache")"})
   compadd "${repos[@]}"
 }
-compdef _gclone_complete gclone
+compdef _repo-clone_complete repo-clone

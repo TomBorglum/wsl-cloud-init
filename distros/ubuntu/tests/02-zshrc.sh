@@ -8,20 +8,20 @@ fail() {
   exit 1
 }
 
-if zsh -i -c 'whence -v gclone' 2>/dev/null | grep -q function; then
-  pass "gclone function is available"
+if zsh -i -c 'whence -v repo-clone' 2>/dev/null | grep -q function; then
+  pass "repo-clone function is available"
 else
-  fail "gclone function is not available"
+  fail "repo-clone function is not available"
 fi
 
-if zsh -i -c 'whence -v gcreate' 2>/dev/null | grep -q function; then
-  pass "gcreate function is available"
+if zsh -i -c 'whence -v repo-create' 2>/dev/null | grep -q function; then
+  pass "repo-create function is available"
 else
-  fail "gcreate function is not available"
+  fail "repo-create function is not available"
 fi
 
-if zsh -i -c 'whence -v _gclone_complete' 2>/dev/null | grep -q function; then
-  pass "_gclone_complete function is available"
+if zsh -i -c 'whence -v _repo-clone_complete' 2>/dev/null | grep -q function; then
+  pass "_repo-clone_complete function is available"
 else
-  fail "_gclone_complete function is not available"
+  fail "_repo-clone_complete function is not available"
 fi
