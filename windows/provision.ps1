@@ -8,54 +8,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 
-function Test-WslInstanceExists([string]$name) {
-  # WSL_UTF8=1 makes `wsl --list` emit clean UTF-8 (avoids the UTF-16/null-byte mangling
-  # that otherwise breaks string matching on the output).
-  $prev = $env:WSL_UTF8
-  $env:WSL_UTF8 = "1"
-  try {
-    $names = (wsl --list --quiet) | ForEach-Object { $_.Trim() }
-  } finally {
-    if ($null -eq $prev) { Remove-Item Env:\WSL_UTF8 -ErrorAction SilentlyContinue }
-    else { $env:WSL_UTF8 = $prev }
-  }
-  return $names -contains $name
-}
+. "$PSScriptRoot\lib\Wsl.ps1"
+. "$PSScriptRoot\lib\Credentials.ps1"
 
 if ((Test-WslInstanceExists $InstanceName) -and -not $Force) {
   Write-Host "Instance '$InstanceName' already exists. Re-run with -Force to overwrite (this destroys it)."
   exit 1
-}
-
-# Read API keys from Windows Credential Manager
-Add-Type -TypeDefinition @'
-using System;
-using System.Runtime.InteropServices;
-
-public class CredManager {
-  [DllImport("advapi32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
-  public static extern bool CredRead(string target, int type, int flags, out IntPtr credential);
-
-  [DllImport("advapi32.dll")]
-  public static extern void CredFree(IntPtr buffer);
-}
-'@
-
-function Get-WindowsCredential([string]$target) {
-  $ptr = [IntPtr]::Zero
-  if (-not [CredManager]::CredRead($target, 1, 0, [ref]$ptr)) {
-    throw "Credential '$target' not found in Windows Credential Manager."
-  }
-  try {
-    # CREDENTIAL struct offsets on 64-bit Windows:
-    #   +32 CredentialBlobSize (DWORD)
-    #   +40 CredentialBlob (IntPtr, after 4-byte padding for alignment)
-    $blobSize = [System.Runtime.InteropServices.Marshal]::ReadInt32($ptr, 32)
-    $blobPtr  = [System.Runtime.InteropServices.Marshal]::ReadIntPtr($ptr, 40)
-    return [System.Runtime.InteropServices.Marshal]::PtrToStringUni($blobPtr, $blobSize / 2)
-  } finally {
-    [CredManager]::CredFree($ptr)
-  }
 }
 
 try {
@@ -99,17 +57,17 @@ $GitExe = (Get-Command git).Source
 $GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
 $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
 if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
-$CredManagerWsl = '/mnt/' + $CredManager[0].ToString().ToLower() + '/' + $CredManager.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+$CredManagerWsl = ConvertTo-WslPath $CredManager
 
 # Derive VS Code path from the installed executable (resolve the bash wrapper alongside code.cmd)
 $VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
 if (-not (Test-Path $VsCodeShell)) { Write-Error "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
-$VsCodeWsl = '/mnt/' + $VsCodeShell[0].ToString().ToLower() + '/' + $VsCodeShell.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+$VsCodeWsl = ConvertTo-WslPath $VsCodeShell
 
 # Derive PowerShell path from the installed executable
 $PwshExe = (Get-Command powershell).Source
 if (-not (Test-Path $PwshExe)) { Write-Error "powershell.exe not found at $PwshExe"; exit 1 }
-$PwshWsl = '/mnt/' + $PwshExe[0].ToString().ToLower() + '/' + $PwshExe.Substring(3) -replace '\\', '/' -replace ' ', '\ '
+$PwshWsl = ConvertTo-WslPath $PwshExe
 
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
