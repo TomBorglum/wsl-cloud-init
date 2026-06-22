@@ -1,1 +1,1 @@
-powershell -ExecutionPolicy Bypass -File scripts\provision.ps1 -InstanceConfig myinstance
+powershell -ExecutionPolicy Bypass -File windows\provision.ps1 -InstanceConfig myinstance
