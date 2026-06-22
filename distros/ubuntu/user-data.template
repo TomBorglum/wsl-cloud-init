@@ -21,6 +21,9 @@ write_files:
       plugins=(git z sudo docker zsh-autosuggestions pj)
       source $ZSH/oh-my-zsh.sh
 
+      bindkey "\e[1;2D" backward-char   # Shift+Left
+      bindkey "\e[1;2C" forward-char    # Shift+Right
+
       eval "$(direnv hook zsh)"
 
       export PROJECT_PATHS=(~/projects)
