@@ -1,7 +1,7 @@
 #cloud-config
 locale: en_US.UTF-8
 users:
-  - name: __LINUX_USERNAME__
+  - name: __TARGET_USER__
     groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
@@ -11,10 +11,10 @@ write_files:
       [boot]
       systemd=true
       [user]
-      default=__LINUX_USERNAME__
+      default=__TARGET_USER__
       [interop]
       appendWindowsPath=false
-  - path: /home/__LINUX_USERNAME__/.zshrc
+  - path: /home/__TARGET_USER__/.zshrc
     content: |
       export ZSH="$HOME/.oh-my-zsh"
       ZSH_THEME="robbyrussell"
@@ -46,7 +46,7 @@ runcmd:
   - GIT_TERMINAL_PROMPT=0 git clone --branch __BRANCH__ --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
   - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv shared/claude distros/ubuntu/scripts distros/ubuntu/tests
   - |
-    export LINUX_USERNAME="__LINUX_USERNAME__"
+    export TARGET_USER="__TARGET_USER__"
     export VSCODE="__VSCODE__"
     export POWERSHELL="__POWERSHELL__"
     export GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
@@ -54,4 +54,4 @@ runcmd:
     export GIT_EMAIL="__GIT_EMAIL__"
     export CONTEXT7_API_KEY="__CONTEXT7_API_KEY__"
     for script in /opt/wsl-cloud-init/distros/ubuntu/scripts/*.sh; do bash "$script"; done
-    echo "__GH_TOKEN__" | sudo -u "__LINUX_USERNAME__" gh auth login --with-token
+    echo "__GH_TOKEN__" | sudo -u "__TARGET_USER__" gh auth login --with-token

@@ -65,8 +65,8 @@ Add it via: Control Panel -> Credential Manager -> Windows Credentials -> Add a 
 }
 
 $WindowsUsername = $env:USERNAME
-$LinuxUsername = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
-if (-not $LinuxUsername) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
+$TargetUser = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
+if (-not $TargetUser) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
 # Read Git identity from Windows Git installation
 $GitName  = git config --global user.name
@@ -95,7 +95,7 @@ $PwshWsl = '/mnt/' + $PwshExe[0].ToString().ToLower() + '/' + $PwshExe.Substring
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 $template = $template `
-    -replace '__LINUX_USERNAME__',            $LinuxUsername `
+    -replace '__TARGET_USER__',            $TargetUser `
     -replace '__GIT_NAME__',                  $GitName `
     -replace '__GIT_EMAIL__',                 $GitEmail `
     -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `

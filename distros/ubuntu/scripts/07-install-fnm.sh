@@ -1,13 +1,13 @@
 #!/bin/bash
 set -euo pipefail
 
-: "${LINUX_USERNAME:?LINUX_USERNAME is required}"
+: "${TARGET_USER:?TARGET_USER is required}"
 
-if [[ -x "/home/$LINUX_USERNAME/.fnm/fnm" ]]; then
-  echo "fnm already installed for $LINUX_USERNAME, skipping"
+if [[ -x "/home/$TARGET_USER/.fnm/fnm" ]]; then
+  echo "fnm already installed for $TARGET_USER, skipping"
   exit 0
 fi
 
 curl -fsSL https://fnm.vercel.app/install -o /tmp/fnm-install.sh
-sudo -u "$LINUX_USERNAME" bash /tmp/fnm-install.sh --install-dir "/home/$LINUX_USERNAME/.fnm" --skip-shell
+sudo -u "$TARGET_USER" bash /tmp/fnm-install.sh --install-dir "/home/$TARGET_USER/.fnm" --skip-shell
 rm -f /tmp/fnm-install.sh
