@@ -51,7 +51,9 @@ _gclone_complete() {
   cache=~/.cache/gh_repos_${cachekey}
   if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
     mkdir -p ~/.cache
-    zle -R "Fetching repos..."
+    local display="$owner"
+    [[ -z "$display" ]] && display="$(gh api user -q .login 2>/dev/null)"
+    zle -R "Fetching repos for ${display:-your account}..."
     local tmp
     if tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"; then
       echo "$tmp" > "$cache"
