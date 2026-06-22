@@ -33,22 +33,27 @@ _gclone_complete() {
     [[ -n ${words[CURRENT]} ]] && compadd -S ' ' -- "${words[CURRENT]}"
     return
   fi
+  local cachekey
+  local -a listargs
   if [[ ${words[2]} == "--owner" ]]; then
     # gclone --owner <owner> <repo> : repo is word 4
     (( CURRENT == 4 )) || return
     owner="${words[3]}"
+    [[ -z "$owner" ]] && return
+    cachekey="$owner"
+    listargs=("$owner")
   else
-    # gclone <repo> : repo is word 2
+    # gclone <repo> : repo is word 2; gh defaults to the authenticated user
     (( CURRENT == 2 )) || return
-    owner="$(gh api user -q .login 2>/dev/null || echo '')"
+    cachekey="@me"
+    listargs=()
   fi
-  [[ -z "$owner" ]] && return
-  cache=~/.cache/gh_repos_${owner}
+  cache=~/.cache/gh_repos_${cachekey}
   if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
     mkdir -p ~/.cache
-    zle -R "Fetching repos for $owner..."
+    zle -R "Fetching repos..."
     local tmp
-    if tmp="$(gh repo list "$owner" --limit 100 --json name -q '.[].name' 2>/dev/null)"; then
+    if tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"; then
       echo "$tmp" > "$cache"
     fi
     zle -R ""
