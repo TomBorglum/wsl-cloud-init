@@ -35,26 +35,35 @@ _gclone_complete() {
   fi
   local cachekey
   local -a listargs
+  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/gclone"
   if [[ ${words[2]} == "--owner" ]]; then
     # gclone --owner <owner> <repo> : repo is word 4
     (( CURRENT == 4 )) || return
     owner="${words[3]}"
     [[ -z "$owner" ]] && return
-    cachekey="$owner"
+    cachekey="${(L)owner}"
     listargs=("$owner")
   else
-    # gclone <repo> : repo is word 2; gh defaults to the authenticated user
+    # gclone <repo> : repo is word 2. Resolve the gh login (cached to a file)
+    # so this shares a cache with an explicit --owner <self>.
     (( CURRENT == 2 )) || return
-    cachekey="@me"
+    local logincache="$cachedir/login"
+    if [[ ! -s "$logincache" ]] || [[ -n $(find "$logincache" -mmin +60 2>/dev/null) ]]; then
+      mkdir -p "$cachedir"
+      local login
+      if login="$(gh api user -q .login 2>/dev/null)" && [[ -n "$login" ]]; then
+        print -r -- "$login" >| "$logincache"
+      fi
+    fi
+    [[ -s "$logincache" ]] && owner="$(<"$logincache")"
+    [[ -z "$owner" ]] && return
+    cachekey="${(L)owner}"
     listargs=()
   fi
-  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/gclone"
   cache="$cachedir/repos_${cachekey}"
   if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
     mkdir -p "$cachedir"
-    local display="$owner"
-    [[ -z "$display" ]] && display="$(gh api user -q .login 2>/dev/null)"
-    zle -R "Fetching repos for ${display:-your account}..."
+    zle -R "Fetching repos for ${owner:-your account}..."
     local tmp
     if tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"; then
       echo "$tmp" > "$cache"
