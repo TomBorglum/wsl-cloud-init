@@ -9,14 +9,14 @@ use_fnm() {
     echo "Error: use_fnm only supports the 'node' tool (got '$tool')" >&2
     return 1
   fi
+  if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: node version must be fully qualified (e.g. 22.14.0), got '$version'" >&2
+    return 1
+  fi
   PATH_add "$HOME/.fnm"
   local version_dir="$HOME/.fnm/node-versions/v${version}/installation/bin"
   if [ ! -d "$version_dir" ]; then
     fnm install "$version" || return 1
-  fi
-  if [ ! -d "$version_dir" ]; then
-    echo "Error: node v${version} not found after install — only fully qualified versions are permitted (e.g. 22.14.0)" >&2
-    return 1
   fi
   PATH_add "$version_dir"
 }
