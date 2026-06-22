@@ -29,7 +29,6 @@ write_files:
       export PROJECT_PATHS=(~/projects)
       for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
 
-
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
       cd ~
