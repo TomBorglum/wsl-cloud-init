@@ -1,7 +1,7 @@
-branch-update() {
+update-branch() {
   # Must be inside a git work tree.
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    echo "branch-update: not inside a git repository" >&2
+    echo "update-branch: not inside a git repository" >&2
     return 1
   fi
 
@@ -12,7 +12,7 @@ branch-update() {
     base="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)"
     base="${base#origin/}"
     if [[ -z "$base" ]]; then
-      echo "branch-update: could not determine the default branch — pass it explicitly, e.g. 'branch-update main', or run 'git remote set-head origin -a'." >&2
+      echo "update-branch: could not determine the default branch — pass it explicitly, e.g. 'update-branch main', or run 'git remote set-head origin -a'." >&2
       return 1
     fi
   fi
@@ -20,13 +20,13 @@ branch-update() {
   # Resolve the current branch; refuse on detached HEAD.
   local branch
   if ! branch="$(git symbolic-ref --quiet --short HEAD)"; then
-    echo "branch-update: detached HEAD — check out a branch first" >&2
+    echo "update-branch: detached HEAD — check out a branch first" >&2
     return 1
   fi
 
   # Abort if the working tree has uncommitted changes.
   if [[ -n "$(git status --porcelain)" ]]; then
-    echo "branch-update: uncommitted changes — commit or stash before updating" >&2
+    echo "update-branch: uncommitted changes — commit or stash before updating" >&2
     return 1
   fi
 
@@ -35,7 +35,7 @@ branch-update() {
   git fetch origin "$base" || return 1
 
   if ! git rebase "origin/$base"; then
-    echo "branch-update: rebase hit conflicts — resolve them, then run 'git rebase --continue' (or 'git rebase --abort')." >&2
+    echo "update-branch: rebase hit conflicts — resolve them, then run 'git rebase --continue' (or 'git rebase --abort')." >&2
     return 1
   fi
 

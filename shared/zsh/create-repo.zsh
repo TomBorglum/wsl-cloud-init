@@ -1,15 +1,15 @@
-repo-create() {
+create-repo() {
   local owner=""
   if [[ "$1" == "--owner" ]]; then
     if [[ -z "$2" ]]; then
-      echo "Usage: repo-create [--owner <owner>] <repo>" >&2
+      echo "Usage: create-repo [--owner <owner>] <repo>" >&2
       return 1
     fi
     owner="$2"
     shift 2
   fi
   if [[ $# -ne 1 || -z "$1" ]]; then
-    echo "Usage: repo-create [--owner <owner>] <repo>" >&2
+    echo "Usage: create-repo [--owner <owner>] <repo>" >&2
     return 1
   fi
   local repo="$1"
@@ -30,7 +30,7 @@ repo-create() {
     actual="${url%/*}"
     actual="${actual##*[:/]}"
     if [[ -z "$actual" || "${(L)actual}" != "${(L)expected}" ]]; then
-      echo "repo-create: ~/projects/$dir is already checked out for owner '${actual:-unknown}', not '$expected' — cannot reuse it." >&2
+      echo "create-repo: ~/projects/$dir is already checked out for owner '${actual:-unknown}', not '$expected' — cannot reuse it." >&2
       return 1
     fi
     echo "Already exists: $dir — cd'ing into it"

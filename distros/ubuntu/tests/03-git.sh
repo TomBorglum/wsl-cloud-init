@@ -11,26 +11,26 @@ fail() {
 compdef() { }
 for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
 
-# --- repo-clone ---
+# --- clone-repo ---
 
-repo-clone TomBorglum/wsl-test-fixture
+clone-repo TomBorglum/wsl-test-fixture
 
 if [[ -d ~/projects/wsl-test-fixture ]]; then
-  pass "repo-clone: ~/projects/wsl-test-fixture was created"
+  pass "clone-repo: ~/projects/wsl-test-fixture was created"
 else
-  fail "repo-clone: ~/projects/wsl-test-fixture was not created"
+  fail "clone-repo: ~/projects/wsl-test-fixture was not created"
 fi
 
 if [[ -d ~/projects/wsl-test-fixture/.git ]]; then
-  pass "repo-clone: cloned directory is a git repo"
+  pass "clone-repo: cloned directory is a git repo"
 else
-  fail "repo-clone: cloned directory is not a git repo"
+  fail "clone-repo: cloned directory is not a git repo"
 fi
 
 if [[ "$PWD" == "$HOME/projects/wsl-test-fixture" ]]; then
-  pass "repo-clone: cd'd into the cloned directory"
+  pass "clone-repo: cd'd into the cloned directory"
 else
-  fail "repo-clone: did not cd into the cloned directory (PWD=$PWD)"
+  fail "clone-repo: did not cd into the cloned directory (PWD=$PWD)"
 fi
 
 # Cleanup
