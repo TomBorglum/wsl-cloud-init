@@ -2,10 +2,30 @@ param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
   [Parameter(Mandatory)][string]$InstanceName,
-  [string]$Branch = "main"
+  [string]$Branch = "main",
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
+
+function Test-WslInstanceExists([string]$name) {
+  # WSL_UTF8=1 makes `wsl --list` emit clean UTF-8 (avoids the UTF-16/null-byte mangling
+  # that otherwise breaks string matching on the output).
+  $prev = $env:WSL_UTF8
+  $env:WSL_UTF8 = "1"
+  try {
+    $names = (wsl --list --quiet) | ForEach-Object { $_.Trim() }
+  } finally {
+    if ($null -eq $prev) { Remove-Item Env:\WSL_UTF8 -ErrorAction SilentlyContinue }
+    else { $env:WSL_UTF8 = $prev }
+  }
+  return $names -contains $name
+}
+
+if ((Test-WslInstanceExists $InstanceName) -and -not $Force) {
+  Write-Error "Instance '$InstanceName' already exists. Re-run with -Force to overwrite (this destroys it)."
+  exit 1
+}
 
 # Read API keys from Windows Credential Manager
 Add-Type -TypeDefinition @'
