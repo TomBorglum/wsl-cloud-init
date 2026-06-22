@@ -6,7 +6,7 @@ if command -v open >/dev/null 2>&1; then
   exit 0
 fi
 
-: "${LINUX_USERNAME:?LINUX_USERNAME is required}"
+: "${TARGET_USER:?TARGET_USER is required}"
 : "${POWERSHELL:?POWERSHELL is required}"
 
 tee /usr/local/bin/open > /dev/null << EOF
@@ -15,6 +15,6 @@ $POWERSHELL -NoProfile -c "Start-Process '\$1'"
 EOF
 chmod 755 /usr/local/bin/open
 
-sudo -u "$LINUX_USERNAME" tee -a "/home/$LINUX_USERNAME/.zshenv" > /dev/null << 'EOF'
+sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << 'EOF'
 export BROWSER=open
 EOF

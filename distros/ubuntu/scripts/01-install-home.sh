@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-: "${LINUX_USERNAME:?LINUX_USERNAME is required}"
+: "${TARGET_USER:?TARGET_USER is required}"
 
-if [[ -d "/home/$LINUX_USERNAME/projects" ]]; then
+if [[ -d "/home/$TARGET_USER/projects" ]]; then
   echo "home already set up, skipping"
   exit 0
 fi
 
-chown -R "$LINUX_USERNAME:$LINUX_USERNAME" "/home/$LINUX_USERNAME"
-sudo -u "$LINUX_USERNAME" mkdir -p "/home/$LINUX_USERNAME/projects"
+chown -R "$TARGET_USER:$TARGET_USER" "/home/$TARGET_USER"
+sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/projects"

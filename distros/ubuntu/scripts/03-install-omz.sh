@@ -1,12 +1,12 @@
 #!/bin/bash
 set -euo pipefail
 
-: "${LINUX_USERNAME:?LINUX_USERNAME is required}"
+: "${TARGET_USER:?TARGET_USER is required}"
 
-if [[ -d "/home/$LINUX_USERNAME/.oh-my-zsh" ]]; then
-  echo "oh-my-zsh already installed for $LINUX_USERNAME, skipping"
+if [[ -d "/home/$TARGET_USER/.oh-my-zsh" ]]; then
+  echo "oh-my-zsh already installed for $TARGET_USER, skipping"
   exit 0
 fi
 
-sudo -u "$LINUX_USERNAME" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
-sudo -u "$LINUX_USERNAME" git clone https://github.com/zsh-users/zsh-autosuggestions "/home/$LINUX_USERNAME/.oh-my-zsh/custom/plugins/zsh-autosuggestions"
+sudo -u "$TARGET_USER" sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc
+sudo -u "$TARGET_USER" git clone https://github.com/zsh-users/zsh-autosuggestions "/home/$TARGET_USER/.oh-my-zsh/custom/plugins/zsh-autosuggestions"

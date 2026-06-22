@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-: "${LINUX_USERNAME:?LINUX_USERNAME is required}"
+: "${TARGET_USER:?TARGET_USER is required}"
 
-if [[ -d "/home/$LINUX_USERNAME/.sdkman" ]]; then
-  echo "sdkman already installed for $LINUX_USERNAME, skipping"
+if [[ -d "/home/$TARGET_USER/.sdkman" ]]; then
+  echo "sdkman already installed for $TARGET_USER, skipping"
   exit 0
 fi
 
 curl -fsSL https://get.sdkman.io -o /tmp/sdkman-install.sh
-sudo -u "$LINUX_USERNAME" SDKMAN_DIR="/home/$LINUX_USERNAME/.sdkman" bash /tmp/sdkman-install.sh
+sudo -u "$TARGET_USER" SDKMAN_DIR="/home/$TARGET_USER/.sdkman" bash /tmp/sdkman-install.sh
 rm -f /tmp/sdkman-install.sh
-sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' "/home/$LINUX_USERNAME/.zshrc"
+sed -i '/sdkman\|SDKMAN\|THIS MUST BE AT THE END/d' "/home/$TARGET_USER/.zshrc"
