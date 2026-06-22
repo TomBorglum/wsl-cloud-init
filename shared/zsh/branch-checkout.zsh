@@ -24,3 +24,19 @@ branch-checkout() {
   # Bring it up to date with the default branch (reuses branch-update.zsh).
   branch-update
 }
+_branch-checkout_complete() {
+  # Only complete the single branch argument.
+  (( CURRENT == 2 )) || return
+  local -a refs
+  # Local branches keep their short name (strip refs/heads/); remote branches
+  # drop the remote too (strip refs/remotes/origin/) to match git checkout's
+  # DWIM, which checks out the bare name.
+  refs=(
+    ${(f)"$(git for-each-ref --format='%(refname:strip=2)' refs/heads 2>/dev/null)"}
+    ${(f)"$(git for-each-ref --format='%(refname:strip=3)' refs/remotes 2>/dev/null)"}
+  )
+  # Drop the remote's symbolic HEAD pointer and de-duplicate.
+  refs=(${refs:#HEAD})
+  compadd -- ${(u)refs}
+}
+compdef _branch-checkout_complete branch-checkout
