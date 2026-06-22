@@ -29,8 +29,7 @@ _update-branch() {
   # trusting the local origin/HEAD symref, which is cached at clone time and
   # goes stale if the default branch is changed upstream. Needs connectivity.
   local base
-  base="$(git ls-remote --symref origin HEAD 2>/dev/null \
-          | sed -n 's@^ref: refs/heads/\(.*\)\tHEAD$@\1@p')"
+  base="$(git ls-remote --symref origin HEAD 2>/dev/null | sed -n 's@^ref: refs/heads/\(.*\)\tHEAD$@\1@p')"
   if [ -z "$base" ]; then
     echo "update-branch: could not determine the remote's default branch — is origin reachable?" >&2
     return 1
