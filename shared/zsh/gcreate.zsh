@@ -1,37 +1,35 @@
 gcreate() {
-  if [[ -z "$1" ]]; then
-    echo "Usage: gnew <[owner/]repo-name>" >&2
+  local owner=""
+  if [[ "$1" == "--owner" ]]; then
+    if [[ -z "$2" ]]; then
+      echo "Usage: gcreate [--owner <owner>] <repo>" >&2
+      return 1
+    fi
+    owner="$2"
+    shift 2
+  fi
+  if [[ $# -ne 1 || -z "$1" ]]; then
+    echo "Usage: gcreate [--owner <owner>] <repo>" >&2
     return 1
   fi
-
-  local input="$1"
-  local name owner
-  if [[ "$input" == */* ]]; then
-    owner="${input%%/*}"
-    name="${input##*/}"
-  else
-    name="$input"
-  fi
-
-  local target=~/projects/$name
+  local repo="$1"
+  local spec="$repo"
+  [[ -n "$owner" ]] && spec="$owner/$repo"
+  local dir
+  dir="$(basename "$repo" .git)"
+  local target=~/projects/$dir
+  mkdir -p ~/projects
   if [[ -d "$target" ]]; then
-    echo "Already exists: $name — cd'ing into it"
+    echo "Already exists: $dir — cd'ing into it"
     cd "$target"
     return
   fi
-
-  if [[ -z "$owner" ]]; then
-    owner="$(gh api user -q .login)" || { echo "gh auth error" >&2; return 1; }
-  fi
-
-  mkdir -p "$HOME/projects"
-  cd "$HOME/projects"
-  gh repo create "$owner/$name" --private --clone >/dev/null || return 1
+  cd ~/projects
+  gh repo create "$spec" --private --clone >/dev/null || return 1
   cd "$target"
-  echo "# $name" > README.md
+  echo "# $dir" > README.md
   git add README.md
   git commit -q -m "Initial commit"
   git push -qu origin main
-
-  echo "Created $name at https://github.com/$owner/$name"
+  echo "Created $dir at $(git remote get-url origin)"
 }
