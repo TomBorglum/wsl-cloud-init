@@ -191,9 +191,11 @@ apt-get update -qq
 apt-get install -y -qq <packages>
 ```
 
-For a third-party apt repo, add the keyring and source list, then update:
+For a third-party apt repo, add the keyring and source list, then update. Create
+`/etc/apt/keyrings` first — it is not guaranteed to exist:
 
 ```bash
+install -m 0755 -d /etc/apt/keyrings
 curl -fsSL <repo>/gpg -o /etc/apt/keyrings/<name>.asc
 chmod a+r /etc/apt/keyrings/<name>.asc
 echo "deb [signed-by=/etc/apt/keyrings/<name>.asc] <repo> <suite> <component>" \
@@ -273,9 +275,10 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 CODENAME=$(lsb_release -cs)
+install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
-echo "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list
 apt-get update -qq
 apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin
 # ... daemon config, systemctl enable/start ...
@@ -284,6 +287,10 @@ apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plug
 Notes worth reusing:
 
 - Derive the Ubuntu codename with `lsb_release -cs` rather than hardcoding it.
+- Derive the architecture with `dpkg --print-architecture` rather than hardcoding
+  it (e.g. `amd64`), so the source line is correct on non-x86 hosts too.
+- Create `/etc/apt/keyrings` with `install -m 0755 -d` before writing a keyring
+  into it — the directory is not guaranteed to exist.
 - When apt would auto-start a service that can't run yet, temporarily drop a
   `policy-rc.d` that exits `101` to suppress the start, then remove it. Reuse that
   trick only if a package tries to start a daemon during install.

@@ -11,7 +11,8 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\lib\Wsl.ps1"
 . "$PSScriptRoot\lib\Credentials.ps1"
 
-if ((Test-WslInstanceExists $InstanceName) -and -not $Force) {
+$exists = Test-WslInstanceExists $InstanceName
+if ($exists -and -not $Force) {
   Write-Host "Instance '$InstanceName' already exists. Re-run with -Force to overwrite (this destroys it)."
   exit 1
 }
@@ -72,16 +73,18 @@ $PwshWsl = ConvertTo-WslPath $PwshExe
 # Substitute template
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
-$template = $template `
-    -replace '__TARGET_USER__',            $TargetUser `
-    -replace '__GIT_NAME__',                  $GitName `
-    -replace '__GIT_EMAIL__',                 $GitEmail `
-    -replace '__GIT_CREDENTIAL_MANAGER__',    $CredManagerWsl `
-    -replace '__VSCODE__',                    $VsCodeWsl `
-    -replace '__POWERSHELL__',               $PwshWsl `
-    -replace '__BRANCH__',                    $Branch `
-    -replace '__CONTEXT7_API_KEY__',          $Context7ApiKey `
-    -replace '__GH_TOKEN__',                  $GhToken
+# Use String.Replace (literal) rather than -replace (regex): a secret containing
+# '$' would otherwise be interpreted as a regex group backreference and corrupted.
+$template = $template.
+    Replace('__TARGET_USER__',             $TargetUser).
+    Replace('__GIT_NAME__',                $GitName).
+    Replace('__GIT_EMAIL__',               $GitEmail).
+    Replace('__GIT_CREDENTIAL_MANAGER__',  $CredManagerWsl).
+    Replace('__VSCODE__',                  $VsCodeWsl).
+    Replace('__POWERSHELL__',              $PwshWsl).
+    Replace('__BRANCH__',                  $Branch).
+    Replace('__CONTEXT7_API_KEY__',        $Context7ApiKey).
+    Replace('__GH_TOKEN__',                $GhToken)
 
 $userDataDir = "$PSScriptRoot\..\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
@@ -90,23 +93,25 @@ $template | Set-Content $userDataPath -NoNewline
 Write-Host "Generated user-data for $InstanceName"
 
 # Provision
-Write-Host "[1/5] Unregistering $InstanceName..."
-$result = Start-Process wsl -ArgumentList "--unregister", $InstanceName -Wait -PassThru -WindowStyle Hidden
-if ($result.ExitCode -ne 0 -and $result.ExitCode -ne -1) {
-    Write-Error "Unexpected error unregistering $InstanceName (exit code $($result.ExitCode))"; exit 1
+if ($exists) {
+    Write-Host "Unregistering existing $InstanceName..."
+    $result = Start-Process wsl -ArgumentList "--unregister", $InstanceName -Wait -PassThru -WindowStyle Hidden
+    if ($result.ExitCode -ne 0) {
+        Write-Error "Failed to unregister $InstanceName (exit code $($result.ExitCode))"; exit 1
+    }
 }
 
-Write-Host "[2/5] Copying cloud-init user-data..."
+Write-Host "[1/4] Copying cloud-init user-data..."
 $cloudInitDir = "$env:USERPROFILE\.cloud-init"
 New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
 Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
 
-Write-Host "[3/5] Installing $DistroInstallName as $InstanceName..."
+Write-Host "[2/4] Installing $DistroInstallName as $InstanceName..."
 wsl --install $DistroInstallName --name $InstanceName --no-launch
 if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
-Write-Host "[4/5] Waiting for cloud-init to finish..."
+Write-Host "[3/4] Waiting for cloud-init to finish..."
 wsl -d $InstanceName --user root -- cloud-init status --wait
 
-Write-Host "[5/5] Launching $InstanceName..."
+Write-Host "[4/4] Launching $InstanceName..."
 wsl -d $InstanceName
