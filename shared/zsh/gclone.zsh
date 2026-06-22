@@ -26,6 +26,7 @@ gclone() {
 _gclone_complete() {
   local cache owner
   if [[ ${words[CURRENT-1]} == "--owner" ]]; then
+    [[ -n ${words[CURRENT]} ]] && compadd -S ' ' -- "${words[CURRENT]}"
     return
   fi
   if [[ ${words[2]} == "--owner" ]]; then
