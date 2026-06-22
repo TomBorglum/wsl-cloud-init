@@ -1,14 +1,18 @@
 gclone() {
   local owner=""
   if [[ "$1" == "--owner" ]]; then
+    if [[ -z "$2" ]]; then
+      echo "Usage: gclone [--owner <owner>] <repo>" >&2
+      return 1
+    fi
     owner="$2"
     shift 2
   fi
-  local repo="$1"
-  if [[ -z "$repo" ]]; then
+  if [[ $# -ne 1 || -z "$1" ]]; then
     echo "Usage: gclone [--owner <owner>] <repo>" >&2
     return 1
   fi
+  local repo="$1"
   local spec="$repo"
   [[ -n "$owner" ]] && spec="$owner/$repo"
   local dir
