@@ -34,8 +34,12 @@ _gclone_complete() {
     return
   fi
   if [[ ${words[2]} == "--owner" ]]; then
+    # gclone --owner <owner> <repo> : repo is word 4
+    (( CURRENT == 4 )) || return
     owner="${words[3]}"
   else
+    # gclone <repo> : repo is word 2
+    (( CURRENT == 2 )) || return
     owner="$(gh api user -q .login 2>/dev/null || echo '')"
   fi
   [[ -z "$owner" ]] && return
