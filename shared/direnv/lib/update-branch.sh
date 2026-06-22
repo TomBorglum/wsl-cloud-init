@@ -48,11 +48,13 @@ _update-branch() {
     return 1
   fi
 
-  # Fetch the latest base from origin, then rebase the branch onto it.
-  echo "Fetching origin/$base..."
-  git fetch origin "$base" || return 1
+  # Fetch the latest base from origin, then rebase the branch onto it. Pass -q to
+  # both so the success path stays quiet (no fetch summary, no "up to date" line);
+  # the single "Updated ..." line below is the only success output. Errors and
+  # rebase conflicts still report normally.
+  git fetch -q origin "$base" || return 1
 
-  if ! git rebase "origin/$base"; then
+  if ! git rebase -q "origin/$base"; then
     echo "update-branch: rebase hit conflicts — resolve them, then run 'git rebase --continue' (or 'git rebase --abort')." >&2
     return 1
   fi
