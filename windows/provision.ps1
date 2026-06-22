@@ -23,7 +23,7 @@ function Test-WslInstanceExists([string]$name) {
 }
 
 if ((Test-WslInstanceExists $InstanceName) -and -not $Force) {
-  Write-Error "Instance '$InstanceName' already exists. Re-run with -Force to overwrite (this destroys it)."
+  Write-Host "Instance '$InstanceName' already exists. Re-run with -Force to overwrite (this destroys it)."
   exit 1
 }
 
