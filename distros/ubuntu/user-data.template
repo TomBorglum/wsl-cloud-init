@@ -47,7 +47,7 @@ packages:
   - jq
 runcmd:
   - GIT_TERMINAL_PROMPT=0 git clone --branch __BRANCH__ --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
-  - git -C /opt/wsl-cloud-init sparse-checkout set shared/zsh shared/direnv shared/claude distros/ubuntu/scripts distros/ubuntu/tests
+  - git -C /opt/wsl-cloud-init sparse-checkout set distros/shared distros/ubuntu/scripts distros/ubuntu/tests
   - |
     export TARGET_USER="__TARGET_USER__"
     export VSCODE="__VSCODE__"
