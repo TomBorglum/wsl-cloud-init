@@ -1,15 +1,19 @@
 create-repo() {
+  local usage="Usage: create-repo [--owner <owner>] <repo>"
   local owner=""
-  if [[ "$1" == "--owner" ]]; then
-    if [[ -z "$2" ]]; then
-      echo "Usage: create-repo [--owner <owner>] <repo>" >&2
-      return 1
-    fi
-    owner="$2"
-    shift 2
-  fi
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h|--help) echo "$usage"; return 0 ;;
+      --owner)
+        if [[ -z "${2:-}" ]]; then echo "$usage" >&2; return 1; fi
+        owner="$2"; shift 2 ;;
+      --) shift; break ;;
+      -*) echo "create-repo: unknown option: $1" >&2; echo "$usage" >&2; return 1 ;;
+      *) break ;;
+    esac
+  done
   if [[ $# -ne 1 || -z "$1" ]]; then
-    echo "Usage: create-repo [--owner <owner>] <repo>" >&2
+    echo "$usage" >&2
     return 1
   fi
   local repo="$1"

@@ -1,4 +1,13 @@
 update-branch() {
+  local usage="Usage: update-branch [base-branch]"
+  case "${1:-}" in
+    -h|--help) echo "$usage"; return 0 ;;
+  esac
+  if [[ $# -gt 1 ]]; then
+    echo "$usage" >&2
+    return 1
+  fi
+
   # Must be inside a git work tree.
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "update-branch: not inside a git repository" >&2

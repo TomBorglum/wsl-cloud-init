@@ -1,6 +1,10 @@
 checkout-branch() {
+  local usage="Usage: checkout-branch <branch>"
+  case "${1:-}" in
+    -h|--help) echo "$usage"; return 0 ;;
+  esac
   if [[ $# -ne 1 || -z "$1" ]]; then
-    echo "Usage: checkout-branch <branch>" >&2
+    echo "$usage" >&2
     return 1
   fi
   local branch="$1"
