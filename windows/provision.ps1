@@ -132,29 +132,23 @@ $template | Set-Content $userDataPath -NoNewline
 Write-Host "Generated user-data for $InstanceName"
 
 # Provision
-Write-Host "[1/6] Terminating $InstanceName..."
-$result = Start-Process wsl -ArgumentList "--terminate", $InstanceName -Wait -PassThru -WindowStyle Hidden
-if ($result.ExitCode -ne 0 -and $result.ExitCode -ne -1) {
-    Write-Error "Unexpected error terminating $InstanceName (exit code $($result.ExitCode))"; exit 1
-}
-
-Write-Host "[2/6] Unregistering $InstanceName..."
+Write-Host "[1/5] Unregistering $InstanceName..."
 $result = Start-Process wsl -ArgumentList "--unregister", $InstanceName -Wait -PassThru -WindowStyle Hidden
 if ($result.ExitCode -ne 0 -and $result.ExitCode -ne -1) {
     Write-Error "Unexpected error unregistering $InstanceName (exit code $($result.ExitCode))"; exit 1
 }
 
-Write-Host "[3/6] Copying cloud-init user-data..."
+Write-Host "[2/5] Copying cloud-init user-data..."
 $cloudInitDir = "$env:USERPROFILE\.cloud-init"
 New-Item -ItemType Directory -Force -Path $cloudInitDir | Out-Null
 Copy-Item -Force $userDataPath "$cloudInitDir\$InstanceName.user-data"
 
-Write-Host "[4/6] Installing $DistroInstallName as $InstanceName..."
+Write-Host "[3/5] Installing $DistroInstallName as $InstanceName..."
 wsl --install $DistroInstallName --name $InstanceName --no-launch
 if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
-Write-Host "[5/6] Waiting for cloud-init to finish..."
+Write-Host "[4/5] Waiting for cloud-init to finish..."
 wsl -d $InstanceName --user root -- cloud-init status --wait
 
-Write-Host "[6/6] Launching $InstanceName..."
+Write-Host "[5/5] Launching $InstanceName..."
 wsl -d $InstanceName
