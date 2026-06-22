@@ -1,11 +1,4 @@
 use_update-branch() {
-  # Reuse the installed update-branch implementation (portable shell, so it
-  # sources fine in bash even though it lives among the zsh site-functions).
-  local fn=/usr/local/share/zsh/site-functions/update-branch.zsh
-  if [ ! -r "$fn" ]; then
-    echo "use_update-branch: $fn not found — is wsl-cloud-init installed?" >&2
-    return 0
-  fi
   # Reload this .envrc on a branch switch so the update fires exactly once per
   # switch. HEAD's content changes on checkout but not on rebase (the symref
   # still reads "ref: refs/heads/<branch>"), so this does not loop.
@@ -13,25 +6,57 @@ use_update-branch() {
   headfile="$(git rev-parse --git-path HEAD 2>/dev/null)"
   [ -n "$headfile" ] && [ -f "$headfile" ] && watch_file "$headfile"
 
-  # Snapshot .envrc before the update. update-branch's rebase replays commits and
-  # rewrites the working tree — bumping .envrc's mtime — which would otherwise
-  # make direnv reload and update a second time. We restore the mtime afterward
-  # iff .envrc's content is unchanged (if the rebase really changed .envrc, the
-  # hash differs and we let direnv reload to apply it).
-  local before_mtime before_sha after_sha
-  before_mtime="$(stat -c %Y .envrc 2>/dev/null)"
-  before_sha="$(git hash-object .envrc 2>/dev/null)"
-
-  # shellcheck disable=SC1090
-  . "$fn"
-  # Best-effort: update-branch prints its own diagnostics (dirty tree, detached
+  # Best-effort: _update-branch prints its own diagnostics (dirty tree, detached
   # HEAD, rebase conflict). Never fail the .envrc load over a sync hiccup, so
   # other directives (e.g. use fnm) still apply.
-  update-branch || echo "use_update-branch: branch not updated (see above); continuing" >&2
+  #
+  # If a rebase rewrites .envrc to net-unchanged content it bumps the mtime,
+  # triggering one extra reload — the follow-up rebase is a no-op that touches
+  # nothing, so there is no further reload. We accept that single redundant
+  # reload rather than snapshotting and restoring .envrc's mtime.
+  _update-branch || echo "use_update-branch: branch not updated (see above); continuing" >&2
+}
 
-  after_sha="$(git hash-object .envrc 2>/dev/null)"
-  if [ -n "$before_mtime" ] && [ "$before_sha" = "$after_sha" ]; then
-    touch -d "@$before_mtime" .envrc 2>/dev/null
+# Fetch the remote's default branch and rebase the current branch onto it.
+_update-branch() {
+  # Must be inside a git work tree.
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "update-branch: not inside a git repository" >&2
+    return 1
   fi
-  return 0
+
+  # Base branch: ask the remote for its current default branch rather than
+  # trusting the local origin/HEAD symref, which is cached at clone time and
+  # goes stale if the default branch is changed upstream. Needs connectivity.
+  local base
+  base="$(git ls-remote --symref origin HEAD 2>/dev/null \
+          | sed -n 's@^ref: refs/heads/\(.*\)\tHEAD$@\1@p')"
+  if [ -z "$base" ]; then
+    echo "update-branch: could not determine the remote's default branch — is origin reachable?" >&2
+    return 1
+  fi
+
+  # Resolve the current branch; refuse on detached HEAD.
+  local branch
+  if ! branch="$(git symbolic-ref --quiet --short HEAD)"; then
+    echo "update-branch: detached HEAD — check out a branch first" >&2
+    return 1
+  fi
+
+  # Abort if the working tree has uncommitted changes.
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "update-branch: uncommitted changes — commit or stash before updating" >&2
+    return 1
+  fi
+
+  # Fetch the latest base from origin, then rebase the branch onto it.
+  echo "Fetching origin/$base..."
+  git fetch origin "$base" || return 1
+
+  if ! git rebase "origin/$base"; then
+    echo "update-branch: rebase hit conflicts — resolve them, then run 'git rebase --continue' (or 'git rebase --abort')." >&2
+    return 1
+  fi
+
+  echo "Updated $branch onto origin/$base"
 }
