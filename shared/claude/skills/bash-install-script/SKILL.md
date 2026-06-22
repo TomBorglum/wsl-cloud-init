@@ -26,7 +26,8 @@ The full convention list with annotated examples lives in
    - The tool name.
    - Its official install method: a curl-piped installer, an apt repository + key, a
      plain apt package, or a downloaded binary. Prefer the upstream-recommended
-     method; check the tool's docs (context7 MCP is available) if unsure.
+     method; when you need to confirm how a tool is installed, look it up via the
+     Context7 MCP server (`resolve-library-id` → `query-docs`) rather than guessing.
    - That the method is **self-contained**: it installs only this tool, never a
      shared runtime (node/python/java) as a transient dependency. Prefer a native
      installer that bundles its runtime, or a standalone binary, over an `npm -g` /
