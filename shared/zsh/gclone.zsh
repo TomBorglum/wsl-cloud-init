@@ -48,9 +48,10 @@ _gclone_complete() {
     cachekey="@me"
     listargs=()
   fi
-  cache=~/.cache/gh_repos_${cachekey}
+  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/gclone"
+  cache="$cachedir/repos_${cachekey}"
   if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
-    mkdir -p ~/.cache
+    mkdir -p "$cachedir"
     local display="$owner"
     [[ -z "$display" ]] && display="$(gh api user -q .login 2>/dev/null)"
     zle -R "Fetching repos for ${display:-your account}..."
