@@ -122,7 +122,7 @@ Installed from the cloud-init package list:
 
 - build-essential
 - curl
-- **[gh](https://cli.github.com)** (GitHub CLI)
+- gh (GitHub CLI)
 - git
 - jq
 - unzip
