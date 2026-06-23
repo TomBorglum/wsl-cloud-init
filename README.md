@@ -88,7 +88,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 - `-Branch <name>` — provision from a branch other than `main`.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
-The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance.
+The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
 
 ## What you get
 
@@ -106,7 +106,9 @@ The script renders the cloud-init config, installs Ubuntu, waits for cloud-init 
 
 ## Configuration
 
-<!-- Credential keys, template substitutions, environment variables passed to install scripts. -->
+<!-- Credential keys, template substitutions, environment variables passed to install scripts, and the
+     derived target user ($env:USERNAME lowercased/stripped to [a-z0-9_-]; passwordless sudo, docker group,
+     zsh shell, set as the WSL default user). -->
 
 ## Troubleshooting
 
