@@ -1,14 +1,22 @@
 # wsl-cloud-init
 
-> Provision a fully configured WSL Ubuntu developer environment from a single command.
-
-An opinionated, cloud-init–driven way to set up WSL that just works. One command on
-Windows gives you a running Ubuntu instance with installed and pre-configured tools 
-— so you're productive immediately.
+An opinionated, cloud-init–driven way to provision a fully configured WSL Ubuntu developer environment from a single command — so you're productive immediately.
 
 ## Overview
 
-<!-- What the project is and the problem it solves: Windows -> WSL Ubuntu provisioning via cloud-init. -->
+Setting up a productive WSL environment by hand is slow and easy to get subtly wrong
+— installing tools, configuring the shell, wiring up Git credentials, and bridging
+Windows apps, repeated for every new instance.
+
+wsl-cloud-init replaces that with one repeatable step. It uses cloud-init to
+declaratively build a fresh Ubuntu WSL instance to a known-good state, so every
+instance you create comes out the same.
+
+Provisioning runs from Windows: a PowerShell script reads your Git identity and
+secrets from Windows Credential Manager, renders a cloud-init template, installs the
+distro, and waits for setup to finish. On first boot cloud-init runs a series of
+scripts that build the environment and wire Windows tools - VS Code, Git
+Credential Manager — into the Linux shell.
 
 ## What you get
 
