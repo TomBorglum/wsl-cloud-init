@@ -130,11 +130,54 @@ Installed from the cloud-init package list:
 
 ## Usage
 
-<!-- How-to (syntax + examples) for the commands this repo adds: clone-repo, create-repo
-     (incl. the GitHub-token specifics; link back to Getting Started step 3), update-branch,
-     open (note: also set as $BROWSER, so web links from CLI tools — e.g. gh ... --web —
-     open in the Windows browser), code. Do NOT re-document third-party tools
-     (Docker/fnm/pixi/sdkman). provision.ps1 is documented in Getting Started, not here. -->
+Day-to-day commands the provisioned environment adds. (The bundled third-party tools — Docker, fnm, pixi, SDKMAN — keep their own docs; provisioning lives in [Getting Started](#getting-started).)
+
+### clone-repo
+Clone one of your GitHub repos into `~/projects/<name>` and drop you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
+
+```bash
+clone-repo my-project               # clones <you>/my-project
+clone-repo --owner some-owner service # clones some-owner/service
+```
+
+Cloning a private repo uses the GitHub token's **Contents (read)** permission — see [Getting Started](#3-create-two-tokens).
+
+### create-repo
+Create a new **private** GitHub repo, clone it to `~/projects/<name>`, seed a README and initial commit, and `cd` in.
+
+```bash
+create-repo my-new-project
+create-repo --owner some-owner service
+```
+
+Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
+
+### update-branch
+Rebase the current branch onto the remote's default branch (e.g. `main`). Run it manually, or let direnv run it automatically whenever you switch branches inside a project.
+
+```bash
+update-branch
+```
+
+It refuses on a dirty working tree or detached HEAD, and stops on rebase conflicts so you can resolve them.
+
+### open
+Open a file or URL with its default Windows application.
+
+```bash
+open report.pdf
+open https://example.com
+```
+
+`open` is also your `$BROWSER`, so web links from command-line tools (e.g. `gh repo view --web`) open in your Windows browser.
+
+### code
+Open a file or folder in your Windows VS Code (via the WSL remote).
+
+```bash
+code .            # open the current folder
+code src/app.ts   # open a file
+```
 
 ## Configuration
 
