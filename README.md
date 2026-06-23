@@ -23,7 +23,7 @@ Credential Manager — into the Linux shell.
 
 Everything is on the Windows side — the Ubuntu environment is built for you.
 
-- **Windows with WSL 2**, recent enough to support cloud-init (run `wsl --update` to be sure).
+- **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
 - **Git for Windows** — includes Git Credential Manager, which the provisioned instance reuses for authentication.
 - **Visual Studio Code** with the `code` command on your `PATH`.
 
