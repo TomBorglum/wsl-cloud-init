@@ -53,7 +53,10 @@ git config --global user.email "you@example.com"
 
 ### 3. Create two tokens
 
-- **GitHub token** — a classic PAT with the `repo` scope; used to sign the instance's `gh` CLI in (add `read:org` if you work with org repos).
+- **GitHub token** — used by the installed `gh` CLI. A **fine-grained token** needs these repository permissions:
+  - **Administration** — read and write (create repositories)
+  - **Contents** — read and write (clone and push)
+  - **Metadata** — read (required)
 - **Context7 API key** — from your Context7 account; used by Claude Code's Context7 MCP.
 
 ### 4. Store the tokens in Windows Credential Manager
