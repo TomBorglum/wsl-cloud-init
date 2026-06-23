@@ -92,17 +92,36 @@ The script renders the cloud-init config, installs Ubuntu, waits for cloud-init 
 
 ## What you get
 
-<!-- Inventory only (what's in the box), one line each, no syntax: Docker, version managers
-     (fnm / pixi / sdkman), Zsh + Oh My Zsh, Claude Code + Context7 MCP, Windows interop
-     (code, open, Git Credential Manager), and the shell helpers named (clone-repo,
-     create-repo, update-branch). How-to lives in Usage. -->
+Every provisioned instance comes ready with:
+
+### Shell
+Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus the git, docker, z, and sudo plugins — and **[direnv](https://direnv.net)** for per-directory environment loading.
+
+### Language runtimes
+**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project.
+
+### Docker
+**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup.
+
+### Claude Code
+The **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
+
+### Windows interop
+Commands that reach from the Linux shell back into Windows: **`code`** opens files and folders in your Windows VS Code, and **`open`** launches a file or URL with its default Windows app. Git authenticates through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing your existing Windows sign-in.
+
+### Shell helpers
+`clone-repo`, `create-repo`, and `update-branch` streamline everyday Git work — see [Usage](#usage).
+
+### Core CLI tools
+The essentials are preinstalled too: git, **[gh](https://cli.github.com)** (GitHub CLI), jq, curl, build-essential, and zip/unzip.
 
 ## Usage
 
 <!-- How-to (syntax + examples) for the commands this repo adds: clone-repo, create-repo
      (incl. the GitHub-token specifics; link back to Getting Started step 3), update-branch,
-     open, code. Do NOT re-document third-party tools (Docker/fnm/pixi/sdkman). provision.ps1
-     is documented in Getting Started, not here. -->
+     open (note: also set as $BROWSER, so web links from CLI tools — e.g. gh ... --web —
+     open in the Windows browser), code. Do NOT re-document third-party tools
+     (Docker/fnm/pixi/sdkman). provision.ps1 is documented in Getting Started, not here. -->
 
 ## Configuration
 
