@@ -107,13 +107,26 @@ Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — auto
 The **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
 
 ### Windows interop
-Commands that reach from the Linux shell back into Windows: **`code`** opens files and folders in your Windows VS Code, and **`open`** launches a file or URL with its default Windows app. Git authenticates through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing your existing Windows sign-in.
+These commands reach from the Linux shell back into Windows:
+
+- **`code`** — opens files and folders in your Windows VS Code.
+- **`open`** — launches a file or URL with its default Windows app.
+
+Git itself authenticates through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing your existing Windows sign-in.
 
 ### Shell helpers
 `clone-repo`, `create-repo`, and `update-branch` streamline everyday Git work — see [Usage](#usage).
 
-### Core CLI tools
-The essentials are preinstalled too: git, **[gh](https://cli.github.com)** (GitHub CLI), jq, curl, build-essential, and zip/unzip.
+### Base packages
+Installed from the cloud-init package list:
+
+- build-essential
+- curl
+- **[gh](https://cli.github.com)** (GitHub CLI)
+- git
+- jq
+- unzip
+- zip
 
 ## Usage
 
