@@ -98,7 +98,7 @@ Every provisioned instance comes ready with:
 Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus the git, docker, z, and sudo plugins — and **[direnv](https://direnv.net)** for per-directory environment loading.
 
 ### Language runtimes
-**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project.
+**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project (see [Usage](#per-project-environments-direnv)).
 
 ### Docker
 **[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup.
@@ -130,13 +130,33 @@ Installed from the cloud-init package list:
 
 ## Usage
 
-Day-to-day commands the provisioned environment adds. (The bundled third-party tools — Docker, fnm, pixi, SDKMAN — keep their own docs; provisioning lives in [Getting Started](#getting-started).)
+Day-to-day commands and per-project setup the provisioned environment adds. The underlying tools (Docker, Node, Python, Java) keep their own docs; provisioning lives in [Getting Started](#getting-started).
+
+### Per-project environments (direnv)
+fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs through direnv (already hooked into your shell). Add an `.envrc` to the project root with the directives you need:
+
+```bash
+# .envrc
+use fnm node 22.14.0     # Node via fnm
+use pixi                 # Python environment from pixi.toml (created if missing)
+use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
+```
+
+then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and installs the requested versions automatically on first use. Versions must be fully qualified — an exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
+
+#### Auto-update on branch switch
+The `use update-branch` directive runs [update-branch](#update-branch) automatically, rebasing the current branch onto the remote default whenever you switch branches in the project:
+
+```bash
+# .envrc
+use update-branch
+```
 
 ### clone-repo
 Clone one of your GitHub repos into `~/projects/<name>` and drop you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
 
 ```bash
-clone-repo my-project               # clones <you>/my-project
+clone-repo my-project                 # clones <you>/my-project
 clone-repo --owner some-owner service # clones some-owner/service
 ```
 
@@ -146,8 +166,8 @@ Cloning a private repo uses the GitHub token's **Contents (read)** permission �
 Create a new **private** GitHub repo, clone it to `~/projects/<name>`, seed a README and initial commit, and `cd` in.
 
 ```bash
-create-repo my-new-project
-create-repo --owner some-owner service
+create-repo my-new-project             # creates <you>/my-new-project
+create-repo --owner some-owner service # creates some-owner/service
 ```
 
 Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
