@@ -92,12 +92,17 @@ The script renders the cloud-init config, installs Ubuntu, waits for cloud-init 
 
 ## What you get
 
-<!-- The provisioned environment: Docker, fnm / pixi / sdkman, Oh My Zsh, Claude Code + Context7 MCP,
-     Windows interop (code, open, Git Credential Manager), shell helpers (clone-repo, create-repo, update-branch). -->
+<!-- Inventory only (what's in the box), one line each, no syntax: Docker, version managers
+     (fnm / pixi / sdkman), Zsh + Oh My Zsh, Claude Code + Context7 MCP, Windows interop
+     (code, open, Git Credential Manager), and the shell helpers named (clone-repo,
+     create-repo, update-branch). How-to lives in Usage. -->
 
 ## Usage
 
-<!-- Running provision.ps1 (parameters, -Force, -Branch) and day-to-day commands after provisioning. -->
+<!-- How-to (syntax + examples) for the commands this repo adds: clone-repo, create-repo
+     (incl. the GitHub-token specifics; link back to Getting Started step 3), update-branch,
+     open, code. Do NOT re-document third-party tools (Docker/fnm/pixi/sdkman). provision.ps1
+     is documented in Getting Started, not here. -->
 
 ## Configuration
 
