@@ -1,6 +1,10 @@
 # wsl-cloud-init
 
-<!-- One-line tagline: what this project is. -->
+> Provision a fully configured WSL Ubuntu developer environment from a single command.
+
+An opinionated, cloud-init–driven way to set up WSL that just works. One command on
+Windows gives you a running Ubuntu instance with installed and pre-configured tools 
+— so you're productive immediately.
 
 ## Overview
 
