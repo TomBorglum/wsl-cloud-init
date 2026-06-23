@@ -9,13 +9,14 @@ Setting up a productive WSL environment by hand is slow and easy to get subtly w
 Windows apps, repeated for every new instance.
 
 wsl-cloud-init replaces that with one repeatable step. It uses cloud-init to
-declaratively build a fresh Ubuntu WSL instance to a known-good state, so every
-instance you create comes out the same.
+declaratively build a fresh WSL Ubuntu instance with a curated, opinionated set of
+tools and configuration, so every instance you create comes out the same — fully
+configured and ready to work in immediately.
 
 Provisioning runs from Windows: a PowerShell script reads your Git identity and
 secrets from Windows Credential Manager, renders a cloud-init template, installs the
 distro, and waits for setup to finish. On first boot cloud-init runs a series of
-scripts that build the environment and wire Windows tools - VS Code, Git
+scripts that build the environment and wire Windows tools — VS Code, Git
 Credential Manager — into the Linux shell.
 
 ## What you get
