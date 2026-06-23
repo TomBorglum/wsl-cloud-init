@@ -24,8 +24,8 @@ Credential Manager — into the Linux shell.
 Everything is on the Windows side — the Ubuntu environment is built for you.
 
 - **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
-- **Git for Windows** — includes Git Credential Manager, which the provisioned instance reuses for authentication.
-- **Visual Studio Code** with the `code` command on your `PATH`.
+- **Git for Windows** — includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication.
+- **VS Code** with the `code` command on your `PATH`.
 
 Accounts, tokens, and Git identity are set up in [Getting Started](#getting-started).
 
@@ -53,11 +53,11 @@ git config --global user.email "you@example.com"
 
 ### 3. Create two tokens
 
-- **GitHub token** — used by the installed `gh` CLI. A **fine-grained token** needs these repository permissions:
+- **GitHub token** — used by the installed [`gh`](https://cli.github.com) CLI. A **fine-grained token** needs these repository permissions:
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
-- **Context7 API key** — from your Context7 account; used by Claude Code's Context7 MCP.
+- **Context7 API key** — from your [Context7](https://context7.com) account; used by Claude Code's Context7 MCP.
 
 ### 4. Store the tokens in Windows Credential Manager
 
