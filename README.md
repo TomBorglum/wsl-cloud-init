@@ -19,11 +19,6 @@ distro, and waits for setup to finish. On first boot cloud-init runs a series of
 scripts that build the environment and wire Windows tools — VS Code, Git
 Credential Manager — into the Linux shell.
 
-## What you get
-
-<!-- The provisioned environment: Docker, fnm / pixi / sdkman, Oh My Zsh, Claude Code + Context7 MCP,
-     Windows interop (code, open, Git Credential Manager), shell helpers (clone-repo, create-repo, update-branch). -->
-
 ## Prerequisites
 
 <!-- WSL 2, PowerShell, Git for Windows, VS Code, an Ubuntu WSL template, secrets in Windows Credential Manager. -->
@@ -31,6 +26,11 @@ Credential Manager — into the Linux shell.
 ## Getting Started
 
 <!-- Step-by-step: store credentials -> set Windows git identity -> run provision.ps1 -> first launch. -->
+
+## What you get
+
+<!-- The provisioned environment: Docker, fnm / pixi / sdkman, Oh My Zsh, Claude Code + Context7 MCP,
+     Windows interop (code, open, Git Credential Manager), shell helpers (clone-repo, create-repo, update-branch). -->
 
 ## Usage
 
