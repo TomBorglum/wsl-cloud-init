@@ -31,7 +31,61 @@ Accounts, tokens, and Git identity are set up in [Getting Started](#getting-star
 
 ## Getting Started
 
-<!-- Step-by-step: store credentials -> set Windows git identity -> run provision.ps1 -> first launch. -->
+All steps run on **Windows**.
+
+### 1. Clone this repository
+
+You run the provisioning script from it.
+
+```powershell
+git clone https://github.com/TomBorglum/wsl-cloud-init.git
+cd wsl-cloud-init
+```
+
+### 2. Set your Git identity
+
+Provisioning copies these into the new instance.
+
+```powershell
+git config --global user.name  "Your Name"
+git config --global user.email "you@example.com"
+```
+
+### 3. Create two tokens
+
+- **GitHub token** — a classic PAT with the `repo` scope; used to sign the instance's `gh` CLI in (add `read:org` if you work with org repos).
+- **Context7 API key** — from your Context7 account; used by Claude Code's Context7 MCP.
+
+### 4. Store the tokens in Windows Credential Manager
+
+Both are stored as **generic credentials** with username `wsl-cloud-init`. Use either option.
+
+#### Option A — cmdkey (PowerShell)
+
+```powershell
+cmdkey /generic:wsl-cloud-init:GH_TOKEN         /user:wsl-cloud-init /pass:<github-token>
+cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key>
+```
+
+#### Option B — Credential Manager GUI
+
+Control Panel → **Credential Manager** → **Windows Credentials** → **Add a generic credential**, once per secret:
+
+| Internet or network address | User name | Password |
+| --- | --- | --- |
+| `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token |
+| `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key |
+
+### 5. Provision an instance
+
+```powershell
+.\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu -InstanceName dev
+```
+
+- `-Branch <name>` — provision from a branch other than `main`.
+- `-Force` — replace an existing instance of the same name (destroys it first).
+
+The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance.
 
 ## What you get
 
