@@ -83,9 +83,13 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 
 ### 5. Provision an instance
 
-```powershell
-.\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu -InstanceName dev
+From **Command Prompt**:
+
+```bat
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu -InstanceName dev
 ```
+
+`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
 - `-Branch <name>` — provision from a branch other than `main`.
 - `-Force` — replace an existing instance of the same name (destroys it first).
@@ -108,7 +112,7 @@ Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — auto
 ### Claude Code
 The **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
 
-### Windows interop
+### WSL interop
 These commands reach from the Linux shell back into Windows:
 
 - **`code`** — opens files and folders in your Windows VS Code.
@@ -239,4 +243,11 @@ The Linux user is derived from your Windows username (`$env:USERNAME`), lowercas
 
 ## Troubleshooting
 
-<!-- Common issues: instance already exists, cloud-init didn't finish, WSL binfmt interop fix, credential retrieval failures. -->
+**Provisioning failed.** Inspect the logs inside the instance; if the cause was transient (e.g. a network blip), re-provision with `-Force`.
+
+```bash
+less /var/log/cloud-init-output.log   # install-script output
+less /var/log/cloud-init.log          # cloud-init's own log
+```
+
+**WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec format error". The instance will self-heal within ~10 seconds; wait and try again.
