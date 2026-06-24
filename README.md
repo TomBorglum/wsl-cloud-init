@@ -95,10 +95,10 @@ The script renders the cloud-init config, installs Ubuntu, waits for cloud-init 
 Every provisioned instance comes ready with:
 
 ### Shell
-Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus the git, docker, z, and sudo plugins — and **[direnv](https://direnv.net)** for per-directory environment loading.
+Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for per-directory environment loading.
 
 ### Language runtimes
-**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project (see [Usage](#per-project-environments-direnv)).
+**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project (see [Usage](#direnv)).
 
 ### Docker
 **[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup.
@@ -115,24 +115,26 @@ These commands reach from the Linux shell back into Windows:
 Git itself authenticates through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing your existing Windows sign-in.
 
 ### Shell helpers
-`clone-repo`, `create-repo`, and `update-branch` streamline everyday Git work — see [Usage](#usage).
+`clone-repo`, `create-repo`, and `update-branch` streamline everyday Git work, and `pj` jumps between checkouts under `~/projects` — see [Usage](#usage).
 
 ### Base packages
 Installed from the cloud-init package list:
 
 - build-essential
 - curl
+- direnv
 - gh (GitHub CLI)
 - git
 - jq
 - unzip
 - zip
+- zsh
 
 ## Usage
 
 Day-to-day commands and per-project setup the provisioned environment adds. The underlying tools (Docker, Node, Python, Java) keep their own docs; provisioning lives in [Getting Started](#getting-started).
 
-### Per-project environments (direnv)
+### direnv
 fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs through direnv (already hooked into your shell). Add an `.envrc` to the project root with the directives you need:
 
 ```bash
@@ -171,6 +173,13 @@ create-repo --owner some-owner service # creates some-owner/service
 ```
 
 Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
+
+### pj
+Jump straight into a checked-out repository under `~/projects` without typing the full path — supports Tab-completion.
+
+```bash
+pj my-project   # cd into ~/projects/my-project
+```
 
 ### update-branch
 Rebase the current branch onto the remote's default branch (e.g. `main`). Run it manually, or let direnv run it automatically whenever you switch branches inside a project.
