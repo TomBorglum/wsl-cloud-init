@@ -92,7 +92,6 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
-- `-Branch <name>` — provision from a branch other than `main`.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
@@ -226,7 +225,6 @@ What you can set when provisioning, and how the instance is derived.
 - `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
 - `-InstanceName` (required) — name for the new WSL instance.
-- `-Branch` — branch of this repo cloud-init pulls its setup scripts from (default `main`).
 - `-Force` — unregister an existing instance of the same name first (this destroys it).
 
 ### Credentials

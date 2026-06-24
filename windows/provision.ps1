@@ -2,7 +2,6 @@ param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
   [Parameter(Mandatory)][string]$InstanceName,
-  [string]$Branch = "main",
   [switch]$Force
 )
 
@@ -65,6 +64,25 @@ $GitEmail = git config --global user.email
 if (-not $GitName)  { Write-Host "git config --global user.name is not set"; exit 1 }
 if (-not $GitEmail) { Write-Host "git config --global user.email is not set"; exit 1 }
 
+# The distro provisions the exact commit this checkout is on. Require a clean tree that is not
+# ahead of origin, so cloud-init can reproduce the commit by cloning it from GitHub.
+$RepoRoot = Split-Path $PSScriptRoot -Parent
+$Branch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
+$CommitSha = (git -C $RepoRoot rev-parse HEAD).Trim()
+
+if (git -C $RepoRoot status --porcelain) {
+  Write-Host "Working tree has uncommitted changes. Commit or stash them before provisioning."
+  exit 1
+}
+
+git -C $RepoRoot fetch origin $Branch --quiet 2>$null
+$ahead = git -C $RepoRoot rev-list --count "origin/$Branch..HEAD" 2>$null
+if ($LASTEXITCODE -ne 0 -or [int]$ahead -gt 0) {
+  Write-Host "Branch '$Branch' is ahead of origin (or not pushed). Push it first: git push origin $Branch"
+  exit 1
+}
+Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 8))"
+
 # Derive Git credential manager path from the git.exe location
 $GitExe = (Get-Command git).Source
 $GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
@@ -94,7 +112,7 @@ $template = $template.
     Replace('__GIT_CREDENTIAL_MANAGER__',  $CredManagerWsl).
     Replace('__VSCODE__',                  $VsCodeWsl).
     Replace('__POWERSHELL__',              $PwshWsl).
-    Replace('__BRANCH__',                  $Branch).
+    Replace('__COMMIT__',                  $CommitSha).
     Replace('__CONTEXT7_API_KEY__',        $Context7ApiKey).
     Replace('__GH_TOKEN__',                $GhToken)
 
