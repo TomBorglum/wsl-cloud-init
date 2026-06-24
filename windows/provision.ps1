@@ -15,7 +15,7 @@ $SupportedDistros = @('Ubuntu-24.04', 'Ubuntu-22.04')
 if ($SupportedDistros -notcontains $DistroInstallName) {
   Write-Host @"
 Unsupported -DistroInstallName '$DistroInstallName'.
-Only pinned LTS versions are supported. Supported: $($SupportedDistros -join ', ')
+Only these pinned LTS versions are supported: $($SupportedDistros -join ', ')
 "@
   exit 1
 }
