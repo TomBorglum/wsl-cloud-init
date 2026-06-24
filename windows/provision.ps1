@@ -78,7 +78,7 @@ if (git -C $RepoRoot status --porcelain) {
 git -C $RepoRoot fetch origin $Branch --quiet 2>$null
 $ahead = git -C $RepoRoot rev-list --count "origin/$Branch..HEAD" 2>$null
 if ($LASTEXITCODE -ne 0 -or [int]$ahead -gt 0) {
-  Write-Host "Branch '$Branch' is ahead of origin (or not pushed). Push it first: git push origin $Branch"
+  Write-Host "Branch '$Branch' is ahead of origin. Push it before before provisioning."
   exit 1
 }
 Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 8))"
