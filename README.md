@@ -55,7 +55,7 @@ git config --global user.email "you@example.com"
 
 Provisioning needs two secrets — see [Configuration](#credentials) for what each is used for.
 
-- **GitHub token** — a **fine-grained token** with these repository permissions:
+- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions:
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
