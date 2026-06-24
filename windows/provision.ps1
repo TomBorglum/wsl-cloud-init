@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 # (e.g. Docker has no apt repo for its codename). Add new names here as they are validated.
 $SupportedDistros = @('Ubuntu-24.04', 'Ubuntu-22.04')
 if ($SupportedDistros -notcontains $DistroInstallName) {
-  Write-Error @"
+  Write-Host @"
 Unsupported -DistroInstallName '$DistroInstallName'.
 Only pinned LTS versions are supported. Supported: $($SupportedDistros -join ', ')
 "@
@@ -57,29 +57,29 @@ Add it via: Control Panel -> Credential Manager -> Windows Credentials -> Add a 
 
 $WindowsUsername = $env:USERNAME
 $TargetUser = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
-if (-not $TargetUser) { Write-Error "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
+if (-not $TargetUser) { Write-Host "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
 # Read Git identity from Windows Git installation
 $GitName  = git config --global user.name
 $GitEmail = git config --global user.email
-if (-not $GitName)  { Write-Error "git config --global user.name is not set"; exit 1 }
-if (-not $GitEmail) { Write-Error "git config --global user.email is not set"; exit 1 }
+if (-not $GitName)  { Write-Host "git config --global user.name is not set"; exit 1 }
+if (-not $GitEmail) { Write-Host "git config --global user.email is not set"; exit 1 }
 
 # Derive Git credential manager path from the git.exe location
 $GitExe = (Get-Command git).Source
 $GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
 $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
-if (-not (Test-Path $CredManager)) { Write-Error "git-credential-manager.exe not found at $CredManager"; exit 1 }
+if (-not (Test-Path $CredManager)) { Write-Host "git-credential-manager.exe not found at $CredManager"; exit 1 }
 $CredManagerWsl = ConvertTo-WslPath $CredManager
 
 # Derive VS Code path from the installed executable (resolve the bash wrapper alongside code.cmd)
 $VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
-if (-not (Test-Path $VsCodeShell)) { Write-Error "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
+if (-not (Test-Path $VsCodeShell)) { Write-Host "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
 $VsCodeWsl = ConvertTo-WslPath $VsCodeShell
 
 # Derive PowerShell path from the installed executable
 $PwshExe = (Get-Command powershell).Source
-if (-not (Test-Path $PwshExe)) { Write-Error "powershell.exe not found at $PwshExe"; exit 1 }
+if (-not (Test-Path $PwshExe)) { Write-Host "powershell.exe not found at $PwshExe"; exit 1 }
 $PwshWsl = ConvertTo-WslPath $PwshExe
 
 # Substitute template
