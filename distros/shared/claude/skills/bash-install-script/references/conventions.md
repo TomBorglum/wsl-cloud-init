@@ -274,7 +274,7 @@ if command -v docker >/dev/null 2>&1; then
   exit 0
 fi
 
-CODENAME=$(lsb_release -cs)
+CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
@@ -286,7 +286,10 @@ apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plug
 
 Notes worth reusing:
 
-- Derive the Ubuntu codename with `lsb_release -cs` rather than hardcoding it.
+- Derive the Ubuntu codename by sourcing `/etc/os-release`
+  (`$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")`) rather than
+  hardcoding it or relying on `lsb_release -cs` — `lsb_release` is not installed on newer
+  minimal Ubuntu images (e.g. 26.04), but `/etc/os-release` is always present.
 - Derive the architecture with `dpkg --print-architecture` rather than hardcoding
   it (e.g. `amd64`), so the source line is correct on non-x86 hosts too.
 - Create `/etc/apt/keyrings` with `install -m 0755 -d` before writing a keyring

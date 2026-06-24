@@ -6,7 +6,11 @@ if command -v docker >/dev/null 2>&1; then
   exit 0
 fi
 
-CODENAME=$(lsb_release -cs)
+CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+if [ -z "$CODENAME" ]; then
+  echo "Could not determine Ubuntu codename from /etc/os-release" >&2
+  exit 1
+fi
 install -m 0755 -d /etc/apt/keyrings
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc

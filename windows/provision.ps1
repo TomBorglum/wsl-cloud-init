@@ -10,7 +10,7 @@ $ErrorActionPreference = "Stop"
 # Only pinned LTS distro names are supported. The bare "Ubuntu" name installs whatever
 # Ubuntu the Store currently ships, which the in-distro setup does not support
 # (e.g. Docker has no apt repo for its codename). Add new names here as they are validated.
-$SupportedDistros = @('Ubuntu-24.04', 'Ubuntu-22.04')
+$SupportedDistros = @('Ubuntu-26.04', 'Ubuntu-24.04', 'Ubuntu-22.04')
 if ($SupportedDistros -notcontains $DistroInstallName) {
   Write-Host @"
 Unsupported -DistroInstallName '$DistroInstallName'.
