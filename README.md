@@ -86,11 +86,12 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 From **Command Prompt**:
 
 ```bat
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu -InstanceName dev
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-24.04 -InstanceName dev
 ```
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
+- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
 - `-Branch <name>` — provision from a branch other than `main`.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
