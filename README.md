@@ -53,11 +53,13 @@ git config --global user.email "you@example.com"
 
 ### 3. Create two tokens
 
-- **GitHub token** — used by the installed [`gh`](https://cli.github.com) CLI. A **fine-grained token** needs these repository permissions:
+Provisioning needs two secrets — see [Configuration](#credentials) for what each is used for.
+
+- **GitHub token** — a **fine-grained token** with these repository permissions:
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
-- **Context7 API key** — from your [Context7](https://context7.com) account; used by Claude Code's Context7 MCP.
+- **Context7 API key** — from your [Context7](https://context7.com) account.
 
 ### 4. Store the tokens in Windows Credential Manager
 
@@ -132,7 +134,7 @@ Installed from the cloud-init package list:
 
 ## Usage
 
-Day-to-day commands and per-project setup the provisioned environment adds. The underlying tools (Docker, Node, Python, Java) keep their own docs; provisioning lives in [Getting Started](#getting-started).
+Day-to-day commands and per-project setup the provisioned environment adds. The underlying tools (Docker, Node, Python, Java) keep their own docs; provisioning lives in Getting Started.
 
 ### direnv
 fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs through direnv (already hooked into your shell). Add an `.envrc` to the project root with the directives you need:
@@ -162,7 +164,7 @@ clone-repo my-project                 # clones <you>/my-project
 clone-repo --owner some-owner service # clones some-owner/service
 ```
 
-Cloning a private repo uses the GitHub token's **Contents (read)** permission — see [Getting Started](#3-create-two-tokens).
+Cloning a private repo uses the GitHub token's **Contents (read)** permission.
 
 ### create-repo
 Create a new **private** GitHub repo, clone it to `~/projects/<name>`, seed a README and initial commit, and `cd` in.
@@ -210,9 +212,32 @@ code src/app.ts   # open a file
 
 ## Configuration
 
-<!-- Credential keys, template substitutions, environment variables passed to install scripts, and the
-     derived target user ($env:USERNAME lowercased/stripped to [a-z0-9_-]; passwordless sudo, docker group,
-     zsh shell, set as the WSL default user). -->
+What you can set when provisioning, and how the instance is derived.
+
+### Provisioning parameters
+
+`windows/provision.ps1` takes:
+
+- `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
+- `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
+- `-InstanceName` (required) — name for the new WSL instance.
+- `-Branch` — branch of this repo cloud-init pulls its setup scripts from (default `main`).
+- `-Force` — unregister an existing instance of the same name first (this destroys it).
+
+### Credentials
+
+Provisioning reads two secrets from Windows Credential Manager:
+
+| Credential | Used for |
+| --- | --- |
+| `wsl-cloud-init:GH_TOKEN` | [`gh`](https://cli.github.com) CLI authentication (`gh auth login --with-token`) |
+| `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP |
+
+### Target user
+
+The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped to `[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker` group, `zsh` as its shell, and is set as the WSL **default user**.
+
+_Template substitution tokens (`__TARGET_USER__`, `__GH_TOKEN__`, …) and the environment variables exported to the install scripts are defined in [`distros/ubuntu/user-data.template`](distros/ubuntu/user-data.template)._
 
 ## Troubleshooting
 
