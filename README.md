@@ -125,7 +125,7 @@ Installed from the cloud-init package list:
 - build-essential
 - curl
 - direnv
-- gh (GitHub CLI)
+- gh
 - git
 - jq
 - unzip
@@ -134,7 +134,7 @@ Installed from the cloud-init package list:
 
 ## Usage
 
-Day-to-day commands and per-project setup the provisioned environment adds. The underlying tools (Docker, Node, Python, Java) keep their own docs; provisioning lives in Getting Started.
+The following day-to-day commands and per-project setup are included in the provisioned instance.
 
 ### direnv
 fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs through direnv (already hooked into your shell). Add an `.envrc` to the project root with the directives you need:
@@ -177,7 +177,7 @@ create-repo --owner some-owner service # creates some-owner/service
 Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
 
 ### pj
-Jump straight into a checked-out repository under `~/projects` without typing the full path — supports Tab-completion.
+Jump straight into a checked-out project under `~/projects` without typing the full path — supports Tab-completion.
 
 ```bash
 pj my-project   # cd into ~/projects/my-project
@@ -236,8 +236,6 @@ Provisioning reads two secrets from Windows Credential Manager:
 ### Target user
 
 The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped to `[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker` group, `zsh` as its shell, and is set as the WSL **default user**.
-
-_Template substitution tokens (`__TARGET_USER__`, `__GH_TOKEN__`, …) and the environment variables exported to the install scripts are defined in [`distros/ubuntu/user-data.template`](distros/ubuntu/user-data.template)._
 
 ## Troubleshooting
 
