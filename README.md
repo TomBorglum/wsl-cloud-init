@@ -86,7 +86,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 From **Command Prompt**:
 
 ```bat
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-24.04 -InstanceName dev
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev
 ```
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
