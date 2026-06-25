@@ -3,14 +3,6 @@ set -euo pipefail
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
-# Shared zsh functions (system-wide)
-if ls /usr/local/share/zsh/site-functions/*.zsh >/dev/null 2>&1; then
-  echo "shared zsh functions already installed, skipping"
-else
-  mkdir -p /usr/local/share/zsh/site-functions
-  install -m 644 /opt/wsl-cloud-init/distros/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/
-fi
-
 # direnv libs (per-user)
 if ls "/home/$TARGET_USER/.config/direnv/lib/"*.sh >/dev/null 2>&1; then
   echo "direnv libs already installed for $TARGET_USER, skipping"
