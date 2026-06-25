@@ -1,5 +1,9 @@
 #cloud-config
 locale: en_US.UTF-8
+# WSL manages its own ext4.vhdx sizing, so the rootfs resize is a no-op here. It also
+# fails on older LTS images (22.04's resize2fs 1.46.5 rejects newer ext4 features),
+# which flips cloud-init status to error. Disable the module.
+resize_rootfs: false
 users:
   - name: __TARGET_USER__
     groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
