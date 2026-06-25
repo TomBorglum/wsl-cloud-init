@@ -253,4 +253,4 @@ less /var/log/cloud-init.log          # cloud-init's own log
 
 **WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec format error". The instance will self-heal within ~10 seconds; wait and try again.
 
-**The systemd user session fails to start** — on launch, the user manager fails with `Device or resource busy` (EBUSY). All WSL2 instances share one kernel, and the first systemd to boot sets up the shared cgroup state — a newer systemd's layout works for older ones, but not vice versa. Boot your newest-systemd instance first; older ones then coexist fine.
+**The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`. It's intermittent and the instance still works. To clear it, run `wsl --shutdown` and relaunch the instance. To check whether an instance is affected, run `systemctl is-active user@1000.service` — it prints `failed` when the session didn't start, or `active` when it's running normally.
