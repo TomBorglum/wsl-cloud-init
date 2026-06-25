@@ -107,7 +107,9 @@ Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — auto
 **[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project (see [Usage](#direnv)).
 
 ### Docker
-**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup.
+**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup
+
+**[lazydocker](https://github.com/jesseduffield/lazydocker)**, a terminal UI for managing containers, images, and volumes.
 
 ### Claude Code
 The **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
