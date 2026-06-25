@@ -124,38 +124,6 @@ For per-user installs a path or directory test (`-x <binary>`, `-d <install-dir>
 is more robust than `sudo -u "$TARGET_USER" command -v <tool>`, since it doesn't
 depend on the user's login PATH being set up.
 
-### Multiple tools in one script (the exception)
-
-One tool per script is the strong default. In the odd case a script installs more
-than one tool, **each tool gets its own guard** — and that guard must skip only
-that tool, never `exit 0`. An early `exit 0` would abort the rest of the script,
-so any later tool would silently never install once the first one is present (the
-same reasoning as the `for script ... bash "$script"` loop above, but within a
-single file).
-
-Use an `if/else` per tool instead: guard hit → echo and skip just this tool; guard
-miss → install it; then fall through to the next tool's block.
-
-```bash
-# Tool A — skip only this block when already present, then continue to Tool B.
-if command -v <tool-a> >/dev/null 2>&1; then
-  echo "<tool-a> already installed, skipping"
-else
-  # ... install tool A ...
-fi
-
-# Tool B — independently guarded; runs regardless of tool A's outcome.
-if [[ -x "/home/$TARGET_USER/.local/bin/<tool-b>" ]]; then
-  echo "<tool-b> already installed for $TARGET_USER, skipping"
-else
-  # ... install tool B ...
-fi
-```
-
-Every other convention still applies to each tool independently: self-contained
-install (no transient runtime), correct execution context, and a detection method
-matching how that tool was installed.
-
 ## Execution context
 
 A root-run install script does two kinds of work:
@@ -206,15 +174,10 @@ apt-get install -y -qq <packages>
 
 ## Self-contained installs (no transient dependencies)
 
-A script installs **exactly one tool** by default — prefer that. The *binding*
-constraint is that an install must **not** pull in a shared language runtime (node,
-python, java, ruby, …) or any other broad dependency as a side effect of installing
-the tool. Doing so pollutes the system with a transient dependency and creates
-hidden coupling between scripts.
-
-In the odd case a script bundles more than one tool (see "Multiple tools in one
-script" above), this rule applies **per tool**: each install must still be
-self-contained — no transient runtime — and independently guarded.
+A script installs **exactly one tool**. The *binding* constraint is that an install
+must **not** pull in a shared language runtime (node, python, java, ruby, …) or any
+other broad dependency as a side effect of installing the tool. Doing so pollutes the
+system with a transient dependency and creates hidden coupling between scripts.
 
 Reject the anti-pattern of pulling a runtime in just to install a tool:
 
@@ -299,48 +262,3 @@ Notes worth reusing:
   trick only if a package tries to start a daemon during install.
 - Write daemon config with a heredoc to a file under `/etc`, then `systemctl enable`
   and `systemctl start`.
-
-## Example: multiple tools in one script (the exception)
-
-Prefer one tool per script — reach for this shape only when several closely related
-assets genuinely belong together. Each block is guarded independently and skips only
-itself (no `exit 0`), so one item already being present never blocks the others. The
-required var is asserted once, up front:
-
-```bash
-#!/bin/bash
-set -euo pipefail
-
-: "${TARGET_USER:?TARGET_USER is required}"
-
-# Shared functions (system-wide)
-if ls /usr/local/share/zsh/site-functions/*.zsh >/dev/null 2>&1; then
-  echo "shared zsh functions already installed, skipping"
-else
-  mkdir -p /usr/local/share/zsh/site-functions
-  cp /opt/example/zsh/*.zsh /usr/local/share/zsh/site-functions/
-fi
-
-# direnv libs (per-user)
-if ls "/home/$TARGET_USER/.config/direnv/lib/"*.sh >/dev/null 2>&1; then
-  echo "direnv libs already installed for $TARGET_USER, skipping"
-else
-  sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
-  install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 \
-    /opt/example/direnv/lib/*.sh "/home/$TARGET_USER/.config/direnv/lib/"
-fi
-
-# Claude skills (per-user)
-if [[ -n "$(ls -A "/home/$TARGET_USER/.claude/skills" 2>/dev/null)" ]]; then
-  echo "claude skills already installed for $TARGET_USER, skipping"
-else
-  sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.claude/skills"
-  sudo -u "$TARGET_USER" cp -r /opt/example/claude/skills/. \
-    "/home/$TARGET_USER/.claude/skills/"
-fi
-```
-
-Note how each block picks the detection method matching its install (a glob for the
-copied `*.zsh` / `*.sh`, a non-empty-dir test for the recursively copied skills),
-and how per-user work runs via `sudo -u "$TARGET_USER"` under that user's home while
-system-wide work runs directly — every single-tool convention, applied per tool.

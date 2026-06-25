@@ -10,12 +10,9 @@ robust install script shares: a strict header, fail-fast preconditions, an
 already-installed guard for idempotency, a clear root-vs-per-user execution context,
 and a self-contained install method.
 
-**One tool per script is the strong default — prefer it.** A script may, in the odd
-case, install more than one tool, but multi-tool scripts are the exception, not an
-equal alternative. When a script does bundle several tools, every convention below
-must be applied **independently to each tool** — its own guard, idempotency,
-self-contained install, and execution context — so each install behaves exactly as
-it would in a single-tool script.
+**One tool per script — always.** A bash install script installs exactly one tool;
+multi-tool scripts are not used. If you need to install another tool, give it its own
+`NN-install-<tool-name>.sh` script rather than bundling it here.
 
 The full convention list with annotated examples lives in
 `references/conventions.md` — read it before writing the script.
@@ -64,14 +61,7 @@ The full convention list with annotated examples lives in
    after the assert for any required var it references. Pick the detection method
    that matches the install context — system `command -v`, apt `dpkg -s`, or a
    per-user path/dir test under the user's home. The exact snippets are in
-   `references/conventions.md`.
-
-   For a single-tool script the guard ends with `exit 0`. **If** the script is the
-   exceptional multi-tool case, each tool gets its own guard that skips only that
-   tool (`if <detect>; then echo "<tool> ... skipping"; else <install>; fi`) rather
-   than `exit 0` — an early `exit 0` would skip every remaining tool in the same
-   file. See the "Multiple tools in one script" subsection of
-   `references/conventions.md`.
+   `references/conventions.md`. The guard ends with `exit 0`.
 
 5. **Write the script.** Start with `#!/bin/bash` and `set -euo pipefail`. The order
    of the already-installed guard and the env asserts depends on whether the guard
@@ -88,11 +78,6 @@ The full convention list with annotated examples lives in
    exact patterns — it has annotated examples for both root and per-user installs.
    Apply its **"Self-contained installs (no transient dependencies)"** rule: never
    pull a shared runtime in as a side effect.
-
-   For the exceptional multi-tool script, the body is a sequence of independently
-   guarded install blocks — one per tool, each satisfying every convention on its
-   own — while any required env var is still asserted once up front, before the
-   first block that uses it.
 
    After writing the file, set its mode to `644` (non-executable) — these scripts
    are run with `bash <script>`, not invoked directly, so the executable bit is
