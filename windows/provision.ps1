@@ -1,7 +1,7 @@
 param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
-  [Parameter(Mandatory)][string]$InstanceName,
+  [string]$InstanceName,
   [switch]$InstallClaudeCode,
   [switch]$Force
 )
@@ -19,6 +19,8 @@ Only these pinned LTS versions are supported: $($SupportedDistros -join ', ')
 "@
   exit 1
 }
+
+if (-not $InstanceName) { $InstanceName = $DistroInstallName }
 
 . "$PSScriptRoot\lib\Wsl.ps1"
 . "$PSScriptRoot\lib\Credentials.ps1"

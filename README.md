@@ -227,9 +227,9 @@ What you can set when provisioning, and how the instance is derived.
 
 - `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
-- `-InstanceName` (required) — name for the new WSL instance.
-- `-InstallClaudeCode` — install Claude Code.
-- `-Force` — unregister an existing instance of the same name first (this destroys it).
+- `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
+- `-InstallClaudeCode` (optional) — install Claude Code.
+- `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
 
 ### Credentials
 
