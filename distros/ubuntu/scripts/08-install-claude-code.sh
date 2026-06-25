@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ "${INSTALL_CLAUDE_CODE:-}" != "true" ]]; then
+  echo "INSTALL_CLAUDE_CODE not set, skipping claude-code install"
+  exit 0
+fi
+
 : "${TARGET_USER:?TARGET_USER is required}"
 
 if [[ -x "/home/$TARGET_USER/.local/bin/claude" ]]; then

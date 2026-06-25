@@ -27,7 +27,7 @@ Everything is on the Windows side — the Ubuntu environment is built for you.
 - **Git for Windows** — includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication.
 - **VS Code** with the `code` command on your `PATH`.
 
-Accounts, tokens, and Git identity are set up in [Getting Started](#getting-started).
+Accounts, secrets, and Git identity are set up in [Getting Started](#getting-started).
 
 ## Getting Started
 
@@ -51,25 +51,25 @@ git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-### 3. Create two tokens
+### 3. Create your secrets
 
-Provisioning needs two secrets — see [Configuration](#credentials) for what each is used for.
+Provisioning needs one or two secrets, depending on what you install — see [Configuration](#credentials) for what each is used for.
 
 - **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions:
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
-- **Context7 API key** — from your [Context7](https://context7.com) account.
+- **Context7 API key** — from your [Context7](https://context7.com) account. Only needed if you provision with `-InstallClaudeCode`.
 
-### 4. Store the tokens in Windows Credential Manager
+### 4. Store the secrets in Windows Credential Manager
 
-Both are stored as **generic credentials** with username `wsl-cloud-init`. Use either option.
+Each is stored as a **generic credential** with username `wsl-cloud-init`.
 
 #### Option A — cmdkey (PowerShell)
 
 ```powershell
 cmdkey /generic:wsl-cloud-init:GH_TOKEN         /user:wsl-cloud-init /pass:<github-token>
-cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key>
+cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key> # only for `-InstallClaudeCode`
 ```
 
 #### Option B — Credential Manager GUI
@@ -79,7 +79,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 | Internet or network address | User name | Password |
 | --- | --- | --- |
 | `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token |
-| `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key |
+| `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key (only for `-InstallClaudeCode`) |
 
 ### 5. Provision an instance
 
@@ -92,6 +92,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
+- `-InstallClaudeCode` — install Claude Code.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
@@ -112,7 +113,7 @@ Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — auto
 **[lazydocker](https://github.com/jesseduffield/lazydocker)**, a terminal UI for managing containers, images, and volumes.
 
 ### Claude Code
-The **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
+Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
 
 ### WSL interop
 These commands reach from the Linux shell back into Windows:
@@ -227,16 +228,17 @@ What you can set when provisioning, and how the instance is derived.
 - `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
 - `-InstanceName` (required) — name for the new WSL instance.
+- `-InstallClaudeCode` — install Claude Code.
 - `-Force` — unregister an existing instance of the same name first (this destroys it).
 
 ### Credentials
 
-Provisioning reads two secrets from Windows Credential Manager:
+Provisioning reads from Windows Credential Manager:
 
 | Credential | Used for |
 | --- | --- |
 | `wsl-cloud-init:GH_TOKEN` | [`gh`](https://cli.github.com) CLI authentication (`gh auth login --with-token`) |
-| `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP |
+| `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
 
 ### Target user
 

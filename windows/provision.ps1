@@ -2,6 +2,7 @@ param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
   [Parameter(Mandatory)][string]$InstanceName,
+  [switch]$InstallClaudeCode,
   [switch]$Force
 )
 
@@ -28,17 +29,22 @@ if ($exists -and -not $Force) {
   exit 1
 }
 
-try {
-  $Context7ApiKey = Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"
-} catch {
-  Write-Error @"
+# Claude Code is opt-in. Only when -InstallClaudeCode is passed do we need (and demand)
+# the Context7 API key; otherwise it stays empty and the in-distro install self-skips.
+$Context7ApiKey = ""
+if ($InstallClaudeCode) {
+  try {
+    $Context7ApiKey = Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"
+  } catch {
+    Write-Error @"
 $_
 Add it via: Control Panel -> Credential Manager -> Windows Credentials -> Add a generic credential
   Internet or network address : wsl-cloud-init:CONTEXT7_API_KEY
   Username                    : wsl-cloud-init
   Password                    : <your-key>
 "@
-  exit 1
+    exit 1
+  }
 }
 
 try {
@@ -101,6 +107,7 @@ if (-not (Test-Path $PwshExe)) { Write-Host "powershell.exe not found at $PwshEx
 $PwshWsl = ConvertTo-WslPath $PwshExe
 
 # Substitute template
+$InstallClaudeCodeValue = if ($InstallClaudeCode) { "true" } else { "false" }
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 # Use String.Replace (literal) rather than -replace (regex): a secret containing
@@ -113,6 +120,7 @@ $template = $template.
     Replace('__VSCODE__',                  $VsCodeWsl).
     Replace('__POWERSHELL__',              $PwshWsl).
     Replace('__COMMIT__',                  $CommitSha).
+    Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
     Replace('__CONTEXT7_API_KEY__',        $Context7ApiKey).
     Replace('__GH_TOKEN__',                $GhToken)
 

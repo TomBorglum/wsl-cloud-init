@@ -55,6 +55,7 @@ runcmd:
     export GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
     export GIT_NAME="__GIT_NAME__"
     export GIT_EMAIL="__GIT_EMAIL__"
+    export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
     export CONTEXT7_API_KEY="__CONTEXT7_API_KEY__"
     for script in /opt/wsl-cloud-init/distros/ubuntu/scripts/*.sh; do bash "$script"; done
     echo "__GH_TOKEN__" | sudo -u "__TARGET_USER__" gh auth login --with-token
