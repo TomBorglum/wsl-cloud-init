@@ -31,3 +31,7 @@ sudo -u "$TARGET_USER" tee "/home/$TARGET_USER/.claude/settings.json" > /dev/nul
   "effortLevel": "low"
 }
 EOF
+
+# Claude skills (per-user); cp -r since this is a directory tree, not flat files
+sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.claude/skills"
+sudo -u "$TARGET_USER" cp -r /opt/wsl-cloud-init/distros/shared/claude/skills/. "/home/$TARGET_USER/.claude/skills/"
