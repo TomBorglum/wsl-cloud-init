@@ -7,5 +7,6 @@ if ls /usr/local/share/zsh/site-functions/*.zsh >/dev/null 2>&1; then
   exit 0
 fi
 
+git -C /opt/wsl-cloud-init sparse-checkout add distros/shared/zsh
 mkdir -p /usr/local/share/zsh/site-functions
 install -m 644 /opt/wsl-cloud-init/distros/shared/zsh/*.zsh /usr/local/share/zsh/site-functions/

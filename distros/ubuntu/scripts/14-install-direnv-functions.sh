@@ -9,5 +9,6 @@ if ls "/home/$TARGET_USER/.config/direnv/lib/"*.sh >/dev/null 2>&1; then
   exit 0
 fi
 
+git -C /opt/wsl-cloud-init sparse-checkout add distros/shared/direnv/lib
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 /opt/wsl-cloud-init/distros/shared/direnv/lib/*.sh "/home/$TARGET_USER/.config/direnv/lib/"
