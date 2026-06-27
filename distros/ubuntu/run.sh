@@ -110,6 +110,17 @@ if [[ "$need_interop" == true ]]; then
   done <<< "$interop_output"
 fi
 
+# Run every script. They are independent, so one failing should not skip the
+# rest; collect failures and report them so a real problem still surfaces (and is
+# named) rather than aborting silently on the first.
+failed=()
 for script in "$SCRIPTS_DIR"/*.sh; do
-  bash "$script"
+  if ! bash "$script"; then
+    failed+=("$(basename "$script")")
+  fi
 done
+
+if [[ ${#failed[@]} -gt 0 ]]; then
+  echo "run.sh: the following scripts failed: ${failed[*]}" >&2
+  exit 1
+fi

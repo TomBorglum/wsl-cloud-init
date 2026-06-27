@@ -16,5 +16,7 @@ if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]]; then
 fi
 for dir in "${dirs[@]}"; do
   files=("$dir"/*.sh)
-  [[ ${#files[@]} -gt 0 ]] && install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 "${files[@]}" "/home/$TARGET_USER/.config/direnv/lib/"
+  if [[ ${#files[@]} -gt 0 ]]; then
+    install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 "${files[@]}" "/home/$TARGET_USER/.config/direnv/lib/"
+  fi
 done

@@ -14,5 +14,7 @@ if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]]; then
 fi
 for dir in "${dirs[@]}"; do
   files=("$dir"/*.zsh)
-  [[ ${#files[@]} -gt 0 ]] && install -m 644 "${files[@]}" /usr/local/share/zsh/site-functions/
+  if [[ ${#files[@]} -gt 0 ]]; then
+    install -m 644 "${files[@]}" /usr/local/share/zsh/site-functions/
+  fi
 done
