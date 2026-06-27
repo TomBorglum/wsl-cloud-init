@@ -44,7 +44,7 @@ cd wsl-cloud-init
 
 ### 2. Set your Git identity
 
-Provisioning copies these into the new instance.
+Only needed if you provision with `-InstallGitConfig` — provisioning copies these into the new instance.
 
 ```powershell
 git config --global user.name  "Your Name"
@@ -55,7 +55,7 @@ git config --global user.email "you@example.com"
 
 Provisioning needs one or two secrets, depending on what you install — see [Configuration](#credentials) for what each is used for.
 
-- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions:
+- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions. Only needed if you provision with `-InstallGitConfig`.
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
@@ -68,7 +68,7 @@ Each is stored as a **generic credential** with username `wsl-cloud-init`.
 #### Option A — cmdkey (PowerShell)
 
 ```powershell
-cmdkey /generic:wsl-cloud-init:GH_TOKEN         /user:wsl-cloud-init /pass:<github-token>
+cmdkey /generic:wsl-cloud-init:GH_TOKEN         /user:wsl-cloud-init /pass:<github-token>  # only for `-InstallGitConfig`
 cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key> # only for `-InstallClaudeCode`
 ```
 
@@ -78,7 +78,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 
 | Internet or network address | User name | Password |
 | --- | --- | --- |
-| `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token |
+| `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token (only for `-InstallGitConfig`) |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key (only for `-InstallClaudeCode`) |
 
 ### 5. Provision an instance
@@ -93,6 +93,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
 - `-InstallClaudeCode` — install Claude Code.
+- `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
@@ -121,10 +122,10 @@ These commands reach from the Linux shell back into Windows:
 - **`code`** — opens files and folders in your Windows VS Code.
 - **`open`** — launches a file or URL with its default Windows app.
 
-Git itself authenticates through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing your existing Windows sign-in.
+Opt-in via `-InstallGitConfig`: your git identity, `gh` authentication, and Git itself authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in).
 
 ### Shell helpers
-`clone-repo`, `create-repo`, and `update-branch` streamline everyday Git work, and `pj` jumps between checkouts under `~/projects` — see [Usage](#usage).
+`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` (plus the `use update-branch` direnv directive) streamline everyday Git work.
 
 ### Base packages
 Installed from the cloud-init package list:
@@ -229,6 +230,7 @@ What you can set when provisioning, and how the instance is derived.
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
 - `-InstallClaudeCode` (optional) — install Claude Code.
+- `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
 - `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
 
 ### Credentials
@@ -237,7 +239,7 @@ Provisioning reads from Windows Credential Manager:
 
 | Credential | Used for |
 | --- | --- |
-| `wsl-cloud-init:GH_TOKEN` | [`gh`](https://cli.github.com) CLI authentication (`gh auth login --with-token`) |
+| `wsl-cloud-init:GH_TOKEN` | [`gh`](https://cli.github.com) CLI authentication (`gh auth login --with-token`) — **only required with `-InstallGitConfig`** |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
 
 ### Target user

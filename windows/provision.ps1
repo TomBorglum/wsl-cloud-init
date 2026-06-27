@@ -3,6 +3,7 @@ param(
   [Parameter(Mandatory)][string]$DistroInstallName,
   [string]$InstanceName,
   [switch]$InstallClaudeCode,
+  [switch]$InstallGitConfig,
   [switch]$Force
 )
 
@@ -49,28 +50,37 @@ Add it via: Control Panel -> Credential Manager -> Windows Credentials -> Add a 
   }
 }
 
-try {
-  $GhToken = Get-WindowsCredential "wsl-cloud-init:GH_TOKEN"
-} catch {
-  Write-Error @"
+# Git/gh configuration is opt-in. Only when -InstallGitConfig is passed do we need (and demand)
+# the GitHub token; otherwise it stays empty and the in-distro install self-skips.
+$GhToken = ""
+if ($InstallGitConfig) {
+  try {
+    $GhToken = Get-WindowsCredential "wsl-cloud-init:GH_TOKEN"
+  } catch {
+    Write-Error @"
 $_
 Add it via: Control Panel -> Credential Manager -> Windows Credentials -> Add a generic credential
   Internet or network address : wsl-cloud-init:GH_TOKEN
   Username                    : wsl-cloud-init
   Password                    : <your-token>
 "@
-  exit 1
+    exit 1
+  }
 }
 
 $WindowsUsername = $env:USERNAME
 $TargetUser = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
 if (-not $TargetUser) { Write-Host "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
-# Read Git identity from Windows Git installation
-$GitName  = git config --global user.name
-$GitEmail = git config --global user.email
-if (-not $GitName)  { Write-Host "git config --global user.name is not set"; exit 1 }
-if (-not $GitEmail) { Write-Host "git config --global user.email is not set"; exit 1 }
+# Read Git identity from Windows Git installation (only when configuring git in the instance)
+$GitName  = ""
+$GitEmail = ""
+if ($InstallGitConfig) {
+  $GitName  = git config --global user.name
+  $GitEmail = git config --global user.email
+  if (-not $GitName)  { Write-Host "git config --global user.name is not set"; exit 1 }
+  if (-not $GitEmail) { Write-Host "git config --global user.email is not set"; exit 1 }
+}
 
 # The distro provisions the exact commit this checkout is on. Require a clean tree that is not
 # ahead of origin, so cloud-init can reproduce the commit by cloning it from GitHub.
@@ -91,12 +101,15 @@ if ($LASTEXITCODE -ne 0 -or [int]$ahead -gt 0) {
 }
 Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 8))"
 
-# Derive Git credential manager path from the git.exe location
-$GitExe = (Get-Command git).Source
-$GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
-$CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
-if (-not (Test-Path $CredManager)) { Write-Host "git-credential-manager.exe not found at $CredManager"; exit 1 }
-$CredManagerWsl = ConvertTo-WslPath $CredManager
+# Derive Git credential manager path from the git.exe location (only when configuring git)
+$CredManagerWsl = ""
+if ($InstallGitConfig) {
+  $GitExe = (Get-Command git).Source
+  $GitRoot = Split-Path (Split-Path $GitExe -Parent) -Parent
+  $CredManager = "$GitRoot\mingw64\bin\git-credential-manager.exe"
+  if (-not (Test-Path $CredManager)) { Write-Host "git-credential-manager.exe not found at $CredManager"; exit 1 }
+  $CredManagerWsl = ConvertTo-WslPath $CredManager
+}
 
 # Derive VS Code path from the installed executable (resolve the bash wrapper alongside code.cmd)
 $VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
@@ -110,6 +123,7 @@ $PwshWsl = ConvertTo-WslPath $PwshExe
 
 # Substitute template
 $InstallClaudeCodeValue = if ($InstallClaudeCode) { "true" } else { "false" }
+$InstallGitConfigValue  = if ($InstallGitConfig)  { "true" } else { "false" }
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 # Use String.Replace (literal) rather than -replace (regex): a secret containing
@@ -123,6 +137,7 @@ $template = $template.
     Replace('__POWERSHELL__',              $PwshWsl).
     Replace('__COMMIT__',                  $CommitSha).
     Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
+    Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
     Replace('__CONTEXT7_API_KEY__',        $Context7ApiKey).
     Replace('__GH_TOKEN__',                $GhToken)
 
