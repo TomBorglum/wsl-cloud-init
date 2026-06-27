@@ -1,6 +1,11 @@
 #!/bin/bash
 set -euo pipefail
 
+if [[ "${INSTALL_VS_CODE_INTEROP:-}" != "true" ]]; then
+  echo "INSTALL_VS_CODE_INTEROP not set, skipping VS Code interop install"
+  exit 0
+fi
+
 if command -v code >/dev/null 2>&1; then
   echo "code already installed, skipping"
   exit 0

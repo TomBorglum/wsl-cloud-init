@@ -25,7 +25,7 @@ Everything is on the Windows side — the Ubuntu environment is built for you.
 
 - **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
 - **Git for Windows** — includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication.
-- **VS Code** with the `code` command on your `PATH`.
+- **VS Code** with the `code` command on your `PATH` — only needed if you provision with `-InstallVsCodeInterop`.
 
 Accounts, secrets, and Git identity are set up in [Getting Started](#getting-started).
 
@@ -94,6 +94,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
 - `-InstallClaudeCode` — install Claude Code.
 - `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth.
+- `-InstallVsCodeInterop` — install the `code` Windows interop wrapper.
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
@@ -119,7 +120,7 @@ Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the **[Co
 ### WSL interop
 These commands reach from the Linux shell back into Windows:
 
-- **`code`** — opens files and folders in your Windows VS Code.
+- **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
 - **`open`** — launches a file or URL with its default Windows app.
 
 Opt-in via `-InstallGitConfig`: your git identity, `gh` authentication, and Git itself authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in).
@@ -231,6 +232,7 @@ What you can set when provisioning, and how the instance is derived.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
 - `-InstallClaudeCode` (optional) — install Claude Code.
 - `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
+- `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
 - `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
 
 ### Credentials

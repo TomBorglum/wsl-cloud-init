@@ -4,6 +4,7 @@ param(
   [string]$InstanceName,
   [switch]$InstallClaudeCode,
   [switch]$InstallGitConfig,
+  [switch]$InstallVsCodeInterop,
   [switch]$Force
 )
 
@@ -111,10 +112,14 @@ if ($InstallGitConfig) {
   $CredManagerWsl = ConvertTo-WslPath $CredManager
 }
 
-# Derive VS Code path from the installed executable (resolve the bash wrapper alongside code.cmd)
-$VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
-if (-not (Test-Path $VsCodeShell)) { Write-Host "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
-$VsCodeWsl = ConvertTo-WslPath $VsCodeShell
+# Derive VS Code path from the installed executable (only when installing the interop wrapper;
+# resolve the bash wrapper alongside code.cmd)
+$VsCodeWsl = ""
+if ($InstallVsCodeInterop) {
+  $VsCodeShell = (Get-Command code).Source -replace '\.cmd$', ''
+  if (-not (Test-Path $VsCodeShell)) { Write-Host "VS Code shell wrapper not found at $VsCodeShell"; exit 1 }
+  $VsCodeWsl = ConvertTo-WslPath $VsCodeShell
+}
 
 # Derive PowerShell path from the installed executable
 $PwshExe = (Get-Command powershell).Source
@@ -122,8 +127,9 @@ if (-not (Test-Path $PwshExe)) { Write-Host "powershell.exe not found at $PwshEx
 $PwshWsl = ConvertTo-WslPath $PwshExe
 
 # Substitute template
-$InstallClaudeCodeValue = if ($InstallClaudeCode) { "true" } else { "false" }
-$InstallGitConfigValue  = if ($InstallGitConfig)  { "true" } else { "false" }
+$InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
+$InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
+$InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
 $template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
 
 # Use String.Replace (literal) rather than -replace (regex): a secret containing
@@ -138,6 +144,7 @@ $template = $template.
     Replace('__COMMIT__',                  $CommitSha).
     Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
     Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
+    Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue).
     Replace('__CONTEXT7_API_KEY__',        $Context7ApiKey).
     Replace('__GH_TOKEN__',                $GhToken)
 
