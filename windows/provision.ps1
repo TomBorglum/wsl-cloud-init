@@ -175,5 +175,10 @@ if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 Write-Host "[3/4] Waiting for cloud-init to finish..."
 wsl -d $InstanceName --user root -- cloud-init status --wait
 
+# Terminate so the next launch re-reads /etc/wsl.conf (written by cloud-init this boot).
+# Otherwise the first session keeps the pre-config state: appended Windows PATH and the
+# wrong default user, until the instance is restarted.
+wsl --terminate $InstanceName
+
 Write-Host "[4/4] Launching $InstanceName..."
 wsl -d $InstanceName
