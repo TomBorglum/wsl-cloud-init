@@ -178,7 +178,7 @@ wsl -d $InstanceName --user root -- cloud-init status --wait
 # Terminate so the next launch re-reads /etc/wsl.conf (written by cloud-init this boot).
 # Otherwise the first session keeps the pre-config state: appended Windows PATH and the
 # wrong default user, until the instance is restarted.
-wsl --terminate $InstanceName
+wsl --terminate $InstanceName | Out-Null   # silence "The operation completed successfully."
 
 Write-Host "[4/4] Launching $InstanceName..."
 wsl -d $InstanceName
