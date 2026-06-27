@@ -54,14 +54,7 @@ runcmd:
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
   - |
     export TARGET_USER="__TARGET_USER__"
-    export VSCODE="__VSCODE__"
-    export POWERSHELL="__POWERSHELL__"
-    export GIT_CREDENTIAL_MANAGER="__GIT_CREDENTIAL_MANAGER__"
-    export GIT_NAME="__GIT_NAME__"
-    export GIT_EMAIL="__GIT_EMAIL__"
     export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
-    export CONTEXT7_API_KEY="__CONTEXT7_API_KEY__"
     export INSTALL_GIT_CONFIG="__INSTALL_GIT_CONFIG__"
     export INSTALL_VS_CODE_INTEROP="__INSTALL_VS_CODE_INTEROP__"
-    export GH_TOKEN="__GH_TOKEN__"
-    for script in /opt/wsl-cloud-init/distros/ubuntu/scripts/*.sh; do bash "$script"; done
+    bash /opt/wsl-cloud-init/distros/ubuntu/run.sh

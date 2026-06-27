@@ -13,10 +13,9 @@ declaratively build a fresh WSL Ubuntu instance with a curated, opinionated set 
 tools and configuration, so every instance you create comes out the same — fully
 configured and ready to work in.
 
-Provisioning runs from Windows: a PowerShell script reads your Git identity, pulls
-your secrets from Windows Credential Manager, renders a cloud-init template, installs
-the distro, and waits for setup to finish. On first boot cloud-init runs a series of
-scripts that build the environment and wire Windows tools — VS Code, Git
+Provisioning runs from Windows: a PowerShell script renders a cloud-init template,
+installs the distro, and waits for setup to finish. On first boot cloud-init runs a
+series of scripts that build the environment and wire Windows tools — VS Code, Git
 Credential Manager — into the Linux shell.
 
 ## Prerequisites
