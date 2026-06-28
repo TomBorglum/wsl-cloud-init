@@ -20,17 +20,16 @@ Credential Manager — into the Linux shell.
 
 ## Prerequisites
 
-Everything is on the Windows side — the Ubuntu environment is built for you.
+The baseline environment needs only two things on the Windows side — the Ubuntu environment is built for you:
 
 - **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
-- **Git for Windows** — used by the provisioning script itself, and includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication if provisioned with `-InstallGitConfig`.
-- **VS Code** with the `code` command on your `PATH` — only needed if you provision with `-InstallVsCodeInterop`.
+- **Git for Windows** — the provisioning script itself runs local `git`.
 
-Accounts, secrets, and Git identity are set up in [Getting Started](#getting-started).
+The opt-in features need a little extra Windows-side setup first — see [Opt-in features](#opt-in-features).
 
 ## Getting Started
 
-All steps run on **Windows**.
+Both steps run on **Windows**. This is the whole baseline path — no accounts or secrets required.
 
 ### 1. Clone this repository
 
@@ -41,28 +40,52 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
-### 2. Set your Git identity
+### 2. Provision an instance
 
-Only needed if you provision with `-InstallGitConfig` — provisioning copies these into the new instance.
+From **Command Prompt**:
+
+```bat
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev
+```
+
+`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
+
+- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
+- `-InstallClaudeCode` — install Claude Code. See [Opt-in features](#opt-in-features).
+- `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth. See [Opt-in features](#opt-in-features).
+- `-InstallVsCodeInterop` — install the `code` Windows interop wrapper. See [Opt-in features](#opt-in-features).
+- `-Force` — replace an existing instance of the same name (destroys it first).
+
+The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
+
+This bare command gives you the full baseline environment described in [What you get](#what-you-get).
+
+## Opt-in features
+
+Three flags add tooling on top of the baseline: `-InstallGitConfig`, `-InstallClaudeCode`, and `-InstallVsCodeInterop`. Each needs a little Windows-side setup first. You can enable them **when provisioning** (add the flag to the Getting Started command) or **add them later** to a running instance — the same setup applies either way.
+
+### Set up Git identity
+
+Only needed for `-InstallGitConfig` — provisioning copies these into the new instance.
 
 ```powershell
 git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-### 3. Create your secrets
+### Create and store secrets
 
-Provisioning needs one or two secrets, depending on what you install — see [Configuration](#credentials) for what each is used for.
+Depending on what you install, you need one or two secrets — see [Configuration](#credentials) for what each is used for:
 
-- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions. Only needed if you provision with `-InstallGitConfig`.
+- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions. Only needed for `-InstallGitConfig`.
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
-- **[Context7](https://context7.com) API key**. Only needed if you provision with `-InstallClaudeCode`.
+- **[Context7](https://context7.com) API key**. Only needed for `-InstallClaudeCode`.
 
-### 4. Store the secrets in Windows Credential Manager
+`-InstallVsCodeInterop` needs no secret — only **VS Code** with the `code` command on your `PATH`.
 
-Each is stored as a **generic credential** with username `wsl-cloud-init`.
+Store each secret as a **generic credential** with username `wsl-cloud-init`, using either option:
 
 #### Option A — cmdkey (PowerShell)
 
@@ -80,27 +103,17 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 | `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token (only for `-InstallGitConfig`) |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key (only for `-InstallClaudeCode`) |
 
-### 5. Provision an instance
+### Enable when provisioning
 
-From **Command Prompt**:
+Once the setup above is in place, add the flags to the Getting Started command:
 
 ```bat
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev -InstallGitConfig -InstallClaudeCode -InstallVsCodeInterop
 ```
 
-`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
+### Enable later in a running instance
 
-- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
-- `-InstallClaudeCode` — install Claude Code.
-- `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth.
-- `-InstallVsCodeInterop` — install the `code` Windows interop wrapper.
-- `-Force` — replace an existing instance of the same name (destroys it first).
-
-The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
-
-## Opting in later
-
-Provisioned without one of the opt-in flags and want it now? You don't need to re-provision. Re-run the same provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` flags for what you want to add — each install script self-skips when its flag isn't set:
+Provisioned without one of the opt-in flags and want it now? You don't need to re-provision. Re-run the same provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` flags for what you want to add:
 
 ```bash
 # Git identity, gh auth, and the Git shell helpers
