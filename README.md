@@ -58,7 +58,7 @@ Provisioning needs one or two secrets, depending on what you install — see [Co
   - **Administration** — read and write (create repositories)
   - **Contents** — read and write (clone and push)
   - **Metadata** — read (required)
-- **Context7 API key** — from your [Context7](https://context7.com) account. Only needed if you provision with `-InstallClaudeCode`.
+- **[Context7](https://context7.com) API key**. Only needed if you provision with `-InstallClaudeCode`.
 
 ### 4. Store the secrets in Windows Credential Manager
 
@@ -97,6 +97,37 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 - `-Force` — replace an existing instance of the same name (destroys it first).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
+
+## Opting in later
+
+Provisioned without one of the opt-in flags and want it now? You don't need to re-provision. Re-run the same provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` flags for what you want to add — each install script self-skips when its flag isn't set:
+
+```bash
+# Git identity, gh auth, and the Git shell helpers
+sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+
+# Claude Code
+sudo INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+
+# the `code` VS Code interop wrapper
+sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+```
+
+Combine flags to add several at once:
+
+```bash
+sudo INSTALL_GIT_CONFIG=true INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+```
+
+Each flag corresponds to the provisioning parameter of the same name:
+
+| Provisioning parameter | On-demand flag |
+| --- | --- |
+| `-InstallClaudeCode` | `INSTALL_CLAUDE_CODE=true` |
+| `-InstallGitConfig` | `INSTALL_GIT_CONFIG=true` |
+| `-InstallVsCodeInterop` | `INSTALL_VS_CODE_INTEROP=true` |
+
+The same prerequisites apply as at provisioning time: `-InstallGitConfig` and `-InstallClaudeCode` still need their secrets in Windows Credential Manager (and your Git identity set). `install.sh` fetches them from Windows at runtime, so set them up first if you didn't before.
 
 ## What you get
 
