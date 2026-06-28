@@ -23,7 +23,7 @@ Credential Manager — into the Linux shell.
 Everything is on the Windows side — the Ubuntu environment is built for you.
 
 - **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
-- **Git for Windows** — includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication.
+- **Git for Windows** — used by the provisioning script itself, and includes [Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager), which the provisioned instance reuses for authentication if provisioned with `-InstallGitConfig`.
 - **VS Code** with the `code` command on your `PATH` — only needed if you provision with `-InstallVsCodeInterop`.
 
 Accounts, secrets, and Git identity are set up in [Getting Started](#getting-started).
@@ -90,7 +90,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplate
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
-- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported.
+- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
 - `-InstallClaudeCode` — install Claude Code.
 - `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth.
 - `-InstallVsCodeInterop` — install the `code` Windows interop wrapper.
@@ -215,6 +215,13 @@ create-repo --owner some-owner service # creates some-owner/service
 
 Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
 
+### create-branch
+Create a branch off the repo's default branch and check it out with tracking, so a plain `git push` just works. If the branch already exists on origin it's just checked out; it refuses a local-only branch that isn't on origin yet.
+
+```bash
+create-branch my-feature   # branch off the default branch, tracking origin/my-feature
+```
+
 ### pj
 Jump straight into a checked-out project under `~/projects` without typing the full path — supports Tab-completion.
 
@@ -258,7 +265,7 @@ What you can set when provisioning, and how the instance is derived.
 `windows/provision.ps1` takes:
 
 - `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
-- `-DistroInstallName` (required) — WSL distro passed to `wsl --install` (e.g. `Ubuntu`).
+- `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
 - `-InstallClaudeCode` (optional) — install Claude Code.
 - `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
