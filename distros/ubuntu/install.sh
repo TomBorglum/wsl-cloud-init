@@ -83,7 +83,10 @@ if [[ "$need_interop" == true ]]; then
     ps_tail+='Write-Output ("CONTEXT7_API_KEY=" + (Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"))'$'\n'
   fi
 
-  ps_program="$(cat "$REPO/windows/lib/Credentials.ps1" "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
+  # Suppress PowerShell's progress stream ("Preparing modules for first use"),
+  # which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
+  ps_header='$ProgressPreference = "SilentlyContinue"'
+  ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Credentials.ps1" "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
 
   # -EncodedCommand (base64 UTF-16LE) sidesteps cross-boundary quoting and the
   # fact that powershell.exe, a Windows process, cannot read our /opt paths
