@@ -1,3 +1,4 @@
+#!/bin/bash
 use_sdk() {
   if [ $# -ne 2 ]; then
     echo "Error: use_sdk requires exactly 2 arguments: <candidate> <version>" >&2

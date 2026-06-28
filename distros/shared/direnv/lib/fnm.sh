@@ -1,3 +1,4 @@
+#!/bin/bash
 use_fnm() {
   if [ $# -ne 2 ]; then
     echo "Error: use_fnm requires exactly 2 arguments: <tool> <version>" >&2

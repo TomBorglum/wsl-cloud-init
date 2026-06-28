@@ -1,3 +1,4 @@
+#!/bin/bash
 use_update-branch() {
   # Reload this .envrc on a branch switch so the update fires exactly once per
   # switch. HEAD's content changes on checkout but not on rebase (the symref

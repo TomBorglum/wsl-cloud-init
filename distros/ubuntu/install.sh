@@ -1,4 +1,8 @@
 #!/bin/bash
+# This script assembles a PowerShell program as single-quoted strings; the
+# `$`-prefixed names inside them are PowerShell variables that bash must not
+# expand, so SC2016 ("expressions don't expand in single quotes") is expected.
+# shellcheck disable=SC2016
 set -euo pipefail
 # Keep secrets out of any xtrace output if the script is run with `bash -x`.
 set +x

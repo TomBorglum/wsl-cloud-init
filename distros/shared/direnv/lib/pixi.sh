@@ -1,3 +1,4 @@
+#!/bin/bash
 use_pixi() {
   local pixi_bin="$HOME/.pixi/bin/pixi"
   if [ ! -x "$pixi_bin" ]; then
