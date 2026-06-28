@@ -122,3 +122,12 @@ for script in "$SCRIPTS_DIR"/*.sh; do
     exit 1
   fi
 done
+
+# On-demand opt-in runs leave new PATH entries (Claude), env vars, and zsh functions
+# (git helpers) in the user's startup files; the calling shell only picks them up on
+# its next read. We can't touch the parent shell from this child process, so just
+# point the user at the reload. Gate on a TTY so cloud-init's first-boot run (no
+# terminal, fresh login picks everything up anyway) stays quiet.
+if [[ -t 1 ]]; then
+  echo "Done. Run 'exec zsh' to load the new commands in this shell."
+fi
