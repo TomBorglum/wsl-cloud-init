@@ -5,9 +5,9 @@ set +x
 
 # Single source of truth for the provisioning run loop, used both by cloud-init
 # (runcmd in user-data.template) and for on-demand re-runs in an already
-# provisioned instance, e.g. to opt into a capability after the fact:
+# provisioned instance, e.g. to opt into an installation after the fact:
 #
-#   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/distros/ubuntu/run.sh
+#   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
 #
 # This is the single point of derivation for both paths. The cloud-init runcmd
 # block exports only TARGET_USER and the INSTALL_* flags; every Windows-derived
@@ -26,7 +26,7 @@ export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 
 # Work out which Windows-derived values are still missing. POWERSHELL is needed
 # whenever unset because the (ungated) open-interop script consumes it; the rest
-# are only needed when their capability is being installed.
+# are only needed when their installation is selected.
 need_interop=false
 need_powershell=false; vscode_q=false; git_q=false; claude_q=false
 if [[ -z "${POWERSHELL:-}" ]]; then need_powershell=true; need_interop=true; fi
@@ -51,7 +51,7 @@ if [[ "$need_interop" == true ]]; then
     [[ -x "$candidate" ]] && { pwsh="$candidate"; break; }
   done
   if [[ -z "$pwsh" ]]; then
-    echo "run.sh: powershell.exe not found under /mnt/*/Windows/System32/WindowsPowerShell/v1.0/" >&2
+    echo "install.sh: powershell.exe not found under /mnt/*/Windows/System32/WindowsPowerShell/v1.0/" >&2
     exit 1
   fi
 
@@ -110,17 +110,12 @@ if [[ "$need_interop" == true ]]; then
   done <<< "$interop_output"
 fi
 
-# Run every script. They are independent, so one failing should not skip the
-# rest; collect failures and report them so a real problem still surfaces (and is
-# named) rather than aborting silently on the first.
-failed=()
+# Run every install script in order. They are independent and self-skip when
+# their installation isn't selected; if one genuinely fails, stop the run and name
+# it rather than pressing on and masking the problem.
 for script in "$SCRIPTS_DIR"/*.sh; do
   if ! bash "$script"; then
-    failed+=("$(basename "$script")")
+    echo "install.sh: $(basename "$script") failed; aborting" >&2
+    exit 1
   fi
 done
-
-if [[ ${#failed[@]} -gt 0 ]]; then
-  echo "run.sh: the following scripts failed: ${failed[*]}" >&2
-  exit 1
-fi

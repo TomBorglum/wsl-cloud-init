@@ -32,7 +32,7 @@ if ($exists -and -not $Force) {
   exit 1
 }
 
-# Opt-in capabilities are provisioned by run.sh inside the distro: it derives the
+# Opt-in installations are provisioned by install.sh inside the distro: it derives the
 # Windows paths/identity and fetches secrets from Credential Manager at runtime,
 # and is also the sole validator of those prerequisites. So nothing secret or
 # Windows-derived is read here. A missing secret / git identity / VS Code surfaces
@@ -62,7 +62,7 @@ if ($LASTEXITCODE -ne 0 -or [int]$ahead -gt 0) {
 Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 8))"
 
 # Substitute template. The template carries no secrets and no derived Windows
-# paths: run.sh fetches/derives those at runtime inside the distro.
+# paths: install.sh fetches/derives those at runtime inside the distro.
 $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
