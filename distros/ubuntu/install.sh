@@ -109,6 +109,7 @@ if [[ "$need_interop" == true ]]; then
       GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
       GH_TOKEN=*)               export GH_TOKEN="${line#*=}" ;;
       CONTEXT7_API_KEY=*)       export CONTEXT7_API_KEY="${line#*=}" ;;
+      *)                        ;;
     esac
   done <<< "$interop_output"
 fi

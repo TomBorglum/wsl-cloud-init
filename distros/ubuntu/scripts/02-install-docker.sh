@@ -7,7 +7,7 @@ if command -v docker >/dev/null 2>&1; then
 fi
 
 CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
-if [ -z "$CODENAME" ]; then
+if [[ -z "$CODENAME" ]]; then
   echo "Could not determine Ubuntu codename from /etc/os-release" >&2
   exit 1
 fi

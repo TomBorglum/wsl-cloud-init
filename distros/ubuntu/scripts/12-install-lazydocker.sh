@@ -8,7 +8,7 @@ fi
 
 VERSION=$(curl -fsSL https://api.github.com/repos/jesseduffield/lazydocker/releases/latest \
   | jq -r .tag_name | sed 's/^v//')
-if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
+if [[ -z "$VERSION" ]] || [[ "$VERSION" = "null" ]]; then
   echo "Could not determine latest lazydocker version" >&2
   exit 1
 fi

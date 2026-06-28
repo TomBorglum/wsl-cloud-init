@@ -1,11 +1,11 @@
 #!/bin/bash
 use_pixi() {
   local pixi_bin="$HOME/.pixi/bin/pixi"
-  if [ ! -x "$pixi_bin" ]; then
+  if [[ ! -x "$pixi_bin" ]]; then
     echo "Error: pixi is not installed" >&2
     return 1
   fi
-  if [ ! -f pixi.toml ]; then
+  if [[ ! -f pixi.toml ]]; then
     local project_name
     project_name="$(basename "$PWD")"
     cat > pixi.toml <<EOF

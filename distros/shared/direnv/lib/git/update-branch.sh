@@ -5,7 +5,7 @@ use_update-branch() {
   # still reads "ref: refs/heads/<branch>"), so this does not loop.
   local headfile
   headfile="$(git rev-parse --git-path HEAD 2>/dev/null)"
-  [ -n "$headfile" ] && [ -f "$headfile" ] && watch_file "$headfile"
+  [[ -n "$headfile" ]] && [[ -f "$headfile" ]] && watch_file "$headfile"
 
   # Best-effort: _update-branch prints its own diagnostics (dirty tree, detached
   # HEAD, rebase conflict). Never fail the .envrc load over a sync hiccup, so
@@ -16,6 +16,7 @@ use_update-branch() {
   # nothing, so there is no further reload. We accept that single redundant
   # reload rather than snapshotting and restoring .envrc's mtime.
   _update-branch || echo "use_update-branch: branch not updated (see above); continuing" >&2
+  return 0
 }
 
 # Fetch the remote's default branch and rebase the current branch onto it.
@@ -31,7 +32,7 @@ _update-branch() {
   # goes stale if the default branch is changed upstream. Needs connectivity.
   local base
   base="$(git ls-remote --symref origin HEAD 2>/dev/null | sed -n 's@^ref: refs/heads/\(.*\)\tHEAD$@\1@p')"
-  if [ -z "$base" ]; then
+  if [[ -z "$base" ]]; then
     echo "update-branch: could not determine the remote's default branch — is origin reachable?" >&2
     return 1
   fi
@@ -44,7 +45,7 @@ _update-branch() {
   fi
 
   # Abort if the working tree has uncommitted changes.
-  if [ -n "$(git status --porcelain)" ]; then
+  if [[ -n "$(git status --porcelain)" ]]; then
     echo "update-branch: uncommitted changes — commit or stash before updating" >&2
     return 1
   fi
