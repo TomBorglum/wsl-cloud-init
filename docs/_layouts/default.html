@@ -16,20 +16,16 @@
         color: #1b1f24;
         background: #fff;
       }
-      @media (prefers-color-scheme: dark) {
-        body { color: #e6edf3; background: #0d1117; }
-        a { color: #58a6ff; }
-        code, pre { background: #161b22; }
-        .btn { background: #238636; }
-      }
       h1 { font-size: 2.2rem; line-height: 1.2; margin: 0 0 .5rem; }
       h2 { margin-top: 2.5rem; }
       .tagline { font-size: 1.2rem; color: #424a53; margin: 0 0 1.5rem; }
       a { color: #0969da; }
-      code, pre { background: #f6f8fa; border-radius: 6px; }
+      /* Set code color and background together so text never inherits a
+         mismatched body color. .highlight wraps Rouge-highlighted blocks. */
+      code, pre, .highlight { background: #f6f8fa; color: #1b1f24; border-radius: 6px; }
       code { padding: .15em .35em; font-size: .9em; }
       pre { padding: 1rem; overflow-x: auto; }
-      pre code { padding: 0; background: none; }
+      pre code, .highlight pre, .highlight code { padding: 0; background: none; color: inherit; }
       .btn {
         display: inline-block; padding: .6rem 1.1rem; margin: .25rem .5rem .25rem 0;
         background: #2da44e; color: #fff !important; border-radius: 6px;
@@ -37,6 +33,14 @@
       }
       ul { padding-left: 1.25rem; }
       footer { margin-top: 4rem; color: #424a53; font-size: .9rem; }
+      /* Dark-mode overrides come last so they win over the base rules above —
+         media queries add no specificity, so source order decides. */
+      @media (prefers-color-scheme: dark) {
+        body { color: #e6edf3; background: #0d1117; }
+        a { color: #58a6ff; }
+        code, pre, .highlight { background: #161b22; color: #e6edf3; }
+        .btn { background: #238636; }
+      }
     </style>
   </head>
   <body>
