@@ -10,6 +10,18 @@ users:
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/zsh
 write_files:
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/linux-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/wsl_setup-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/ubuntu_release_upgrader-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
   - path: /etc/wsl.conf
     content: |
       [boot]
