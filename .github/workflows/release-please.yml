@@ -1,0 +1,30 @@
+name: Release Please
+
+# Automates releases. On every push to main, release-please opens (or updates) a
+# single "chore: release X.Y.Z" PR that bumps CHANGELOG.md and the version
+# manifest from the Conventional Commit messages since the last tag. Merging that
+# PR creates the git tag and the GitHub Release with the generated notes.
+#
+# Uses the AUTOMATION_PAT secret (not GITHUB_TOKEN) so the release PR triggers the
+# required SonarCloud gate and the resulting tag/release can trigger downstream
+# workflows. The PAT is the same fine-grained token used by update-lazydocker.yml
+# (Contents: read/write and Pull requests: read/write), which covers opening the
+# PR, pushing the tag, and publishing the release.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          token: ${{ secrets.AUTOMATION_PAT }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json

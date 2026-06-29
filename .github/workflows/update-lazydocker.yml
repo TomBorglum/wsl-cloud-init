@@ -71,8 +71,8 @@ jobs:
           branch: chore/update-lazydocker
           delete-branch: true
           base: main
-          commit-message: "Bump lazydocker to v${{ steps.check.outputs.latest }}"
-          title: "Bump lazydocker to v${{ steps.check.outputs.latest }}"
+          commit-message: "deps: bump lazydocker to v${{ steps.check.outputs.latest }}"
+          title: "deps: bump lazydocker to v${{ steps.check.outputs.latest }}"
           body: |
             Automated update of lazydocker to **v${{ steps.check.outputs.latest }}**.
 

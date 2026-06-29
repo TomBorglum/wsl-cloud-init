@@ -40,6 +40,14 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
+Provisioning uses whatever commit your checkout is on (cloud-init clones the repo
+and checks out that exact commit). For a reproducible, released version, check out
+a release tag before provisioning; stay on `main` for the latest changes.
+
+```powershell
+git checkout v1.0.0   # or omit to use the latest on main
+```
+
 ### 2. Provision an instance
 
 From **Command Prompt**:
