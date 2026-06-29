@@ -84,9 +84,12 @@ The full convention list with annotated examples lives in
    unnecessary. See the "File permissions" section of `references/conventions.md`.
 
 6. **Verify.** Run `bash -n` on the new script to catch syntax errors, and confirm
-   its mode is `644`. Note to the user that full runtime verification requires the
-   real target environment — these scripts assume their intended user/root context
-   and a fresh system.
+   its mode is `644`. Check that **every** download `curl` enforces HTTPS with
+   `--proto '=https'` (see the "Download pattern" section of
+   `references/conventions.md`) — a bare `curl ... https://...` is flagged as a
+   vulnerability by static analysis. Note to the user that full runtime verification
+   requires the real target environment — these scripts assume their intended
+   user/root context and a fresh system.
 
 ## Reference
 
