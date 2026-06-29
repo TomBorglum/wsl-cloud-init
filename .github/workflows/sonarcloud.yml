@@ -11,8 +11,8 @@ permissions:
   pull-requests: read
 
 jobs:
-  sonarcloud:
-    name: SonarCloud Code Analysis
+  scan:
+    name: Scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
