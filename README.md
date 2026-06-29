@@ -50,10 +50,13 @@ git checkout v1.0.0   # or omit to use the latest on main
 
 ### 2. Provision an instance
 
-From **Command Prompt**:
+In **PowerShell**:
 
-```bat
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+  -DistroTemplatePath ubuntu `
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev
 ```
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
@@ -115,8 +118,14 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 
 Once the setup above is in place, add the flags to the Getting Started command:
 
-```bat
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev -InstallGitConfig -InstallClaudeCode -InstallVsCodeInterop
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+  -DistroTemplatePath ubuntu `
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev `
+  -InstallGitConfig `
+  -InstallClaudeCode `
+  -InstallVsCodeInterop
 ```
 
 ### Enable later in a running instance
