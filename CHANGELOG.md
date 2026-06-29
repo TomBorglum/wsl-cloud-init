@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.0.0...v1.0.1) (2026-06-29)
+
+
+### Documentation
+
+* add CONTRIBUTING.md with commit and branch conventions ([#10](https://github.com/TomBorglum/wsl-cloud-init/issues/10)) ([9163aa6](https://github.com/TomBorglum/wsl-cloud-init/commit/9163aa6708ab53b664d824a979b35ed1332f3799))
+
 ## 1.0.0 (2026-06-29)
 
 
