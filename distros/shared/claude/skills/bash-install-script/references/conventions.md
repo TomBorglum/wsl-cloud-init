@@ -145,12 +145,20 @@ and just operate under `$HOME`.
 Fetch to `/tmp`, run, then clean up:
 
 ```bash
-curl -fsSL <url> -o /tmp/<name>
+curl -fsSL --proto '=https' --tlsv1.2 <url> -o /tmp/<name>
 # ... use it ...
 rm -f /tmp/<name>
 ```
 
-`curl` flags: `-fsSL` (fail on error, silent, show errors, follow redirects).
+`curl` flags: `-fsSL` (fail on error, silent, show errors, follow redirects) plus
+`--proto '=https' --tlsv1.2`. **Always include `--proto '=https'`** on any `curl`
+that downloads: with `-L`, a redirect from the `https://` URL to a plaintext
+`http://` one would otherwise be followed silently, downloading code over an
+insecure channel. `--proto '=https'` restricts the transfer — including redirects —
+to HTTPS, so such a downgrade fails loudly instead. `--tlsv1.2` floors the TLS
+version. This applies to **every** download `curl` in the script, including the
+keyring fetch in the apt pattern below. Static analyzers (e.g. SonarCloud) flag a
+bare `curl ... https://...` as a vulnerability for exactly this reason.
 
 ## apt pattern
 
@@ -164,7 +172,7 @@ For a third-party apt repo, add the keyring and source list, then update. Create
 
 ```bash
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL <repo>/gpg -o /etc/apt/keyrings/<name>.asc
+curl -fsSL --proto '=https' --tlsv1.2 <repo>/gpg -o /etc/apt/keyrings/<name>.asc
 chmod a+r /etc/apt/keyrings/<name>.asc
 echo "deb [signed-by=/etc/apt/keyrings/<name>.asc] <repo> <suite> <component>" \
   > /etc/apt/sources.list.d/<name>.list
@@ -218,7 +226,7 @@ if [[ -x "/home/$TARGET_USER/.tool/bin/tool" ]]; then
   exit 0
 fi
 
-curl -fsSL https://example.sh/install.sh -o /tmp/tool-install.sh
+curl -fsSL --proto '=https' --tlsv1.2 https://example.sh/install.sh -o /tmp/tool-install.sh
 sudo -u "$TARGET_USER" bash /tmp/tool-install.sh
 rm -f /tmp/tool-install.sh
 ```
@@ -239,7 +247,7 @@ fi
 
 CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
 install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+curl -fsSL --proto '=https' --tlsv1.2 https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $CODENAME stable" > /etc/apt/sources.list.d/docker.list
 apt-get update -qq

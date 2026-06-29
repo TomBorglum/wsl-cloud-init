@@ -15,7 +15,7 @@ fi
 
 : "${CONTEXT7_API_KEY:?CONTEXT7_API_KEY is required}"
 
-curl -fsSL https://claude.ai/install.sh -o /tmp/claude-install.sh
+curl -fsSL --proto '=https' --tlsv1.2 https://claude.ai/install.sh -o /tmp/claude-install.sh
 sudo -u "$TARGET_USER" bash /tmp/claude-install.sh
 rm -f /tmp/claude-install.sh
 
