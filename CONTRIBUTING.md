@@ -26,25 +26,41 @@ and ideally under ~72 characters.
 ## Types
 
 These are the types configured in [`release-please-config.json`](release-please-config.json).
-The type determines which changelog section the change appears under and whether
-it bumps the version.
+The type controls two independent things: which changelog section the change
+appears under, and whether it is a **releasable unit** — i.e. whether it can cut
+a release on its own. For our `simple` release type the releasable units are
+`feat`, `fix`, and `deps` (plus any breaking change); everything else only ever
+rides along.
 
-| Type | Example | Changelog section | Version effect |
+| Type | Example | Changelog section | Cuts a release? |
 | --- | --- | --- | --- |
-| `feat` | `feat: add openSUSE distro template` | Features | **minor** (1.1.0) |
-| `fix` | `fix: correct WSL path conversion` | Bug Fixes | **patch** (1.0.1) |
-| `perf` | `perf: skip a redundant interop call` | Performance Improvements | patch |
-| `deps` | `deps: bump lazydocker to v0.24.1` | Dependencies | rides along¹ |
-| `revert` | `revert: undo the sdkman pin` | Reverts | patch |
-| `docs` | `docs: clarify the opt-in features` | Documentation | rides along¹ |
-| `chore` | `chore: tidy script comments` | *(hidden)* | rides along¹ |
-| `ci` | `ci: pin actions by sha` | *(hidden)* | rides along¹ |
-| `build` `refactor` `style` `test` | `refactor: extract a helper` | *(hidden)* | rides along¹ |
+| `feat` | `feat: add openSUSE distro template` | Features | yes — **minor** (1.1.0) |
+| `fix` | `fix: correct WSL path conversion` | Bug Fixes | yes — **patch** (1.0.1) |
+| `deps` | `deps: bump lazydocker to v0.24.1` | Dependencies | yes — **patch** (1.0.1) |
+| `perf` | `perf: skip a redundant interop call` | Performance Improvements | no — rides along¹ |
+| `revert` | `revert: undo the sdkman pin` | Reverts | no — rides along¹ |
+| `docs` | `docs: clarify the opt-in features` | Documentation | no — rides along¹ |
+| `chore` | `chore: tidy script comments` | *(hidden)* | no — rides along¹ |
+| `ci` | `ci: pin actions by sha` | *(hidden)* | no — rides along¹ |
+| `build` `refactor` `style` `test` | `refactor: extract a helper` | *(hidden)* | no — rides along¹ |
 
 ¹ **Rides along**: does not trigger a release on its own, but is included in the
-next release that a `feat` or `fix` cuts. Visible types show up in the notes;
-hidden ones don't. A PR containing only these types will not open a release PR
-until a `feat` or `fix` lands.
+next release that a `feat`/`fix`/`deps` cuts. Visible types show up in the notes;
+hidden ones don't. A PR containing only ride-along types will not open a release
+PR until a releasable unit lands.
+
+### `deps:` vs `ci:` — shipped tools vs CI tooling
+
+`deps:` is releasable on purpose: it's how an update to a tool that is **shipped
+into the provisioned environment** produces a new release. The lazydocker
+auto-update workflow uses `deps:` so that bumping lazydocker cuts a patch release
+of wsl-cloud-init — users get the newer tool in a tagged version.
+
+Dependabot, by contrast, updates the GitHub Actions used only in CI. Those never
+reach a provisioned environment, so its PRs use `ci:` (hidden, non-releasable):
+they keep CI current without cutting a product release. Rule of thumb: **if the
+change alters what a user receives when they provision, it's `deps:` (or
+`feat`/`fix`); if it only touches the build/CI, it's `ci:`/`chore:`.**
 
 ## Breaking changes
 
@@ -90,10 +106,11 @@ release-please aggregates **every commit merged since the last release** (across
 all PRs, not just one branch) and applies the highest-impact bump:
 
 ```
-any  feat! / BREAKING CHANGE   →  MAJOR
-else any  feat                 →  MINOR
-else any  fix / perf / revert  →  PATCH
-else only chore/docs/deps/...  →  no release
+any  feat! / BREAKING CHANGE       →  MAJOR
+else any  feat                     →  MINOR
+else any  fix / deps               →  PATCH
+else only ride-along types         →  no release
+   (perf, revert, docs, chore, ci, …)
 ```
 
 ## Branch names
