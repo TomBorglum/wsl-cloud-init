@@ -36,13 +36,16 @@ Every provisioned instance comes ready with:
 
 ## Provision in one command
 
-You need only an up-to-date **WSL 2** and **Git for Windows**. Then, from a Windows
-Command Prompt:
+You need only an up-to-date **WSL 2** and **Git for Windows**. Then, in
+**PowerShell**:
 
-```bat
+```powershell
 git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04 -InstanceName dev
+powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+  -DistroTemplatePath ubuntu `
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev
 ```
 
 The script renders the cloud-init config, installs Ubuntu, waits for setup to
