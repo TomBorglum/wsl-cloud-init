@@ -1,0 +1,14 @@
+title: wsl-cloud-init
+description: >-
+  Provision a fully configured WSL Ubuntu developer environment with one command,
+  using cloud-init — zsh, Docker, language runtimes, Git, and Windows interop,
+  ready to work in.
+url: https://tomborglum.github.io
+baseurl: /wsl-cloud-init
+# A short marketing landing page only; the repository README is the source of truth.
+# A self-contained layout (_layouts/default.html) renders the page, so no gem theme
+# is needed — that keeps SEO meta tags under our control via jekyll-seo-tag.
+plugins:
+  - jekyll-seo-tag
+exclude:
+  - "*.sh"
