@@ -8,7 +8,12 @@ updates:
     schedule:
       interval: "weekly"
     commit-message:
-      prefix: "deps"
+      # "ci", not "deps": these actions run only in CI and never reach a
+      # provisioned environment, so their bumps must not cut a release of
+      # wsl-cloud-init. release-please treats "ci" as a hidden, non-releasable
+      # type. Tools that ARE shipped into the distro use "deps" instead (see
+      # update-lazydocker.yml), which is releasable and cuts a patch.
+      prefix: "ci"
     groups:
       actions:
         patterns:
