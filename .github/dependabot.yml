@@ -1,0 +1,15 @@
+version: 2
+updates:
+  # Keep GitHub Actions used in workflows up to date. This is the only manifest
+  # ecosystem present today; add others (e.g. docker, pip, npm) here if the repo
+  # gains those manifests later.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
+    groups:
+      actions:
+        patterns:
+          - "*"

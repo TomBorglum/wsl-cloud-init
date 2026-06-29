@@ -1,0 +1,80 @@
+name: Update lazydocker
+
+# Dependabot can't track a version pinned in a shell script, and wouldn't refresh
+# the embedded checksums anyway. This job does both: it bumps VERSION and both
+# per-arch SHA-256 sums from the release's checksums.txt, then opens a PR that
+# goes through the normal SonarCloud gate + branch rules before merge.
+#
+# Requires the AUTOMATION_PAT secret: a fine-grained PAT scoped to this repo with
+# Contents: read/write and Pull requests: read/write. A PAT (not GITHUB_TOKEN) is
+# used so the resulting PR triggers the required status checks.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Mondays 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{ secrets.AUTOMATION_PAT }}
+
+      - name: Check for a newer lazydocker release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.AUTOMATION_PAT }}
+        run: |
+          set -euo pipefail
+          script="distros/ubuntu/scripts/12-install-lazydocker.sh"
+
+          current="$(grep -oP '^VERSION=\K.*' "$script")"
+          latest="$(gh api repos/jesseduffield/lazydocker/releases/latest --jq '.tag_name' | sed 's/^v//')"
+          echo "current=$current  latest=$latest"
+
+          if [[ "$current" == "$latest" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already on the latest version; nothing to do."
+            exit 0
+          fi
+
+          sums="$(curl -fsSL --proto '=https' \
+            "https://github.com/jesseduffield/lazydocker/releases/download/v${latest}/checksums.txt")"
+          x86="$(printf '%s\n' "$sums" | awk -v f="lazydocker_${latest}_Linux_x86_64.tar.gz" '$2==f {print $1}')"
+          arm="$(printf '%s\n' "$sums" | awk -v f="lazydocker_${latest}_Linux_arm64.tar.gz" '$2==f {print $1}')"
+          if [[ -z "$x86" || -z "$arm" ]]; then
+            echo "Could not find Linux x86_64/arm64 checksums for v${latest}" >&2
+            exit 1
+          fi
+
+          # Address each line by its ARCH marker so spacing/order can't break the edit.
+          sed -i \
+            -e "s/^VERSION=.*/VERSION=${latest}/" \
+            -e "/ARCH=x86_64/ s/SHA256=[0-9a-f]\{64\}/SHA256=${x86}/" \
+            -e "/ARCH=arm64/  s/SHA256=[0-9a-f]\{64\}/SHA256=${arm}/" \
+            "$script"
+
+          bash -n "$script"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ secrets.AUTOMATION_PAT }}
+          branch: chore/update-lazydocker
+          delete-branch: true
+          base: main
+          commit-message: "Bump lazydocker to v${{ steps.check.outputs.latest }}"
+          title: "Bump lazydocker to v${{ steps.check.outputs.latest }}"
+          body: |
+            Automated update of lazydocker to **v${{ steps.check.outputs.latest }}**.
+
+            `VERSION` and both per-arch `SHA256` values were refreshed from the
+            release's `checksums.txt`. The SonarCloud gate must pass before merge.

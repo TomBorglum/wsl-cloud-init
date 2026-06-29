@@ -1,0 +1,75 @@
+#cloud-config
+locale: en_US.UTF-8
+# WSL manages its own ext4.vhdx sizing, so the rootfs resize is a no-op here. It also
+# fails on older LTS images (22.04's resize2fs 1.46.5 rejects newer ext4 features),
+# which flips cloud-init status to error. Disable the module.
+resize_rootfs: false
+users:
+  - name: __TARGET_USER__
+    groups: [adm, dialout, cdrom, sudo, audio, dip, video, plugdev, netdev, docker]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/zsh
+write_files:
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/linux-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
+    defer: true
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/wsl_setup-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
+    defer: true
+  - path: /home/__TARGET_USER__/.config/ubuntu-insights/ubuntu_release_upgrader-consent.toml
+    content: |
+      consent_state = false
+    owner: __TARGET_USER__:__TARGET_USER__
+    defer: true
+  - path: /etc/wsl.conf
+    content: |
+      [boot]
+      systemd=true
+      [user]
+      default=__TARGET_USER__
+      [interop]
+      appendWindowsPath=false
+  - path: /home/__TARGET_USER__/.zshrc
+    content: |
+      export ZSH="$HOME/.oh-my-zsh"
+      ZSH_THEME="robbyrussell"
+      plugins=(git z sudo docker zsh-autosuggestions pj)
+      source $ZSH/oh-my-zsh.sh
+
+      bindkey "\e[1;2D" backward-char   # Shift+Left
+      bindkey "\e[1;2C" forward-char    # Shift+Right
+
+      eval "$(direnv hook zsh)"
+
+      export PROJECT_PATHS=(~/projects)
+      for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
+
+      eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
+
+      cd ~
+package_update: true
+package_upgrade: true
+packages:
+  - git
+  - curl
+  - build-essential
+  - unzip
+  - zip
+  - zsh
+  - direnv
+  - gh
+  - jq
+runcmd:
+  - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
+  - git -C /opt/wsl-cloud-init sparse-checkout set distros/ubuntu/scripts
+  - git -C /opt/wsl-cloud-init checkout __COMMIT__
+  - |
+    export TARGET_USER="__TARGET_USER__"
+    export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
+    export INSTALL_GIT_CONFIG="__INSTALL_GIT_CONFIG__"
+    export INSTALL_VS_CODE_INTEROP="__INSTALL_VS_CODE_INTEROP__"
+    bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
