@@ -19,7 +19,9 @@ case "$(dpkg --print-architecture)" in
   *) echo "Unsupported architecture for lazydocker: $(dpkg --print-architecture)" >&2; exit 1 ;;
 esac
 
-curl -fsSL \
+# --proto '=https' refuses any redirect that would downgrade to a clear-text
+# protocol, so the transfer stays HTTPS end to end.
+curl -fsSL --proto '=https' \
   "https://github.com/jesseduffield/lazydocker/releases/download/v${VERSION}/lazydocker_${VERSION}_Linux_${ARCH}.tar.gz" \
   -o /tmp/lazydocker.tar.gz
 
