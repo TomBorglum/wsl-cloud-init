@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% seo %}
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 3rem 1.25rem 5rem;
+        color: #1b1f24;
+        background: #fff;
+      }
+      @media (prefers-color-scheme: dark) {
+        body { color: #e6edf3; background: #0d1117; }
+        a { color: #58a6ff; }
+        code, pre { background: #161b22; }
+        .btn { background: #238636; }
+      }
+      h1 { font-size: 2.2rem; line-height: 1.2; margin: 0 0 .5rem; }
+      h2 { margin-top: 2.5rem; }
+      .tagline { font-size: 1.2rem; color: #57606a; margin: 0 0 1.5rem; }
+      a { color: #0969da; }
+      code, pre { background: #f6f8fa; border-radius: 6px; }
+      code { padding: .15em .35em; font-size: .9em; }
+      pre { padding: 1rem; overflow-x: auto; }
+      pre code { padding: 0; background: none; }
+      .btn {
+        display: inline-block; padding: .6rem 1.1rem; margin: .25rem .5rem .25rem 0;
+        background: #2da44e; color: #fff !important; border-radius: 6px;
+        text-decoration: none; font-weight: 600;
+      }
+      ul { padding-left: 1.25rem; }
+      footer { margin-top: 4rem; color: #57606a; font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+    {{ content }}
+    <footer>
+      <hr>
+      <p>
+        <a href="https://github.com/TomBorglum/wsl-cloud-init">GitHub</a> ·
+        <a href="https://github.com/TomBorglum/wsl-cloud-init#readme">Documentation</a> ·
+        <a href="https://github.com/TomBorglum/wsl-cloud-init/releases">Releases</a> ·
+        MIT licensed
+      </p>
+    </footer>
+  </body>
+</html>
