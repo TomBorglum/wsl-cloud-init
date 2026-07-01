@@ -1,0 +1,45 @@
+name: setup-direnv
+description: >-
+  Install direnv and activate the language runtimes declared in a repository's
+  .envrc, exporting them to $GITHUB_PATH / $GITHUB_ENV for later workflow steps.
+
+inputs:
+  working-directory:
+    description: Directory containing the .envrc to activate.
+    required: false
+    default: '.'
+
+runs:
+  using: composite
+  steps:
+    # Install direnv from the runner's apt repos. direnv publishes no vendor
+    # checksum file, so there is nothing to pin against; the version floats with
+    # the runner image, which is acceptable here. Idempotent: skip if direnv is
+    # already on PATH (e.g. a warm rerun).
+    - name: Install direnv
+      shell: bash
+      run: |
+        set -euo pipefail
+        if command -v direnv >/dev/null 2>&1; then
+          echo "direnv already installed: $(direnv version)"
+          exit 0
+        fi
+        sudo apt-get update
+        sudo apt-get install -y direnv
+
+    # Activate the .envrc: install the CI direnv directives, fail if there is no
+    # .envrc, then evaluate it. Evaluating it runs use_sdk, which installs the
+    # declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for later steps.
+    - name: Activate .envrc
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set -euo pipefail
+        if [[ ! -f .envrc ]]; then
+          echo "setup-direnv: no .envrc in $(pwd)" >&2
+          exit 1
+        fi
+        install -d "$HOME/.config/direnv/lib"
+        install -m 644 "$GITHUB_ACTION_PATH"/lib/*.sh "$HOME/.config/direnv/lib/"
+        direnv allow
+        direnv exec . true
