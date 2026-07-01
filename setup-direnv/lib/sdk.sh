@@ -40,7 +40,11 @@ use_sdk() {
     exit 1
   fi
 
-  # Expose the runtime to subsequent workflow steps.
+  # Expose the runtime to subsequent workflow steps. PATH only, with no
+  # candidate-specific env var (e.g. JAVA_HOME): the terminal directive in
+  # distros/shared/direnv/lib/sdk.sh is PATH-only too, so this keeps CI faithful
+  # to local. Tools self-locate from PATH (`mvn` falls back to `java` on PATH when
+  # JAVA_HOME is unset). If a candidate ever needs its own env var, add it to both
+  # directives together so they don't diverge.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
-  [[ "$candidate" == "java" ]] && echo "JAVA_HOME=$candidate_dir" >> "$GITHUB_ENV"
 }

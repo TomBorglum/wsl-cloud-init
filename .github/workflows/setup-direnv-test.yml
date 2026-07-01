@@ -29,12 +29,8 @@ jobs:
       - name: Assert the runtime propagated to later steps
         run: |
           set -euo pipefail
-          echo "JAVA_HOME=${JAVA_HOME:-<unset>}"
-          test -n "${JAVA_HOME:-}"
-          case "$JAVA_HOME" in
-            "$HOME/.sdkman/candidates/java/"*) : ;;
-            *) echo "JAVA_HOME is not a SDKMAN candidate dir: $JAVA_HOME" >&2; exit 1 ;;
-          esac
+          # Directives expose runtimes via $GITHUB_PATH only (no JAVA_HOME etc.),
+          # so assert each tool resolves to its SDKMAN candidate dir on PATH.
           java -version
           command -v java | grep -q "$HOME/.sdkman/candidates/java/"
           # Maven: a non-java SDKMAN candidate installs through the same generic
