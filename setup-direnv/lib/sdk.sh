@@ -9,7 +9,7 @@
 # Deliberately simpler than the terminal directive in
 # distros/shared/direnv/lib/sdk.sh: that version's arg checks, SDKMAN_DIR override,
 # subshell and PATH_add exist to keep direnv's interactive load/unload clean, which
-# CI does not do. Here we use standard SDKMAN and rely on its built-in idempotency.
+# CI does not do.
 use_sdk() {
   local candidate=$1
   local version=$2
@@ -20,13 +20,17 @@ use_sdk() {
   fi
   source "$HOME/.sdkman/bin/sdkman-init.sh"
 
-  # `sdk install` is idempotent, but its exit code is unreliable — it returns
-  # non-zero even when the candidate installs fine — so don't gate on it. Install,
-  # then ask SDKMAN itself where the candidate lives; `sdk home` is the canonical
-  # resolver and its success is the real signal that the install landed.
-  sdk install "$candidate" "$version" || true
+  # `sdk home` is the canonical resolver: it prints the candidate's install dir and
+  # exits non-zero when it isn't installed. Use it both as the idempotency gate
+  # (skip `sdk install` — and its network round-trip — when already present) and,
+  # after installing, as the real success signal. Don't gate on `sdk install`'s own
+  # exit code: it returns non-zero even when the candidate installs fine.
   local candidate_dir
   candidate_dir="$(sdk home "$candidate" "$version" 2>/dev/null || true)"
+  if [[ -z "$candidate_dir" ]]; then
+    sdk install "$candidate" "$version" || true
+    candidate_dir="$(sdk home "$candidate" "$version" 2>/dev/null || true)"
+  fi
   if [[ -z "$candidate_dir" || ! -d "$candidate_dir" ]]; then
     echo "use_sdk: failed to install $candidate $version (SDKMAN_DIR=${SDKMAN_DIR:-unset})" >&2
     ls -la "${SDKMAN_DIR:-$HOME/.sdkman}/candidates/$candidate" >&2 2>/dev/null || true
