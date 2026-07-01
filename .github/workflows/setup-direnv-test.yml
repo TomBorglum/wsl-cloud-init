@@ -37,6 +37,11 @@ jobs:
           esac
           java -version
           command -v java | grep -q "$HOME/.sdkman/candidates/java/"
+          # Maven: a non-java SDKMAN candidate installs through the same generic
+          # use_sdk (no code change) and is exposed via PATH only (no dedicated env
+          # var). `mvn -version` also needs a JDK, so it re-confirms java propagated.
+          mvn -version
+          command -v mvn | grep -q "$HOME/.sdkman/candidates/maven/"
 
   missing-envrc:
     runs-on: ubuntu-latest
