@@ -160,7 +160,7 @@ essential, not incidental:
 | | terminal (`distros/shared/direnv/lib`) | CI (`setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
-| expose the runtime | `PATH_add` + `export JAVA_HOME` for java (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `JAVA_HOME` via `$GITHUB_ENV` for java (cross-step files) |
+| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |
 | failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
@@ -171,17 +171,14 @@ would not actually reduce the CI-only hardening (that code has to exist regardle
 sharing). Duplication here is cheaper than the abstraction that would remove it.
 
 Note that each directive is **generic over its argument**, so most additions cost nothing.
-`use_sdk` passes `<candidate> <version>` straight to SDKMAN, so `use sdk maven 3.9.6`,
-`use sdk gradle 8.7`, etc. already work through the existing function — a new SDKMAN
-candidate needs **no code change**. The only candidate-specific line is the `JAVA_HOME`
-export, guarded on `java`; anything else simply lands on `$GITHUB_PATH`.
+`use_sdk` passes `<candidate> <version>` straight to SDKMAN and exposes the result the same
+way for **every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME`
+(`JAVA_HOME`, `MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`,
+`use sdk gradle 8.7`, etc. already work through the existing function with **no code change**
+and no per-candidate special-casing.
 
-You therefore only touch the CI copy when the *contract surface* genuinely widens:
-
-- a candidate that needs its **own env var beyond PATH** — the way `java` needs `JAVA_HOME`
-  (you'd add another `[[ "$candidate" == … ]]` export), or
-- an entirely **new directive** (`use_fnm`, `use_pixi`, a new backend), which is a new
-  function, not a variant of `use_sdk`.
+You therefore only touch the CI copy for an entirely **new directive** (`use_fnm`, `use_pixi`,
+a new backend) — a new function, not a variant of `use_sdk`.
 
 When you do add a new directive, guard against local↔CI drift by:
 

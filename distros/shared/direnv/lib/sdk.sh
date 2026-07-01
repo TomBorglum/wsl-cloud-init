@@ -13,9 +13,10 @@ use_sdk() {
   fi
 
   PATH_add "$candidate_dir/bin"
-  # Mirror SDKMAN, which exports JAVA_HOME for the selected java. Pin it to this
-  # project's version (like `sdk use java <version>`) rather than leaving it on the
-  # global default. direnv tracks this export and restores the prior value when the
-  # directory is left. SDKMAN sets no *_HOME for maven/gradle/etc., so neither do we.
-  [[ "$candidate" == "java" ]] && export JAVA_HOME="$candidate_dir"
+  # Mirror SDKMAN, which exports <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …) for the
+  # selected version. Derive the name from the candidate (SDKMAN's convention)
+  # instead of hardcoding it, pinned to this project's version rather than the global
+  # default. A plain `export` is tracked by direnv and restored to its prior value
+  # when the directory is left (unlike `sdk use`, which mutates the live shell).
+  export "${candidate^^}_HOME=$candidate_dir"
 }

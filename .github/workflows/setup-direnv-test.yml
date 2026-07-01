@@ -29,18 +29,13 @@ jobs:
       - name: Assert the runtime propagated to later steps
         run: |
           set -euo pipefail
-          # java: exposed on PATH, and JAVA_HOME pinned to the candidate dir
-          # (mirroring SDKMAN, which exports JAVA_HOME for java).
-          echo "JAVA_HOME=${JAVA_HOME:-<unset>}"
-          test -n "${JAVA_HOME:-}"
-          case "$JAVA_HOME" in
-            "$HOME/.sdkman/candidates/java/"*) : ;;
-            *) echo "JAVA_HOME is not a SDKMAN candidate dir: $JAVA_HOME" >&2; exit 1 ;;
-          esac
+          # Each SDKMAN candidate exposes its bin on PATH and its <CANDIDATE>_HOME on
+          # $GITHUB_ENV (SDKMAN's convention), pinned to the version the .envrc declares.
+          echo "JAVA_HOME=${JAVA_HOME:-<unset>}  MAVEN_HOME=${MAVEN_HOME:-<unset>}"
+          test "${JAVA_HOME:-}"  = "$HOME/.sdkman/candidates/java/21.0.2-tem"
+          test "${MAVEN_HOME:-}" = "$HOME/.sdkman/candidates/maven/3.9.9"
           java -version
           command -v java | grep -q "$HOME/.sdkman/candidates/java/"
-          # maven: a non-java candidate is exposed via PATH only (SDKMAN sets no
-          # MAVEN_HOME); mvn self-locates and finds the JDK, re-confirming propagation.
           mvn -version
           command -v mvn | grep -q "$HOME/.sdkman/candidates/maven/"
 

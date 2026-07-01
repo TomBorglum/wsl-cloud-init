@@ -40,11 +40,10 @@ use_sdk() {
     exit 1
   fi
 
-  # Expose the runtime to subsequent workflow steps: PATH always, plus JAVA_HOME
-  # for java — mirroring SDKMAN (and the terminal directive in
-  # distros/shared/direnv/lib/sdk.sh, which exports JAVA_HOME too) so CI stays
-  # faithful to local. SDKMAN sets no *_HOME for maven/gradle/etc., so neither do
-  # we; those candidates self-locate from PATH.
+  # Expose the runtime to subsequent workflow steps: the bin on $GITHUB_PATH, plus
+  # SDKMAN's <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …) on $GITHUB_ENV. The name is
+  # derived from the candidate (SDKMAN's convention), not hardcoded — matching the
+  # terminal directive in distros/shared/direnv/lib/sdk.sh.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
-  [[ "$candidate" == "java" ]] && echo "JAVA_HOME=$candidate_dir" >> "$GITHUB_ENV"
+  echo "${candidate^^}_HOME=$candidate_dir" >> "$GITHUB_ENV"
 }
