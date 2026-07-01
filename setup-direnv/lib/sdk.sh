@@ -15,8 +15,10 @@ use_sdk() {
   local version=$2
 
   # Standard SDKMAN install; guard only to skip re-downloading on a warm rerun.
+  # --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no plaintext
+  # redirects), matching the repo's other installers.
   if [[ ! -d "$HOME/.sdkman" ]]; then
-    curl -fsSL https://get.sdkman.io | bash
+    curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io | bash
   fi
   source "$HOME/.sdkman/bin/sdkman-init.sh"
 
@@ -46,4 +48,5 @@ use_sdk() {
   # terminal directive in distros/shared/direnv/lib/sdk.sh.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
   echo "${candidate^^}_HOME=$candidate_dir" >> "$GITHUB_ENV"
+  return 0
 }
