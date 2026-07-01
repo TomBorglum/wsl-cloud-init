@@ -31,7 +31,7 @@ use_sdk() {
     sdk install "$candidate" "$version" || true
     candidate_dir="$(sdk home "$candidate" "$version" 2>/dev/null || true)"
   fi
-  if [[ -z "$candidate_dir" || ! -d "$candidate_dir" ]]; then
+  if [[ ! -d "$candidate_dir" ]]; then
     echo "use_sdk: failed to install $candidate $version (SDKMAN_DIR=${SDKMAN_DIR:-unset})" >&2
     ls -la "${SDKMAN_DIR:-$HOME/.sdkman}/candidates/$candidate" >&2 2>/dev/null || true
     # exit, not return: direnv silently ignores a directive that `return`s a
