@@ -142,3 +142,49 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 2. Merge it. release-please opens or updates the **chore(main): release X.Y.Z** PR.
 3. Merge that release PR — the version is tagged and the GitHub Release is
    published automatically. No manual tagging.
+
+## The `setup-direnv` CI directives — why they are a separate copy
+
+The [`setup-direnv`](setup-direnv/) composite action lets CI honor the same `.envrc`
+a developer uses locally, so a runtime version is declared **once** (`use sdk java
+21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
+shared `.envrc` is the real single source of truth, and it is what prevents version drift.
+
+The directive **implementations**, however, are intentionally *not* shared. `setup-direnv/lib/`
+holds its own self-contained copy of each `use_*` function, separate from the terminal ones
+in `distros/shared/direnv/lib/`. Do **not** try to unify them behind one file or a wrapper.
+
+The two copies look similar but differ at nearly every step, and the differences are
+essential, not incidental:
+
+| | terminal (`distros/shared/direnv/lib`) | CI (`setup-direnv/lib`) |
+| --- | --- | --- |
+| SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
+| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |
+| failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
+| success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
+| arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
+
+A unified function would have to branch on all of those axes — one file with two code
+paths — which is harder to read and reason about than two short, self-contained files, and
+would not actually reduce the CI-only hardening (that code has to exist regardless of
+sharing). Duplication here is cheaper than the abstraction that would remove it.
+
+Note that each directive is **generic over its argument**, so most additions cost nothing.
+`use_sdk` passes `<candidate> <version>` straight to SDKMAN and exposes the result the same
+way for **every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME`
+(`JAVA_HOME`, `MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`,
+`use sdk gradle 8.7`, etc. already work through the existing function with **no code change**
+and no per-candidate special-casing.
+
+You therefore only touch the CI copy for an entirely **new directive** (`use_fnm`, `use_pixi`,
+a new backend) — a new function, not a variant of `use_sdk`.
+
+When you do add a new directive, guard against local↔CI drift by:
+
+1. mirroring the terminal directive's **name and accepted arguments** in the CI copy, and
+2. adding a fixture `.envrc` to `.github/workflows/setup-direnv-test.yml` that exercises it
+   end to end (install + cross-step propagation).
+
+Keep each CI directive small and self-contained; reach for a fixture test, not a shared
+implementation, to keep local and CI behavior aligned.
