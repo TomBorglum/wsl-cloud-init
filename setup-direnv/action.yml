@@ -37,6 +37,12 @@ runs:
     # to a declared version invalidates the cache. actions/cache registers a post-step
     # that saves at job end (skipped on an exact-key hit). On a full hit, use_sdk's
     # idempotency (the ~/.sdkman guard + `sdk home`) skips every download.
+    #
+    # No restore-keys on purpose: a broad prefix fallback would base-restore the prior
+    # .envrc's ~/.sdkman on every version change, so old toolchains would accrete and
+    # the cache would grow without bound. With an exact key only, an unchanged .envrc
+    # is a full hit (no downloads), a version change starts a lean fresh cache, and the
+    # superseded entry auto-evicts after 7 days idle.
     - name: Cache SDKMAN toolchains
       if: ${{ inputs.cache == 'true' }}
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -46,8 +52,6 @@ runs:
         # key ends in '/.envrc', which resolves. It is empty when there is no .envrc
         # (that path fails activation anyway), which is a harmless constant key.
         key: setup-direnv-sdkman-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
-        restore-keys: |
-          setup-direnv-sdkman-${{ runner.os }}-
 
     # Activate the .envrc: install the CI direnv directives, fail if there is no
     # .envrc, then evaluate it. Evaluating it runs use_sdk, which installs the
