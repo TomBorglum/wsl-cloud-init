@@ -17,14 +17,21 @@ use_sdk() {
 
   # Standard SDKMAN install; guard only to skip re-downloading on a warm rerun.
   if [[ ! -d "$HOME/.sdkman" ]]; then
-    curl -fsSL https://get.sdkman.io | bash || return 1
+    curl -fsSL https://get.sdkman.io | bash
   fi
-
-  # SDKMAN is idempotent: an already-installed candidate is a no-op that exits 0.
-  # Keep the || return 1 so a failed install fails the job rather than falling
-  # through to the exports below and passing green with no SDK installed.
   source "$HOME/.sdkman/bin/sdkman-init.sh"
-  sdk install "$candidate" "$version" || return 1
+
+  # `sdk install` is idempotent, but its exit code is unreliable — it returns
+  # non-zero even when the candidate installs fine — so don't gate on it. Install,
+  # then treat the candidate directory's existence as the real success signal.
+  sdk install "$candidate" "$version" || true
+  if [[ ! -d "$candidate_dir" ]]; then
+    echo "use_sdk: failed to install $candidate $version" >&2
+    # exit, not return: direnv silently ignores a directive that `return`s a
+    # non-zero code (the job would go green with nothing installed), whereas a
+    # non-zero `exit` from the .envrc propagates and fails the step.
+    exit 1
+  fi
 
   # Expose the runtime to subsequent workflow steps.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
