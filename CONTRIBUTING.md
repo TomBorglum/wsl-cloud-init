@@ -160,7 +160,7 @@ essential, not incidental:
 | | terminal (`distros/shared/direnv/lib`) | CI (`setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
-| expose the runtime | `PATH_add` (in-shell) | `$GITHUB_PATH` / `$GITHUB_ENV` (cross-step files) |
+| expose the runtime | `PATH_add` + `export JAVA_HOME` for java (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `JAVA_HOME` via `$GITHUB_ENV` for java (cross-step files) |
 | failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
