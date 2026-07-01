@@ -170,8 +170,20 @@ paths — which is harder to read and reason about than two short, self-containe
 would not actually reduce the CI-only hardening (that code has to exist regardless of
 sharing). Duplication here is cheaper than the abstraction that would remove it.
 
-**The drift that matters is at the contract surface, not in the code.** Guard it, when you
-add a directive (`use_fnm`, `use_pixi`, …), by:
+Note that each directive is **generic over its argument**, so most additions cost nothing.
+`use_sdk` passes `<candidate> <version>` straight to SDKMAN, so `use sdk maven 3.9.6`,
+`use sdk gradle 8.7`, etc. already work through the existing function — a new SDKMAN
+candidate needs **no code change**. The only candidate-specific line is the `JAVA_HOME`
+export, guarded on `java`; anything else simply lands on `$GITHUB_PATH`.
+
+You therefore only touch the CI copy when the *contract surface* genuinely widens:
+
+- a candidate that needs its **own env var beyond PATH** — the way `java` needs `JAVA_HOME`
+  (you'd add another `[[ "$candidate" == … ]]` export), or
+- an entirely **new directive** (`use_fnm`, `use_pixi`, a new backend), which is a new
+  function, not a variant of `use_sdk`.
+
+When you do add a new directive, guard against local↔CI drift by:
 
 1. mirroring the terminal directive's **name and accepted arguments** in the CI copy, and
 2. adding a fixture `.envrc` to `.github/workflows/setup-direnv-test.yml` that exercises it
