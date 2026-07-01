@@ -8,6 +8,12 @@ inputs:
     description: Directory containing the .envrc to activate.
     required: false
     default: '.'
+  cache:
+    description: >-
+      Cache the SDKMAN tool dir (~/.sdkman) across runs, keyed on the .envrc.
+      Set to 'false' to disable.
+    required: false
+    default: 'true'
 
 runs:
   using: composite
@@ -26,6 +32,22 @@ runs:
         fi
         sudo apt-get update
         sudo apt-get install -y direnv
+
+    # Restore the SDKMAN tool dir before activation, keyed on the .envrc so a change
+    # to a declared version invalidates the cache. actions/cache registers a post-step
+    # that saves at job end (skipped on an exact-key hit). On a full hit, use_sdk's
+    # idempotency (the ~/.sdkman guard + `sdk home`) skips every download.
+    - name: Cache SDKMAN toolchains
+      if: ${{ inputs.cache == 'true' }}
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: ~/.sdkman
+        # hashFiles globs relative to GITHUB_WORKSPACE; with working-directory '.' the
+        # key ends in '/.envrc', which resolves. It is empty when there is no .envrc
+        # (that path fails activation anyway), which is a harmless constant key.
+        key: setup-direnv-sdkman-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
+        restore-keys: |
+          setup-direnv-sdkman-${{ runner.os }}-
 
     # Activate the .envrc: install the CI direnv directives, fail if there is no
     # .envrc, then evaluate it. Evaluating it runs use_sdk, which installs the
