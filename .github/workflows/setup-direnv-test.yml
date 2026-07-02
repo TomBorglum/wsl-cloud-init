@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 jobs:
-  activate:
+  activate-sdk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -38,6 +38,26 @@ jobs:
           command -v java | grep -q "$HOME/.sdkman/candidates/java/"
           mvn -version
           command -v mvn | grep -q "$HOME/.sdkman/candidates/maven/"
+
+  activate-fnm:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run setup-direnv against the fnm fixture
+        uses: ./setup-direnv
+        with:
+          working-directory: setup-direnv/test/fixture-fnm
+
+      - name: Assert the runtime propagated to later steps
+        run: |
+          set -euo pipefail
+          # fnm exposes the node bin on PATH, pinned to the version the .envrc declares.
+          # Resolving node here (a later step) proves the $GITHUB_PATH export, not just a
+          # transient direnv shell.
+          node --version
+          test "$(node --version)" = "v22.14.0"
+          command -v node | grep -q "$HOME/.fnm/node-versions/v22.14.0/"
 
   missing-envrc:
     runs-on: ubuntu-latest
