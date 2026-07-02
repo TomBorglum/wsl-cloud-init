@@ -49,6 +49,17 @@ use_fnm() {
     exit 1
   fi
 
+  # Require an exact version. A partial like `22` resolves to the latest matching
+  # release (e.g. v22.99.0), which would silently drift; reject it so the .envrc
+  # pins one runtime. Ask the resolved binary its own version rather than parsing
+  # the path, keeping the check independent of fnm's on-disk layout.
+  local node_ver
+  node_ver="$("$node_bin" -v 2>/dev/null || true)"
+  if [[ "$node_ver" != "v$version" ]]; then
+    echo "use_fnm: node '$version' is not an exact release (resolved to ${node_ver:-unknown}); pin a full version like 22.14.0" >&2
+    exit 1
+  fi
+
   # Expose the runtime to subsequent workflow steps: the node bin on $GITHUB_PATH.
   echo "$(dirname "$node_bin")" >> "$GITHUB_PATH"
   return 0
