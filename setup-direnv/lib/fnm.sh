@@ -6,10 +6,10 @@
 # Actions. Self-contained by design: it sources no other file in this repository.
 #
 # Deliberately simpler than the terminal directive in
-# distros/shared/direnv/lib/fnm.sh: that version's arg checks, list-remote guard
-# and PATH_add exist to keep direnv's interactive load/unload clean, which CI does
-# not do. Node has no canonical <TOOL>_HOME convention, so this exports only the
-# bin dir to $GITHUB_PATH (no $GITHUB_ENV, unlike use_sdk).
+# distros/shared/direnv/lib/fnm.sh: that version's arg checks and PATH_add exist to
+# keep direnv's interactive load/unload clean, which CI does not do. Node has no
+# canonical <TOOL>_HOME convention, so this exports only the bin dir to $GITHUB_PATH
+# (no $GITHUB_ENV, unlike use_sdk).
 use_fnm() {
   # $1 is the trusted tool token ('node'); fnm is Node-only, so ignore it and take
   # the version. CI trusts the committed .envrc — no arg validation.
@@ -23,21 +23,26 @@ use_fnm() {
     curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install \
       | bash -s -- --install-dir "$HOME/.fnm" --skip-shell
   fi
-  # Put the fnm binary on PATH (CI has no shell integration / PATH_add) — the analog
-  # of the terminal directive's `PATH_add "$HOME/.fnm"`. No FNM_DIR export: fnm
-  # already defaults its data dir to ~/.fnm (where the version_dir below and the
-  # action's cache expect it), same as the terminal copy relies on.
+  # Put the fnm binary on PATH (CI has no shell integration / PATH_add) so `fnm` is
+  # callable below. No FNM_DIR export: fnm defaults its data dir to ~/.fnm.
   export PATH="$HOME/.fnm:$PATH"
 
   # `fnm install` is idempotent, so run it unconditionally and don't gate on its
-  # exit — the dir check below is the real success signal. A non-exact version (e.g.
-  # '22') installs as v22.x.y, so v${version} won't exist and this fails cleanly
-  # rather than exporting a path to nothing.
+  # exit — the resolution below is the real success signal.
   fnm install "$version" || true
-  local version_dir="$HOME/.fnm/node-versions/v${version}/installation/bin"
-  if [[ ! -d "$version_dir" ]]; then
-    echo "use_fnm: failed to install node $version" >&2
-    ls -la "$HOME/.fnm/node-versions" >&2 2>/dev/null || true
+
+  # Resolve the installed node's real bin dir instead of hardcoding fnm's on-disk
+  # layout — the resolve-via-tool approach, like sdk.sh's `sdk home`. `fnm install`
+  # does NOT put node on PATH, and CI has no shell integration (GitHub Actions runs
+  # steps with `bash --noprofile --norc`), so a bare `which node` would find
+  # nothing. `fnm exec --using` activates the version for one subprocess; `readlink
+  # -f` canonicalizes fnm's multishell symlink to the real ~/.fnm/node-versions
+  # path. This is robust to fnm changing its data dir or layout.
+  local node_bin
+  node_bin="$(fnm exec --using "$version" -- bash -c 'readlink -f "$(command -v node)"' 2>/dev/null || true)"
+  if [[ -z "$node_bin" || ! -x "$node_bin" ]]; then
+    echo "use_fnm: failed to install/resolve node $version" >&2
+    fnm ls >&2 2>/dev/null || true
     # exit, not return: direnv silently ignores a directive that `return`s a
     # non-zero code (the job would go green with nothing installed), whereas a
     # non-zero `exit` from the .envrc propagates and fails the step.
@@ -45,6 +50,6 @@ use_fnm() {
   fi
 
   # Expose the runtime to subsequent workflow steps: the node bin on $GITHUB_PATH.
-  echo "$version_dir" >> "$GITHUB_PATH"
+  echo "$(dirname "$node_bin")" >> "$GITHUB_PATH"
   return 0
 }
