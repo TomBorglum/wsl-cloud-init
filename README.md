@@ -15,8 +15,8 @@ configured and ready to work in.
 
 Provisioning runs from Windows: a PowerShell script renders a cloud-init template,
 installs the distro, and waits for setup to finish. On first boot cloud-init runs a
-series of scripts that build the environment and wire Windows tools — VS Code, Git
-Credential Manager — into the Linux shell.
+series of scripts that build the environment and wire Windows tools — VS Code, `gh`
+authentication — into the Linux shell.
 
 ## Prerequisites
 
@@ -183,7 +183,7 @@ These commands reach from the Linux shell back into Windows:
 - **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
 - **`open`** — launches a file or URL with its default Windows app.
 
-Opt-in via `-InstallGitConfig`: your git identity, `gh` authentication, and Git itself authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in).
+Opt-in via `-InstallGitConfig`: your git identity, `gh` authentication, and Git itself authenticating through `gh` (`gh auth setup-git`) — so git and `gh` share the one credential instead of rotating two independently.
 
 ### Shell helpers
 `pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` (plus the `use update-branch` direnv directive) streamline everyday Git work.
@@ -324,6 +324,6 @@ less /var/log/cloud-init-output.log   # install-script output
 less /var/log/cloud-init.log          # cloud-init's own log
 ```
 
-**WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec format error". The instance will self-heal within ~10 seconds; wait and try again.
+**WSL interop stops working** — `code` and `open` fail, often with an "Exec format error". The instance will self-heal within ~10 seconds; wait and try again.
 
 **The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`. It's intermittent and the instance still works. To clear it, run `wsl --shutdown` and relaunch the instance. To check whether an instance is affected, run `systemctl is-active user@1000.service` — it prints `failed` when the session didn't start, or `active` when it's running normally.
