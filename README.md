@@ -84,34 +84,30 @@ git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
 ```
 
+### Sign in to GitHub
+
+Only needed for `-InstallGitConfig`. Both Git **and** `gh` reuse your existing Windows GitHub sign-in — the `git:https://github.com` credential that **Git Credential Manager** stores in Windows Credential Manager. There is **no separate token to create**: a single `git clone`/`git push` against a private repo on Windows (or `git-credential-manager github login`) signs you in and creates it. See [Configuration](#credentials).
+
+`gh` is **not** authenticated at provisioning time — a wrapper on `PATH` reads that credential and authenticates `gh` the first time you invoke it, so rotating the token on GitHub is picked up automatically on the next `gh` call.
+
 ### Create and store secrets
 
-Depending on what you install, you need one or two secrets — see [Configuration](#credentials) for what each is used for:
-
-- **[GitHub](https://github.com) token** — a **fine-grained token** with these repository permissions. Only needed for `-InstallGitConfig`.
-  - **Administration** — read and write (create repositories)
-  - **Contents** — read and write (clone and push)
-  - **Metadata** — read (required)
-- **[Context7](https://context7.com) API key**. Only needed for `-InstallClaudeCode`.
+Only needed for `-InstallClaudeCode`: a **[Context7](https://context7.com) API key**, stored as a **generic credential** with username `wsl-cloud-init` — see [Configuration](#credentials) for how it's used.
 
 `-InstallVsCodeInterop` needs no secret — only **VS Code** with the `code` command on your `PATH`.
-
-Store each secret as a **generic credential** with username `wsl-cloud-init`, using either option:
 
 #### Option A — cmdkey (PowerShell)
 
 ```powershell
-cmdkey /generic:wsl-cloud-init:GH_TOKEN         /user:wsl-cloud-init /pass:<github-token>  # only for `-InstallGitConfig`
 cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key> # only for `-InstallClaudeCode`
 ```
 
 #### Option B — Credential Manager GUI
 
-Control Panel → **Credential Manager** → **Windows Credentials** → **Add a generic credential**, once per secret:
+Control Panel → **Credential Manager** → **Windows Credentials** → **Add a generic credential**:
 
 | Internet or network address | User name | Password |
 | --- | --- | --- |
-| `wsl-cloud-init:GH_TOKEN` | `wsl-cloud-init` | your GitHub token (only for `-InstallGitConfig`) |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key (only for `-InstallClaudeCode`) |
 
 ### Enable when provisioning
@@ -157,7 +153,7 @@ Each flag corresponds to the provisioning parameter of the same name:
 | `-InstallGitConfig` | `INSTALL_GIT_CONFIG=true` |
 | `-InstallVsCodeInterop` | `INSTALL_VS_CODE_INTEROP=true` |
 
-The same prerequisites apply as at provisioning time: `-InstallGitConfig` and `-InstallClaudeCode` still need their secrets in Windows Credential Manager (and your Git identity set). `install.sh` fetches them from Windows at runtime, so set them up first if you didn't before.
+The same prerequisites apply as at provisioning time: `-InstallGitConfig` needs your Git identity set and a GitHub sign-in in Windows Credential Manager (`git:https://github.com`); `-InstallClaudeCode` needs its Context7 key stored there. `install.sh` fetches what it needs from Windows at runtime, so set them up first if you didn't before.
 
 ## What you get
 
@@ -183,7 +179,7 @@ These commands reach from the Linux shell back into Windows:
 - **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
 - **`open`** — launches a file or URL with its default Windows app.
 
-Opt-in via `-InstallGitConfig`: your git identity, `gh` authentication, and Git itself authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in).
+Opt-in via `-InstallGitConfig`: your git identity, plus both Git and `gh` authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in). `gh` authenticates itself from that credential on first use — nothing is stored at provisioning time, and a rotated token is picked up automatically on the next `gh` call.
 
 ### Shell helpers
 `pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` (plus the `use update-branch` direnv directive) streamline everyday Git work.
@@ -304,12 +300,14 @@ What you can set when provisioning, and how the instance is derived.
 
 ### Credentials
 
-Provisioning reads from Windows Credential Manager:
+Windows Credential Manager provides:
 
 | Credential | Used for |
 | --- | --- |
-| `wsl-cloud-init:GH_TOKEN` | [`gh`](https://cli.github.com) CLI authentication (`gh auth login --with-token`) — **only required with `-InstallGitConfig`** |
+| `git:https://github.com` | Your Windows GitHub sign-in (stored by Git Credential Manager). Both Git and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
+
+`gh` is not authenticated during provisioning. A wrapper on `PATH` (`/usr/local/bin/gh`) reads `git:https://github.com` and authenticates `gh` the first time it's invoked — so a rotated token is picked up automatically on the next call.
 
 ### Target user
 
