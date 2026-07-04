@@ -10,8 +10,8 @@ inputs:
     default: '.'
   cache:
     description: >-
-      Cache the SDKMAN tool dir (~/.sdkman) across runs, keyed on the .envrc.
-      Set to 'false' to disable.
+      Cache the language toolchain dirs (~/.sdkman, ~/.fnm) across runs, keyed on
+      the .envrc. Set to 'false' to disable.
     required: false
     default: 'true'
 
@@ -33,29 +33,35 @@ runs:
         sudo apt-get update
         sudo apt-get install -y direnv
 
-    # Restore the SDKMAN tool dir before activation, keyed on the .envrc so a change
-    # to a declared version invalidates the cache. actions/cache registers a post-step
-    # that saves at job end (skipped on an exact-key hit). On a full hit, use_sdk's
-    # idempotency (the ~/.sdkman guard + `sdk home`) skips every download.
+    # Restore the toolchain dirs before activation, keyed on the .envrc so a change
+    # to a declared version invalidates the cache. One entry, directive-agnostic: the
+    # path lists every tool dir a directive might populate, and actions/cache skips a
+    # path that does not exist (an fnm-only .envrc caches only ~/.fnm, etc.).
+    # actions/cache registers a post-step that saves at job end (skipped on an
+    # exact-key hit). On a full hit, each directive's idempotency (its install-dir
+    # guard) skips every download.
     #
     # No restore-keys on purpose: a broad prefix fallback would base-restore the prior
-    # .envrc's ~/.sdkman on every version change, so old toolchains would accrete and
-    # the cache would grow without bound. With an exact key only, an unchanged .envrc
-    # is a full hit (no downloads), a version change starts a lean fresh cache, and the
+    # .envrc's toolchains on every version change, so old ones would accrete and the
+    # cache would grow without bound. With an exact key only, an unchanged .envrc is a
+    # full hit (no downloads), a version change starts a lean fresh cache, and the
     # superseded entry auto-evicts after 7 days idle.
-    - name: Cache SDKMAN toolchains
+    - name: Cache toolchains
       if: ${{ inputs.cache == 'true' }}
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
-        path: ~/.sdkman
+        path: |
+          ~/.sdkman
+          ~/.fnm
         # hashFiles globs relative to GITHUB_WORKSPACE; with working-directory '.' the
         # key ends in '/.envrc', which resolves. It is empty when there is no .envrc
         # (that path fails activation anyway), which is a harmless constant key.
-        key: setup-direnv-sdkman-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
+        key: setup-direnv-toolchains-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
 
     # Activate the .envrc: install the CI direnv directives, fail if there is no
-    # .envrc, then evaluate it. Evaluating it runs use_sdk, which installs the
-    # declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for later steps.
+    # .envrc, then evaluate it. Evaluating it runs each use_* directive, which
+    # installs the declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for
+    # later steps.
     - name: Activate .envrc
       shell: bash
       working-directory: ${{ inputs.working-directory }}
