@@ -35,7 +35,7 @@ if [[ "${INSTALL_VS_CODE_INTEROP:-}" == "true" && -z "${VSCODE:-}" ]]; then
 fi
 if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]] &&
    { [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
-     [[ -z "${GIT_EMAIL:-}" ]] || [[ -z "${GH_TOKEN:-}" ]]; }; then
+     [[ -z "${GIT_EMAIL:-}" ]]; }; then
   git_q=true; need_interop=true
 fi
 if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" && -z "${CONTEXT7_API_KEY:-}" ]]; then
@@ -77,7 +77,6 @@ if [[ "$need_interop" == true ]]; then
     ps_tail+='Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n'
     ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
     ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'$'\n'
-    ps_tail+='Write-Output ("GH_TOKEN=" + (Get-WindowsCredential "wsl-cloud-init:GH_TOKEN"))'$'\n'
   fi
   if [[ "$claude_q" == true ]]; then
     ps_tail+='Write-Output ("CONTEXT7_API_KEY=" + (Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"))'$'\n'
@@ -107,7 +106,6 @@ if [[ "$need_interop" == true ]]; then
       GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
       GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
       GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
-      GH_TOKEN=*)               export GH_TOKEN="${line#*=}" ;;
       CONTEXT7_API_KEY=*)       export CONTEXT7_API_KEY="${line#*=}" ;;
       *)                        ;;
     esac
