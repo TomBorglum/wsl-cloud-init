@@ -130,19 +130,19 @@ Provisioned without one of the opt-in flags and want it now? You don't need to r
 
 ```bash
 # Git identity, gh auth, and the Git shell helpers
-sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
 # Claude Code
-sudo INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+sudo INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
 # the `code` VS Code interop wrapper
-sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
 Combine flags to add several at once:
 
 ```bash
-sudo INSTALL_GIT_CONFIG=true INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+sudo INSTALL_GIT_CONFIG=true INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
 Each flag corresponds to the provisioning parameter of the same name:
@@ -290,7 +290,7 @@ What you can set when provisioning, and how the instance is derived.
 
 `windows/provision.ps1` takes:
 
-- `-DistroTemplatePath` (required) — template directory under `distros/` to render (e.g. `ubuntu`).
+- `-DistroTemplatePath` (required) — template directory under `wsl/distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
 - `-InstallClaudeCode` (optional) — install Claude Code.

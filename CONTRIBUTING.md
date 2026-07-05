@@ -152,12 +152,12 @@ shared `.envrc` is the real single source of truth, and it is what prevents vers
 
 The directive **implementations**, however, are intentionally *not* shared. `setup-direnv/lib/`
 holds its own self-contained copy of each `use_*` function, separate from the terminal ones
-in `distros/shared/direnv/lib/`. Do **not** try to unify them behind one file or a wrapper.
+in `wsl/user/.config/direnv/lib/`. Do **not** try to unify them behind one file or a wrapper.
 
 The two copies look similar but differ at nearly every step, and the differences are
 essential, not incidental:
 
-| | terminal (`distros/shared/direnv/lib`) | CI (`setup-direnv/lib`) |
+| | terminal (`wsl/user/.config/direnv/lib`) | CI (`setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
 | expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |

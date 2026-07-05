@@ -65,11 +65,11 @@ packages:
   - jq
 runcmd:
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
-  - git -C /opt/wsl-cloud-init sparse-checkout set distros/ubuntu/scripts
+  - git -C /opt/wsl-cloud-init sparse-checkout set wsl/distros/ubuntu/scripts
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
   - |
     export TARGET_USER="__TARGET_USER__"
     export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
     export INSTALL_GIT_CONFIG="__INSTALL_GIT_CONFIG__"
     export INSTALL_VS_CODE_INTEROP="__INSTALL_VS_CODE_INTEROP__"
-    bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+    bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh

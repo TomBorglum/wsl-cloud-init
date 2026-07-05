@@ -7,7 +7,7 @@
 # this repository.
 #
 # Deliberately simpler than the terminal directive in
-# distros/shared/direnv/lib/sdk.sh: that version's arg checks, SDKMAN_DIR override,
+# wsl/user/.config/direnv/lib/sdk.sh: that version's arg checks, SDKMAN_DIR override,
 # subshell and PATH_add exist to keep direnv's interactive load/unload clean, which
 # CI does not do.
 use_sdk() {
@@ -45,7 +45,7 @@ use_sdk() {
   # Expose the runtime to subsequent workflow steps: the bin on $GITHUB_PATH, plus
   # SDKMAN's <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …) on $GITHUB_ENV. The name is
   # derived from the candidate (SDKMAN's convention), not hardcoded — matching the
-  # terminal directive in distros/shared/direnv/lib/sdk.sh.
+  # terminal directive in wsl/user/.config/direnv/lib/sdk.sh.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
   echo "${candidate^^}_HOME=$candidate_dir" >> "$GITHUB_ENV"
   return 0

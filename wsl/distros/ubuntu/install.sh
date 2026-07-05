@@ -7,7 +7,7 @@ set +x
 # (runcmd in user-data.template) and for on-demand re-runs in an already
 # provisioned instance, e.g. to opt into an installation after the fact:
 #
-#   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/distros/ubuntu/install.sh
+#   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 #
 # This is the single point of derivation for both paths. The cloud-init runcmd
 # block exports only TARGET_USER and the INSTALL_* flags; every Windows-derived
@@ -17,7 +17,7 @@ set +x
 # ever written to disk.
 
 REPO=/opt/wsl-cloud-init
-SCRIPTS_DIR="$REPO/distros/ubuntu/scripts"
+SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 
 # The Linux account the per-user tooling is installed for. When invoked by hand
 # this is the invoking user (sudo preserves it in SUDO_USER); cloud-init exports

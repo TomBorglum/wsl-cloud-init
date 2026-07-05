@@ -66,7 +66,7 @@ Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 
 $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
-$template = Get-Content "$PSScriptRoot\..\distros\$DistroTemplatePath\user-data.template" -Raw
+$template = Get-Content "$PSScriptRoot\..\wsl\distros\$DistroTemplatePath\cloud-init\user-data.template" -Raw
 
 # String.Replace (literal) rather than -replace (regex), so a value containing
 # '$' is never interpreted as a regex backreference.
