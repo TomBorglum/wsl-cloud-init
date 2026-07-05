@@ -10,8 +10,8 @@ inputs:
     default: '.'
   cache:
     description: >-
-      Cache the language toolchain dirs (~/.sdkman, ~/.fnm) across runs, keyed on
-      the .envrc. Set to 'false' to disable.
+      Cache the language toolchain dirs (~/.sdkman, ~/.fnm, ~/.pixi) across runs,
+      keyed on the .envrc. Set to 'false' to disable.
     required: false
     default: 'true'
 
@@ -53,6 +53,7 @@ runs:
         path: |
           ~/.sdkman
           ~/.fnm
+          ~/.pixi
         # hashFiles globs relative to GITHUB_WORKSPACE; with working-directory '.' the
         # key ends in '/.envrc', which resolves. It is empty when there is no .envrc
         # (that path fails activation anyway), which is a harmless constant key.
