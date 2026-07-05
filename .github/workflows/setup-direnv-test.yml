@@ -8,7 +8,7 @@ name: setup-direnv test
 on:
   pull_request:
     paths:
-      - 'setup-direnv/**'
+      - 'actions/setup-direnv/**'
       - '.github/workflows/setup-direnv-test.yml'
   workflow_dispatch:
 
@@ -21,10 +21,10 @@ jobs:
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
-      - name: Run setup-direnv against the fixture
-        uses: ./setup-direnv
+      - name: Run setup-direnv against the sdk fixture
+        uses: ./actions/setup-direnv
         with:
-          working-directory: setup-direnv/test/fixture
+          working-directory: actions/setup-direnv/test/fixture-sdk
 
       - name: Assert the runtime propagated to later steps
         run: |
@@ -45,9 +45,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Run setup-direnv against the fnm fixture
-        uses: ./setup-direnv
+        uses: ./actions/setup-direnv
         with:
-          working-directory: setup-direnv/test/fixture-fnm
+          working-directory: actions/setup-direnv/test/fixture-fnm
 
       - name: Assert the runtime propagated to later steps
         run: |
@@ -65,9 +65,9 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Run setup-direnv against the pixi fixture
-        uses: ./setup-direnv
+        uses: ./actions/setup-direnv
         with:
-          working-directory: setup-direnv/test/fixture-pixi
+          working-directory: actions/setup-direnv/test/fixture-pixi
 
       - name: Assert the runtime propagated to later steps
         run: |
@@ -78,7 +78,7 @@ jobs:
           pixi --version
           command -v pixi | grep -q "$HOME/.pixi/bin/"
           python --version
-          command -v python | grep -q "/setup-direnv/test/fixture-pixi/.pixi/envs/default/bin/"
+          command -v python | grep -q "/actions/setup-direnv/test/fixture-pixi/.pixi/envs/default/bin/"
 
   missing-envrc:
     runs-on: ubuntu-latest
@@ -89,7 +89,7 @@ jobs:
       - name: Run setup-direnv where there is no .envrc
         id: run
         continue-on-error: true
-        uses: ./setup-direnv
+        uses: ./actions/setup-direnv
         with:
           working-directory: .github
 
