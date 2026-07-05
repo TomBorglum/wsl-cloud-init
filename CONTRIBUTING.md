@@ -145,19 +145,19 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 
 ## The `setup-direnv` CI directives — why they are a separate copy
 
-The [`setup-direnv`](setup-direnv/) composite action lets CI honor the same `.envrc`
+The [`setup-direnv`](actions/setup-direnv/) composite action lets CI honor the same `.envrc`
 a developer uses locally, so a runtime version is declared **once** (`use sdk java
 21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
 shared `.envrc` is the real single source of truth, and it is what prevents version drift.
 
-The directive **implementations**, however, are intentionally *not* shared. `setup-direnv/lib/`
+The directive **implementations**, however, are intentionally *not* shared. `actions/setup-direnv/lib/`
 holds its own self-contained copy of each `use_*` function, separate from the terminal ones
 in `wsl/user/.config/direnv/lib/`. Do **not** try to unify them behind one file or a wrapper.
 
 The two copies look similar but differ at nearly every step, and the differences are
 essential, not incidental:
 
-| | terminal (`wsl/user/.config/direnv/lib`) | CI (`setup-direnv/lib`) |
+| | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
 | expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |
