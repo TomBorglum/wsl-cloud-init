@@ -59,6 +59,27 @@ jobs:
           test "$(node --version)" = "v22.14.0"
           command -v node | grep -q "$HOME/.fnm/node-versions/v22.14.0/"
 
+  activate-pixi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run setup-direnv against the pixi fixture
+        uses: ./setup-direnv
+        with:
+          working-directory: setup-direnv/test/fixture-pixi
+
+      - name: Assert the runtime propagated to later steps
+        run: |
+          set -euo pipefail
+          # pixi exposes the workspace's default-env bin on PATH. Resolving python
+          # here (a later step) to that env proves the $GITHUB_PATH export, not just
+          # a transient direnv shell. pixi itself is also exposed from ~/.pixi/bin.
+          pixi --version
+          command -v pixi | grep -q "$HOME/.pixi/bin/"
+          python --version
+          command -v python | grep -q "/setup-direnv/test/fixture-pixi/.pixi/envs/default/bin/"
+
   missing-envrc:
     runs-on: ubuntu-latest
     steps:
