@@ -6,13 +6,14 @@ shopt -s nullglob
 
 # direnv functions (per-user). Idempotent: each run re-selects the current set and
 # install overwrites, so re-running can add directives that were skipped before.
-git -C /opt/wsl-cloud-init sparse-checkout add distros/shared/direnv/lib
+git -C /opt/wsl-cloud-init sparse-checkout add wsl/user/.config/direnv/lib
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 
 # Runtime directives (always); the git/ subdir is gated on INSTALL_GIT_CONFIG.
-dirs=(/opt/wsl-cloud-init/distros/shared/direnv/lib)
+src=/opt/wsl-cloud-init/wsl/user/.config/direnv/lib
+dirs=("$src")
 if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]]; then
-  dirs+=(/opt/wsl-cloud-init/distros/shared/direnv/lib/git)
+  dirs+=("$src/git")
 fi
 for dir in "${dirs[@]}"; do
   files=("$dir"/*.sh)

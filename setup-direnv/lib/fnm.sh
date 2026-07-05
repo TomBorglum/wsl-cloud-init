@@ -6,7 +6,7 @@
 # Actions. Self-contained by design: it sources no other file in this repository.
 #
 # Deliberately simpler than the terminal directive in
-# distros/shared/direnv/lib/fnm.sh: that version's arg checks and PATH_add exist to
+# wsl/user/.config/direnv/lib/fnm.sh: that version's arg checks and PATH_add exist to
 # keep direnv's interactive load/unload clean, which CI does not do. Node has no
 # canonical <TOOL>_HOME convention, so this exports only the bin dir to $GITHUB_PATH
 # (no $GITHUB_ENV, unlike use_sdk).
@@ -18,7 +18,7 @@ use_fnm() {
   # Standard fnm install into ~/.fnm; guard only to skip re-downloading on a warm
   # rerun / full cache hit. --proto '=https' --tlsv1.2 pins the transfer to
   # HTTPS/TLS 1.2+ (no plaintext redirects), matching the repo's other installers
-  # (distros/ubuntu/scripts/06-install-fnm.sh).
+  # (wsl/distros/ubuntu/scripts/06-install-fnm.sh).
   if [[ ! -d "$HOME/.fnm" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install \
       | bash -s -- --install-dir "$HOME/.fnm" --skip-shell
