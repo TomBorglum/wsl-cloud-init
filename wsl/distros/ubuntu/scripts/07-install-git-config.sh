@@ -16,18 +16,16 @@ if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
 fi
 
 # Resolve the git config from Windows over interop via wsl_interop_git_config (all the
-# PowerShell lives in lib/wsl-interop.sh). Explicit values win; the trio is resolved
-# only when one is missing, and each KEY=VALUE line fills in just the unset ones.
-if [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
-   [[ -z "${GIT_EMAIL:-}" ]]; then
-  while IFS= read -r line; do
-    case "$line" in
-      GIT_CREDENTIAL_MANAGER=*) GIT_CREDENTIAL_MANAGER="${GIT_CREDENTIAL_MANAGER:-${line#*=}}" ;;
-      GIT_NAME=*)               GIT_NAME="${GIT_NAME:-${line#*=}}" ;;
-      GIT_EMAIL=*)              GIT_EMAIL="${GIT_EMAIL:-${line#*=}}" ;;
-    esac
-  done < <(wsl_interop_git_config)
-fi
+# PowerShell lives in lib/wsl-interop.sh). We are committed to installing and none of
+# the values are set yet, so each KEY=VALUE line is assigned directly; the assertions
+# below prove the trio came back filled.
+while IFS= read -r line; do
+  case "$line" in
+    GIT_CREDENTIAL_MANAGER=*) GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
+    GIT_NAME=*)               GIT_NAME="${line#*=}" ;;
+    GIT_EMAIL=*)              GIT_EMAIL="${line#*=}" ;;
+  esac
+done < <(wsl_interop_git_config)
 
 : "${GIT_CREDENTIAL_MANAGER:?GIT_CREDENTIAL_MANAGER is required}"
 : "${GIT_NAME:?GIT_NAME is required}"
