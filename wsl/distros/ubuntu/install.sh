@@ -9,13 +9,13 @@ set +x
 #
 #   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 #
-# This is the single point of derivation for both paths. The cloud-init runcmd
-# block exports only TARGET_USER and the INSTALL_* flags; the Windows-derived
-# paths and git identity are resolved here at runtime via Windows interop, the
-# same way for cloud-init and on-demand. provision.ps1 no longer derives or
-# substitutes any of them, so nothing is persisted. Secrets are not resolved
-# here: the scripts that need them fetch their own (08 reads the Context7 key,
-# the gh wrapper reads the GitHub token), so no secret is ever written to disk.
+# This is the single point of derivation for POWERSHELL. The cloud-init runcmd
+# block exports only TARGET_USER and the INSTALL_* flags; POWERSHELL is resolved
+# here at runtime via Windows interop, the same way for cloud-init and on-demand.
+# provision.ps1 no longer derives or substitutes it, so nothing else is persisted.
+# The opt-in scripts resolve their own Windows-derived values and secrets: 07 reads
+# the git identity, 08 the Context7 key, 10 the VS Code path, the gh wrapper the
+# GitHub token, so install.sh doesn't know about them and no secret is written to disk.
 
 REPO=/opt/wsl-cloud-init
 SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
@@ -27,16 +27,9 @@ export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 
 # Interop and Windows PowerShell are always present under WSL, and POWERSHELL is
 # always needed (the ungated open/gh wrappers consume it at runtime), so it is
-# always derived below. The git identity trio is opt-in: it is queried only when the
-# git config install is selected and it isn't already provided. Other opt-in scripts
-# (08 for the Context7 key, 10 for the VS Code path) resolve their own Windows-derived
-# values themselves over interop, so install.sh doesn't know about them.
-git_q=false
-if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]] &&
-   { [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
-     [[ -z "${GIT_EMAIL:-}" ]]; }; then
-  git_q=true
-fi
+# always derived below. Every opt-in script (07 for the git identity, 08 for the
+# Context7 key, 10 for the VS Code path) resolves its own Windows-derived values
+# over interop, so install.sh doesn't know about them.
 
 # Bootstrap interop from the fixed OS location of Windows PowerShell. It is
 # part of Windows itself (independent of anything we install), and is only the
@@ -52,22 +45,12 @@ fi
 
 # The error-prone bit (Windows->WSL path conversion) is reused verbatim from the
 # Windows side rather than reimplemented; pull windows/lib into the sparse checkout
-# and dot-source it. (08 reads Credentials.ps1 from the same checkout for its own
-# credential fetch.)
+# and dot-source it. (07/08/10 read the same checkout for their own derivations.)
 git -C "$REPO" sparse-checkout add windows/lib >/dev/null
 
-# Build the PowerShell program: the shared path helper plus a tail that emits the
-# values we need as KEY=VALUE lines. The path/identity derivations mirror
-# provision.ps1 one-for-one. POWERSHELL is always emitted; the opt-in values are
-# appended when their installation was selected.
-ps_tail='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'$'\n'
-if [[ "$git_q" == true ]]; then
-  ps_tail+='$gitExe = (Get-Command git).Source'$'\n'
-  ps_tail+='$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) + "\mingw64\bin\git-credential-manager.exe"'$'\n'
-  ps_tail+='Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n'
-  ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
-  ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'$'\n'
-fi
+# Build the PowerShell program: the shared path helper plus a tail that emits
+# POWERSHELL as a KEY=VALUE line. The derivation mirrors provision.ps1 one-for-one.
+ps_tail='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'
 
 # Suppress PowerShell's progress stream ("Preparing modules for first use"),
 # which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
@@ -86,11 +69,8 @@ while IFS= read -r line; do
   line="${line%$'\r'}"
   [[ -z "$line" ]] && continue
   case "$line" in
-    POWERSHELL=*)             export POWERSHELL="${line#*=}" ;;
-    GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
-    GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
-    GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
-    *)                        ;;
+    POWERSHELL=*) export POWERSHELL="${line#*=}" ;;
+    *)            ;;
   esac
 done <<< "$interop_output"
 
