@@ -27,12 +27,11 @@ export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 
 # Interop and Windows PowerShell are always present under WSL, and POWERSHELL is
 # always needed (the ungated open/gh wrappers consume it at runtime), so it is
-# always derived below. The remaining Windows-derived values are opt-in: each is
-# queried only when its installation is selected and it isn't already provided.
-vscode_q=false; git_q=false
-if [[ "${INSTALL_VS_CODE_INTEROP:-}" == "true" && -z "${VSCODE:-}" ]]; then
-  vscode_q=true
-fi
+# always derived below. The git identity trio is opt-in: it is queried only when the
+# git config install is selected and it isn't already provided. Other opt-in scripts
+# (08 for the Context7 key, 10 for the VS Code path) resolve their own Windows-derived
+# values themselves over interop, so install.sh doesn't know about them.
+git_q=false
 if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]] &&
    { [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
      [[ -z "${GIT_EMAIL:-}" ]]; }; then
@@ -62,10 +61,6 @@ git -C "$REPO" sparse-checkout add windows/lib >/dev/null
 # provision.ps1 one-for-one. POWERSHELL is always emitted; the opt-in values are
 # appended when their installation was selected.
 ps_tail='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'$'\n'
-if [[ "$vscode_q" == true ]]; then
-  ps_tail+='$vsc = (Get-Command code).Source -replace "\.cmd$",""'$'\n'
-  ps_tail+='Write-Output ("VSCODE=" + (ConvertTo-WslPath $vsc))'$'\n'
-fi
 if [[ "$git_q" == true ]]; then
   ps_tail+='$gitExe = (Get-Command git).Source'$'\n'
   ps_tail+='$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) + "\mingw64\bin\git-credential-manager.exe"'$'\n'
@@ -92,7 +87,6 @@ while IFS= read -r line; do
   [[ -z "$line" ]] && continue
   case "$line" in
     POWERSHELL=*)             export POWERSHELL="${line#*=}" ;;
-    VSCODE=*)                 export VSCODE="${line#*=}" ;;
     GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
     GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
     GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
