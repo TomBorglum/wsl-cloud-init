@@ -24,93 +24,88 @@ SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 # it explicitly.
 export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 
-# Work out which Windows-derived values are still missing. POWERSHELL is needed
-# whenever unset because the (ungated) open-interop script consumes it; the rest
-# are only needed when their installation is selected.
-need_interop=false
-need_powershell=false; vscode_q=false; git_q=false; claude_q=false
-if [[ -z "${POWERSHELL:-}" ]]; then need_powershell=true; need_interop=true; fi
+# Interop and Windows PowerShell are always present under WSL, and POWERSHELL is
+# always needed (the ungated open/gh wrappers consume it at runtime), so it is
+# always derived below. The remaining Windows-derived values are opt-in: each is
+# queried only when its installation is selected and it isn't already provided.
+vscode_q=false; git_q=false; claude_q=false
 if [[ "${INSTALL_VS_CODE_INTEROP:-}" == "true" && -z "${VSCODE:-}" ]]; then
-  vscode_q=true; need_interop=true
+  vscode_q=true
 fi
 if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]] &&
    { [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
      [[ -z "${GIT_EMAIL:-}" ]]; }; then
-  git_q=true; need_interop=true
+  git_q=true
 fi
 if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" && -z "${CONTEXT7_API_KEY:-}" ]]; then
-  claude_q=true; need_interop=true
+  claude_q=true
 fi
 
-if [[ "$need_interop" == true ]]; then
-  # Bootstrap interop from the fixed OS location of Windows PowerShell. It is
-  # part of Windows itself (independent of anything we install), and is only the
-  # entry point: the authoritative POWERSHELL value is self-reported below.
-  pwsh=""
-  for candidate in /mnt/*/Windows/System32/WindowsPowerShell/v1.0/powershell.exe; do
-    [[ -x "$candidate" ]] && { pwsh="$candidate"; break; }
-  done
-  if [[ -z "$pwsh" ]]; then
-    echo "install.sh: powershell.exe not found under /mnt/*/Windows/System32/WindowsPowerShell/v1.0/" >&2
-    exit 1
-  fi
-
-  # The error-prone bits (credential-blob marshalling, Windows->WSL path
-  # conversion) are reused verbatim from the Windows side rather than
-  # reimplemented; pull them into the sparse checkout and dot-source them.
-  git -C "$REPO" sparse-checkout add windows/lib >/dev/null
-
-  # Build the PowerShell program: the two shared helpers plus a tail that emits
-  # only the values we still need as KEY=VALUE lines. The path/identity
-  # derivations mirror provision.ps1 one-for-one.
-  ps_tail=""
-  if [[ "$need_powershell" == true ]]; then
-    ps_tail+='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'$'\n'
-  fi
-  if [[ "$vscode_q" == true ]]; then
-    ps_tail+='$vsc = (Get-Command code).Source -replace "\.cmd$",""'$'\n'
-    ps_tail+='Write-Output ("VSCODE=" + (ConvertTo-WslPath $vsc))'$'\n'
-  fi
-  if [[ "$git_q" == true ]]; then
-    ps_tail+='$gitExe = (Get-Command git).Source'$'\n'
-    ps_tail+='$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) + "\mingw64\bin\git-credential-manager.exe"'$'\n'
-    ps_tail+='Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n'
-    ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
-    ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'$'\n'
-  fi
-  if [[ "$claude_q" == true ]]; then
-    ps_tail+='Write-Output ("CONTEXT7_API_KEY=" + (Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"))'$'\n'
-  fi
-
-  # Suppress PowerShell's progress stream ("Preparing modules for first use"),
-  # which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
-  ps_header='$ProgressPreference = "SilentlyContinue"'
-  ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Credentials.ps1" "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
-
-  # -EncodedCommand (base64 UTF-16LE) sidesteps cross-boundary quoting and the
-  # fact that powershell.exe, a Windows process, cannot read our /opt paths
-  # directly. Secrets are fetched inside PowerShell and returned on stdout; the
-  # encoded program on the command line contains only the fetch code, never a
-  # secret value.
-  encoded="$(printf '%s' "$ps_program" | iconv -t UTF-16LE | base64 | tr -d '\n')"
-  interop_output="$("$pwsh" -NoProfile -NonInteractive -EncodedCommand "$encoded")"
-
-  # Parse KEY=VALUE lines. IFS=/-r preserve the backslash-escaped spaces in the
-  # WSL paths; strip the trailing CR that PowerShell's Write-Output emits.
-  while IFS= read -r line; do
-    line="${line%$'\r'}"
-    [[ -z "$line" ]] && continue
-    case "$line" in
-      POWERSHELL=*)             export POWERSHELL="${line#*=}" ;;
-      VSCODE=*)                 export VSCODE="${line#*=}" ;;
-      GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
-      GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
-      GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
-      CONTEXT7_API_KEY=*)       export CONTEXT7_API_KEY="${line#*=}" ;;
-      *)                        ;;
-    esac
-  done <<< "$interop_output"
+# Bootstrap interop from the fixed OS location of Windows PowerShell. It is
+# part of Windows itself (independent of anything we install), and is only the
+# entry point: the authoritative POWERSHELL value is self-reported below.
+pwsh=""
+for candidate in /mnt/*/Windows/System32/WindowsPowerShell/v1.0/powershell.exe; do
+  [[ -x "$candidate" ]] && { pwsh="$candidate"; break; }
+done
+if [[ -z "$pwsh" ]]; then
+  echo "install.sh: powershell.exe not found under /mnt/*/Windows/System32/WindowsPowerShell/v1.0/" >&2
+  exit 1
 fi
+
+# The error-prone bits (credential-blob marshalling, Windows->WSL path
+# conversion) are reused verbatim from the Windows side rather than
+# reimplemented; pull them into the sparse checkout and dot-source them.
+git -C "$REPO" sparse-checkout add windows/lib >/dev/null
+
+# Build the PowerShell program: the two shared helpers plus a tail that emits the
+# values we need as KEY=VALUE lines. The path/identity derivations mirror
+# provision.ps1 one-for-one. POWERSHELL is always emitted; the opt-in values are
+# appended when their installation was selected.
+ps_tail='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'$'\n'
+if [[ "$vscode_q" == true ]]; then
+  ps_tail+='$vsc = (Get-Command code).Source -replace "\.cmd$",""'$'\n'
+  ps_tail+='Write-Output ("VSCODE=" + (ConvertTo-WslPath $vsc))'$'\n'
+fi
+if [[ "$git_q" == true ]]; then
+  ps_tail+='$gitExe = (Get-Command git).Source'$'\n'
+  ps_tail+='$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) + "\mingw64\bin\git-credential-manager.exe"'$'\n'
+  ps_tail+='Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n'
+  ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
+  ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'$'\n'
+fi
+if [[ "$claude_q" == true ]]; then
+  ps_tail+='Write-Output ("CONTEXT7_API_KEY=" + (Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"))'$'\n'
+fi
+
+# Suppress PowerShell's progress stream ("Preparing modules for first use"),
+# which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
+ps_header='$ProgressPreference = "SilentlyContinue"'
+ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Credentials.ps1" "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
+
+# -EncodedCommand (base64 UTF-16LE) sidesteps cross-boundary quoting and the
+# fact that powershell.exe, a Windows process, cannot read our /opt paths
+# directly. Secrets are fetched inside PowerShell and returned on stdout; the
+# encoded program on the command line contains only the fetch code, never a
+# secret value.
+encoded="$(printf '%s' "$ps_program" | iconv -t UTF-16LE | base64 | tr -d '\n')"
+interop_output="$("$pwsh" -NoProfile -NonInteractive -EncodedCommand "$encoded")"
+
+# Parse KEY=VALUE lines. IFS=/-r preserve the backslash-escaped spaces in the
+# WSL paths; strip the trailing CR that PowerShell's Write-Output emits.
+while IFS= read -r line; do
+  line="${line%$'\r'}"
+  [[ -z "$line" ]] && continue
+  case "$line" in
+    POWERSHELL=*)             export POWERSHELL="${line#*=}" ;;
+    VSCODE=*)                 export VSCODE="${line#*=}" ;;
+    GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
+    GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
+    GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
+    CONTEXT7_API_KEY=*)       export CONTEXT7_API_KEY="${line#*=}" ;;
+    *)                        ;;
+  esac
+done <<< "$interop_output"
 
 # Persist the resolved powershell.exe path so the open/gh wrappers read it from the
 # environment at runtime rather than baking it in. Append it once and never override: if a
