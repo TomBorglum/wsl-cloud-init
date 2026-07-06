@@ -25,6 +25,12 @@ write_files:
       consent_state = false
     owner: __TARGET_USER__:__TARGET_USER__
     defer: true
+  # Pre-create .zshenv owned by the user so install.sh can write POWERSHELL into it before
+  # 01-install-home.sh chowns the home dir. defer: true chowns after the user exists.
+  - path: /home/__TARGET_USER__/.zshenv
+    content: ""
+    owner: __TARGET_USER__:__TARGET_USER__
+    defer: true
   - path: /etc/wsl.conf
     content: |
       [boot]

@@ -113,16 +113,18 @@ if [[ "$need_interop" == true ]]; then
 fi
 
 # Persist the resolved powershell.exe path so the open/gh wrappers read it from the
-# environment at runtime rather than baking it in. POWERSHELL is set by now: either it
-# came in via the environment (so it wasn't re-resolved) or it was self-reported above.
-# Rewrite in place so a re-run picks up a changed path with no duplicate lines. (System32
-# has no spaces, so the WSL path needs no escaping.)
+# environment at runtime rather than baking it in. Append it once and never override: if a
+# POWERSHELL line already exists we leave it (that is the idempotency rule). cloud-init
+# pre-creates .zshenv owned by TARGET_USER, so appending works here even though the home
+# directory is still root-owned until 01-install-home.sh chowns it — appending to an
+# already-owned file needs only file-write permission, not a writable parent dir. The value
+# is written unquoted so ConvertTo-WslPath's backslash-escaped spaces resolve when zsh
+# sources .zshenv (System32 has none, but this keeps the escaping honest).
 : "${POWERSHELL:?POWERSHELL is required}"
 zshenv="/home/$TARGET_USER/.zshenv"
-sudo -u "$TARGET_USER" touch "$zshenv"
-sudo -u "$TARGET_USER" sed -i '/^export POWERSHELL=/d' "$zshenv"
-printf 'export POWERSHELL="%s"\n' "$POWERSHELL" \
-  | sudo -u "$TARGET_USER" tee -a "$zshenv" >/dev/null
+if ! sudo -u "$TARGET_USER" grep -q '^export POWERSHELL=' "$zshenv" 2>/dev/null; then
+  printf 'export POWERSHELL=%s\n' "$POWERSHELL" | sudo -u "$TARGET_USER" tee -a "$zshenv" >/dev/null
+fi
 
 # Run every install script in order. They are independent and self-skip when
 # their installation isn't selected; if one genuinely fails, stop the run and name
