@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/wsl-interop.sh"
+source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 if [[ "${INSTALL_CLAUDE_CODE:-}" != "true" ]]; then
   echo "INSTALL_CLAUDE_CODE not set, skipping claude-code install"
@@ -16,7 +16,7 @@ if [[ -x "/home/$TARGET_USER/.local/bin/claude" ]]; then
 fi
 
 # Resolve the Context7 API key from Windows Credential Manager via wsl_interop_credential
-# (all the PowerShell lives in lib/wsl-interop.sh). The secret is fetched inside PowerShell
+# (all the PowerShell lives in wsl-interop.sh). The secret is fetched inside PowerShell
 # and returned on stdout; only the fetch code crosses the boundary, never the value. We are
 # committed to installing here, so it is fetched unconditionally.
 CONTEXT7_API_KEY="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
