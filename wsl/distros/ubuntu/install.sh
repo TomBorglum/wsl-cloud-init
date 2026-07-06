@@ -112,6 +112,18 @@ if [[ "$need_interop" == true ]]; then
   done <<< "$interop_output"
 fi
 
+# Persist the resolved powershell.exe path so the open/gh wrappers read it from the
+# environment at runtime rather than baking it in. POWERSHELL is set by now: either it
+# came in via the environment (so it wasn't re-resolved) or it was self-reported above.
+# Rewrite in place so a re-run picks up a changed path with no duplicate lines. (System32
+# has no spaces, so the WSL path needs no escaping.)
+: "${POWERSHELL:?POWERSHELL is required}"
+zshenv="/home/$TARGET_USER/.zshenv"
+sudo -u "$TARGET_USER" touch "$zshenv"
+sudo -u "$TARGET_USER" sed -i '/^export POWERSHELL=/d' "$zshenv"
+printf 'export POWERSHELL="%s"\n' "$POWERSHELL" \
+  | sudo -u "$TARGET_USER" tee -a "$zshenv" >/dev/null
+
 # Run every install script in order. They are independent and self-skip when
 # their installation isn't selected; if one genuinely fails, stop the run and name
 # it rather than pressing on and masking the problem.
