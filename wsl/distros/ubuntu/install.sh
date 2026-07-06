@@ -17,6 +17,10 @@ set -euo pipefail
 REPO=/opt/wsl-cloud-init
 SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 
+# Shared WSL->Windows interop helpers (sparse checkout + dot-source + run a
+# PowerShell derivation). WSL_INTEROP_REPO defaults to $REPO.
+source "$SCRIPTS_DIR/lib/wsl-interop.sh"
+
 # The Linux account the per-user tooling is installed for. When invoked by hand
 # this is the invoking user (sudo preserves it in SUDO_USER); cloud-init exports
 # it explicitly.
@@ -26,41 +30,9 @@ export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 # and Windows PowerShell are always present under WSL, so it is derived below for
 # every run.
 
-# Bootstrap interop from the fixed OS location of Windows PowerShell. It is
-# part of Windows itself (independent of anything we install), and is only the
-# entry point: the authoritative POWERSHELL value is self-reported below.
-pwsh=""
-for candidate in /mnt/*/Windows/System32/WindowsPowerShell/v1.0/powershell.exe; do
-  [[ -x "$candidate" ]] && { pwsh="$candidate"; break; }
-done
-if [[ -z "$pwsh" ]]; then
-  echo "install.sh: powershell.exe not found under /mnt/*/Windows/System32/WindowsPowerShell/v1.0/" >&2
-  exit 1
-fi
-
-# The error-prone bit (Windows->WSL path conversion) is reused verbatim from the
-# Windows side rather than reimplemented; pull windows/lib into the sparse checkout
-# and dot-source it.
-git -C "$REPO" sparse-checkout add windows/lib >/dev/null
-
-# Build the PowerShell program: the shared path helper plus a tail that emits the
-# converted powershell.exe path as a POWERSHELL=<value> line on stdout.
-ps_tail='Write-Output ("POWERSHELL=" + (ConvertTo-WslPath (Get-Command powershell).Source))'
-
-# Suppress PowerShell's progress stream ("Preparing modules for first use"),
-# which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
-ps_header='$ProgressPreference = "SilentlyContinue"'
-ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
-
-# -EncodedCommand (base64 UTF-16LE) sidesteps cross-boundary quoting and the
-# fact that powershell.exe, a Windows process, cannot read our /opt paths
-# directly. The derived value is returned on stdout as a KEY=VALUE line.
-encoded="$(printf '%s' "$ps_program" | iconv -t UTF-16LE | base64 | tr -d '\n')"
-interop_output="$("$pwsh" -NoProfile -NonInteractive -EncodedCommand "$encoded")"
-
-# Pull the POWERSHELL=<value> line off stdout and strip the trailing CR that
-# PowerShell's Write-Output emits. The value keeps its backslash-escaped spaces.
-POWERSHELL="$(sed -n 's/^POWERSHELL=//p' <<< "$interop_output" | tr -d '\r')"
+# Resolve the WSL path to Windows powershell.exe. wsl_interop_powershell_path
+# bootstraps and self-reports it over interop; install.sh stays pure bash.
+POWERSHELL="$(wsl_interop_powershell_path)" || exit 1
 export POWERSHELL
 
 # Persist the resolved powershell.exe path so the open/gh wrappers read it from the
