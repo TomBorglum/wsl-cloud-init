@@ -8,14 +8,12 @@ fi
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
-# The wrapper reads $POWERSHELL from the environment at runtime (exported from ~/.zshenv,
-# derived once in install.sh) rather than baking the path in. The quoted heredoc keeps
-# $POWERSHELL and $1 literal so they resolve when `open` runs.
-tee /usr/local/bin/open > /dev/null << 'EOF'
-#!/bin/bash
-"$POWERSHELL" -NoProfile -c "Start-Process '$1'"
-EOF
-chmod 755 /usr/local/bin/open
+# The wrapper is a real file under wsl/system, installed (idempotent overwrite) with the
+# executable bit; sparse-checkout add makes it available in the /opt checkout at install.
+# It reads $POWERSHELL from the environment at runtime (exported from ~/.zshenv, derived
+# once in install.sh) rather than baking the path in.
+git -C /opt/wsl-cloud-init sparse-checkout add wsl/system/usr/local/bin >/dev/null
+install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/open /usr/local/bin/open
 
 sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << 'EOF'
 export BROWSER=open
