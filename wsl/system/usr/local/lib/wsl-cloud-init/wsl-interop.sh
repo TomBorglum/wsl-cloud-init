@@ -97,13 +97,34 @@ wsl_interop_credential() {
 # GIT_CREDENTIAL_MANAGER=, GIT_NAME=, GIT_EMAIL=. Callers parse the lines.
 wsl_interop_git_config() {
   : "${POWERSHELL:?POWERSHELL is required}"
-  _wsl_interop_run "$POWERSHELL" Wsl.ps1 \
-    '$gitExe = (Get-Command git).Source'$'\n''$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) + "\mingw64\bin\git-credential-manager.exe"'$'\n''Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n''Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n''Write-Output ("GIT_EMAIL=" + (git config --global user.email))'
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$gitExe = (Get-Command git).Source'$'\n'
+  ps_tail+='$credMgr = (Split-Path (Split-Path $gitExe -Parent) -Parent) +'$'\n'
+  ps_tail+='  "\mingw64\bin\git-credential-manager.exe"'$'\n'
+  ps_tail+='Write-Output ("GIT_CREDENTIAL_MANAGER=" + (ConvertTo-WslPath $credMgr))'$'\n'
+  ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
+  ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
 
-# Echo the Windows VS Code executable in /mnt form, for baking into a `code` wrapper.
+# Echo the Windows VS Code `code` shell-script launcher in /mnt form, for baking into a
+# `code` wrapper. The wrapper is invoked from bash over /mnt, so it must point at the
+# WSL-aware POSIX shell script (`bin/code`), not the `code.cmd`/`.exe` siblings. Resolve
+# whatever `Get-Command code` returns to its directory and target the `code` sibling
+# directly, so the result is correct regardless of which launcher is first on PATH; fail
+# loudly if that shell script is absent rather than baking a wrapper that can't run.
 wsl_interop_vscode_path() {
   : "${POWERSHELL:?POWERSHELL is required}"
-  _wsl_interop_run "$POWERSHELL" Wsl.ps1 \
-    '$vsc = (Get-Command code).Source -replace "\.cmd$",""'$'\n''Write-Output (ConvertTo-WslPath $vsc)'
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$src = (Get-Command code).Source'$'\n'
+  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "code"'$'\n'
+  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
+  ps_tail+='  throw "wsl-interop: VS Code '"'"'code'"'"' shell launcher missing beside $src"'$'\n'
+  ps_tail+='}'$'\n'
+  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
