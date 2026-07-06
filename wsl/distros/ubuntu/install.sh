@@ -17,9 +17,22 @@ set -euo pipefail
 REPO=/opt/wsl-cloud-init
 SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 
-# Shared WSL->Windows interop helpers (sparse checkout + dot-source + run a
-# PowerShell derivation). WSL_INTEROP_REPO defaults to $REPO.
-source "$SCRIPTS_DIR/lib/wsl-interop.sh"
+# Install the shared WSL->Windows interop runtime to a durable, git-free location,
+# co-located with the PowerShell helpers it dot-sources. This is a bootstrap (not a
+# numbered script): install.sh sources the lib itself to derive POWERSHELL, and the
+# gh wrapper re-sources it at runtime to re-authenticate after a Windows-side token
+# rotation — neither can depend on the /opt checkout being present or writable.
+# Idempotent: install(1) and `sparse-checkout add` overwrite cleanly on re-runs.
+INTEROP_DIR=/usr/local/lib/wsl-cloud-init
+INTEROP_SRC="$REPO/wsl/system/usr/local/lib/wsl-cloud-init"
+git -C "$REPO" sparse-checkout add wsl/system/usr/local/lib/wsl-cloud-init windows/lib >/dev/null
+install -D -m 755 "$INTEROP_SRC/wsl-interop.sh"       "$INTEROP_DIR/wsl-interop.sh"
+install -D -m 644 "$REPO/windows/lib/Wsl.ps1"         "$INTEROP_DIR/Wsl.ps1"
+install -D -m 644 "$REPO/windows/lib/Credentials.ps1" "$INTEROP_DIR/Credentials.ps1"
+
+# Shared WSL->Windows interop helpers (dot-source + run a PowerShell derivation),
+# sourced from the durable bundle the bootstrap above just installed.
+source "$INTEROP_DIR/wsl-interop.sh"
 
 # The Linux account the per-user tooling is installed for. When invoked by hand
 # this is the invoking user (sudo preserves it in SUDO_USER); cloud-init exports
