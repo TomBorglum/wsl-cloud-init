@@ -1,0 +1,2 @@
+#!/bin/bash
+$POWERSHELL -NoProfile -c "Start-Process '$1'"
