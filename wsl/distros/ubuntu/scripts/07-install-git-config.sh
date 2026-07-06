@@ -37,7 +37,3 @@ sudo -u "$TARGET_USER" git config --global credential.helper "$GIT_CREDENTIAL_MA
 sudo -u "$TARGET_USER" git config --global user.name "$GIT_NAME"
 sudo -u "$TARGET_USER" git config --global user.email "$GIT_EMAIL"
 sudo -u "$TARGET_USER" git config --global init.defaultBranch main
-
-# gh is not authenticated here. The gh wrapper (/usr/local/bin/gh, installed by
-# 15-install-gh-auth.sh) authenticates on first use from the Windows
-# "git:https://github.com" credential, so a rotated token is picked up automatically.
