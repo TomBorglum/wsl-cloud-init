@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/wsl-interop.sh"
+source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 if [[ "${INSTALL_GIT_CONFIG:-}" != "true" ]]; then
   echo "INSTALL_GIT_CONFIG not set, skipping git config"
@@ -16,7 +16,7 @@ if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
 fi
 
 # Resolve the git config from Windows over interop via wsl_interop_git_config (all the
-# PowerShell lives in lib/wsl-interop.sh). We are committed to installing and none of
+# PowerShell lives in wsl-interop.sh). We are committed to installing and none of
 # the values are set yet, so each KEY=VALUE line is assigned directly; the assertions
 # below prove the trio came back filled.
 while IFS= read -r line; do
