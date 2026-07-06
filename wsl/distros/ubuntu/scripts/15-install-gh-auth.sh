@@ -6,16 +6,14 @@ if [[ "${INSTALL_GIT_CONFIG:-}" != "true" ]]; then
   exit 0
 fi
 
-: "${POWERSHELL:?POWERSHELL is required}"
-
 # Install the gh wrapper ahead of the apt-provided /usr/bin/gh on PATH. It reads the
 # Windows "git:https://github.com" credential (via powershell.exe) and authenticates gh
 # on demand — on first use and after a token rotation — so no gh token is provisioned.
 #
 # The wrapper is written verbatim from a quoted here-doc (so its many $ and the embedded
-# C#/PowerShell stay literal), then the one Windows-derived value, POWERSHELL, is
-# substituted in. The powershell.exe path is derived only in install.sh and passed here
-# via the environment; nothing else hard-codes it. Idempotent: overwrites on each run.
+# C#/PowerShell stay literal). The one Windows-derived value, the powershell.exe path, is
+# read from $POWERSHELL in the environment at runtime (exported from ~/.zshenv, derived
+# only in install.sh); nothing here hard-codes it. Idempotent: overwrites on each run.
 tee /usr/local/bin/gh > /dev/null <<'GHWRAPPER'
 #!/bin/bash
 # gh wrapper: authenticates gh from the Windows "git:https://github.com" credential
@@ -36,10 +34,12 @@ tee /usr/local/bin/gh > /dev/null <<'GHWRAPPER'
 # No `set -e`: failures are handled explicitly below and $? must survive capture.
 
 GH=/usr/bin/gh
-# Path to Windows powershell.exe, baked in at install time from install.sh's $POWERSHELL
-# (the one place that derives it). Windows PATH isn't on the WSL PATH
-# (wsl.conf appendWindowsPath=false), so the full path is required.
-POWERSHELL="__POWERSHELL__"
+# Path to Windows powershell.exe, read from the environment at runtime. install.sh derives
+# it (the one place that does) and exports it via ~/.zshenv, so any gh invocation from the
+# user's shell inherits it. Windows PATH isn't on the WSL PATH
+# (wsl.conf appendWindowsPath=false), so the full path is required; if it is somehow unset
+# the -x check below reports it rather than silently misbehaving.
+POWERSHELL="${POWERSHELL:-}"
 
 # Read git:https://github.com from Windows and sign gh in. Announces itself, then is
 # silent; returns non-zero on failure with a one-line reason. Neutral wording ("Authen-
@@ -121,5 +121,4 @@ __gh_authenticate && exec "$GH" "$@"
 exit $ret
 GHWRAPPER
 
-sed -i "s|__POWERSHELL__|${POWERSHELL}|" /usr/local/bin/gh
 chmod 755 /usr/local/bin/gh
