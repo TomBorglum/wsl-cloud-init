@@ -24,12 +24,9 @@
 source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 GH=/usr/bin/gh
-# Path to Windows powershell.exe, read from the environment at runtime. install.sh derives
-# it (the one place that does) and exports it via ~/.zshenv, so any gh invocation from the
-# user's shell inherits it; wsl_interop_credential requires it. Windows PATH isn't on the
-# WSL PATH (wsl.conf appendWindowsPath=false), so the full path is required; if it is
-# somehow unset the -x check below reports it rather than silently misbehaving.
-export POWERSHELL="${POWERSHELL:-}"
+# $POWERSHELL is inherited from the environment (exported from ~/.zshenv, derived once in
+# install.sh); wsl_interop_credential and the -x guard below both rely on it. Windows PATH
+# isn't on the WSL PATH (wsl.conf appendWindowsPath=false), so the full path is required.
 
 # Read git:https://github.com from Windows and sign gh in. Announces itself, then is
 # silent; returns non-zero on failure with a one-line reason. Neutral wording ("Authen-
