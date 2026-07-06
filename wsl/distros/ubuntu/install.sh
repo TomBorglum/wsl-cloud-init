@@ -10,11 +10,12 @@ set +x
 #   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 #
 # This is the single point of derivation for both paths. The cloud-init runcmd
-# block exports only TARGET_USER and the INSTALL_* flags; every Windows-derived
-# value (paths, git identity, secrets) is resolved here at runtime via Windows
-# interop, the same way for cloud-init and on-demand. provision.ps1 no longer
-# derives or substitutes any of them, so nothing is persisted and no secret is
-# ever written to disk.
+# block exports only TARGET_USER and the INSTALL_* flags; the Windows-derived
+# paths and git identity are resolved here at runtime via Windows interop, the
+# same way for cloud-init and on-demand. provision.ps1 no longer derives or
+# substitutes any of them, so nothing is persisted. Secrets are not resolved
+# here: the scripts that need them fetch their own (08 reads the Context7 key,
+# the gh wrapper reads the GitHub token), so no secret is ever written to disk.
 
 REPO=/opt/wsl-cloud-init
 SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
@@ -28,7 +29,7 @@ export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 # always needed (the ungated open/gh wrappers consume it at runtime), so it is
 # always derived below. The remaining Windows-derived values are opt-in: each is
 # queried only when its installation is selected and it isn't already provided.
-vscode_q=false; git_q=false; claude_q=false
+vscode_q=false; git_q=false
 if [[ "${INSTALL_VS_CODE_INTEROP:-}" == "true" && -z "${VSCODE:-}" ]]; then
   vscode_q=true
 fi
@@ -36,9 +37,6 @@ if [[ "${INSTALL_GIT_CONFIG:-}" == "true" ]] &&
    { [[ -z "${GIT_CREDENTIAL_MANAGER:-}" ]] || [[ -z "${GIT_NAME:-}" ]] ||
      [[ -z "${GIT_EMAIL:-}" ]]; }; then
   git_q=true
-fi
-if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" && -z "${CONTEXT7_API_KEY:-}" ]]; then
-  claude_q=true
 fi
 
 # Bootstrap interop from the fixed OS location of Windows PowerShell. It is
@@ -53,12 +51,13 @@ if [[ -z "$pwsh" ]]; then
   exit 1
 fi
 
-# The error-prone bits (credential-blob marshalling, Windows->WSL path
-# conversion) are reused verbatim from the Windows side rather than
-# reimplemented; pull them into the sparse checkout and dot-source them.
+# The error-prone bit (Windows->WSL path conversion) is reused verbatim from the
+# Windows side rather than reimplemented; pull windows/lib into the sparse checkout
+# and dot-source it. (08 reads Credentials.ps1 from the same checkout for its own
+# credential fetch.)
 git -C "$REPO" sparse-checkout add windows/lib >/dev/null
 
-# Build the PowerShell program: the two shared helpers plus a tail that emits the
+# Build the PowerShell program: the shared path helper plus a tail that emits the
 # values we need as KEY=VALUE lines. The path/identity derivations mirror
 # provision.ps1 one-for-one. POWERSHELL is always emitted; the opt-in values are
 # appended when their installation was selected.
@@ -74,20 +73,15 @@ if [[ "$git_q" == true ]]; then
   ps_tail+='Write-Output ("GIT_NAME=" + (git config --global user.name))'$'\n'
   ps_tail+='Write-Output ("GIT_EMAIL=" + (git config --global user.email))'$'\n'
 fi
-if [[ "$claude_q" == true ]]; then
-  ps_tail+='Write-Output ("CONTEXT7_API_KEY=" + (Get-WindowsCredential "wsl-cloud-init:CONTEXT7_API_KEY"))'$'\n'
-fi
 
 # Suppress PowerShell's progress stream ("Preparing modules for first use"),
 # which otherwise leaks to stderr as CLIXML noise since we capture only stdout.
 ps_header='$ProgressPreference = "SilentlyContinue"'
-ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Credentials.ps1" "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
+ps_program="$ps_header"$'\n'"$(cat "$REPO/windows/lib/Wsl.ps1")"$'\n'"$ps_tail"
 
 # -EncodedCommand (base64 UTF-16LE) sidesteps cross-boundary quoting and the
 # fact that powershell.exe, a Windows process, cannot read our /opt paths
-# directly. Secrets are fetched inside PowerShell and returned on stdout; the
-# encoded program on the command line contains only the fetch code, never a
-# secret value.
+# directly. The derived values are returned on stdout as KEY=VALUE lines.
 encoded="$(printf '%s' "$ps_program" | iconv -t UTF-16LE | base64 | tr -d '\n')"
 interop_output="$("$pwsh" -NoProfile -NonInteractive -EncodedCommand "$encoded")"
 
@@ -102,7 +96,6 @@ while IFS= read -r line; do
     GIT_CREDENTIAL_MANAGER=*) export GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
     GIT_NAME=*)               export GIT_NAME="${line#*=}" ;;
     GIT_EMAIL=*)              export GIT_EMAIL="${line#*=}" ;;
-    CONTEXT7_API_KEY=*)       export CONTEXT7_API_KEY="${line#*=}" ;;
     *)                        ;;
   esac
 done <<< "$interop_output"
