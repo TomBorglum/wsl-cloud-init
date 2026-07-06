@@ -26,7 +26,7 @@ SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 INTEROP_DIR=/usr/local/lib/wsl-cloud-init
 INTEROP_SRC="$REPO/wsl/system/usr/local/lib/wsl-cloud-init"
 git -C "$REPO" sparse-checkout add wsl/system/usr/local/lib/wsl-cloud-init windows/lib >/dev/null
-install -D -m 755 "$INTEROP_SRC/wsl-interop.sh"       "$INTEROP_DIR/wsl-interop.sh"
+install -D -m 644 "$INTEROP_SRC/wsl-interop.sh"       "$INTEROP_DIR/wsl-interop.sh"
 install -D -m 644 "$REPO/windows/lib/Wsl.ps1"         "$INTEROP_DIR/Wsl.ps1"
 install -D -m 644 "$REPO/windows/lib/Credentials.ps1" "$INTEROP_DIR/Credentials.ps1"
 
