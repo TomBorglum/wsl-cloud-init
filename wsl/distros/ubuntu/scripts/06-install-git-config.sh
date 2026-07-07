@@ -23,10 +23,6 @@ fi
 # instance still (re)install the wrapper.
 install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/gh /usr/local/bin/gh
 
-# Auto-prune stale remote-tracking refs on every fetch/pull, so deleted upstream
-# branches don't linger in origin/*. A user preference independent of the Windows
-# identity resolved below, set before the early-exit so re-runs of an already-configured
-# instance still enforce it (same rationale as the gh wrapper above).
 sudo -u "$TARGET_USER" git config --global fetch.prune true
 
 if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
