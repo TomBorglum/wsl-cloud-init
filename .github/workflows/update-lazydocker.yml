@@ -31,7 +31,7 @@ jobs:
           GH_TOKEN: ${{ secrets.AUTOMATION_PAT }}
         run: |
           set -euo pipefail
-          script="wsl/distros/ubuntu/scripts/12-install-lazydocker.sh"
+          script="wsl/distros/ubuntu/scripts/11-install-lazydocker.sh"
 
           current="$(grep -oP '^VERSION=\K.*' "$script")"
           latest="$(gh api repos/jesseduffield/lazydocker/releases/latest --jq '.tag_name' | sed 's/^v//')"

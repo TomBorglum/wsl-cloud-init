@@ -25,12 +25,6 @@ write_files:
       consent_state = false
     owner: __TARGET_USER__:__TARGET_USER__
     defer: true
-  # Pre-create .zshenv owned by the user so install.sh can write POWERSHELL into it before
-  # 01-install-home.sh chowns the home dir. defer: true chowns after the user exists.
-  - path: /home/__TARGET_USER__/.zshenv
-    content: ""
-    owner: __TARGET_USER__:__TARGET_USER__
-    defer: true
   - path: /etc/wsl.conf
     content: |
       [boot]
@@ -40,6 +34,8 @@ write_files:
       [interop]
       appendWindowsPath=false
   - path: /home/__TARGET_USER__/.zshrc
+    owner: __TARGET_USER__:__TARGET_USER__
+    defer: true
     content: |
       export ZSH="$HOME/.oh-my-zsh"
       ZSH_THEME="robbyrussell"
@@ -51,6 +47,7 @@ write_files:
 
       eval "$(direnv hook zsh)"
 
+      [[ -d ~/projects ]] || mkdir -p ~/projects
       export PROJECT_PATHS=(~/projects)
       # Must run after `source $ZSH/oh-my-zsh.sh` above: these files can redefine
       # plugin functions/completions (e.g. _pj), and the later definition wins.
@@ -72,6 +69,10 @@ packages:
   - gh
   - jq
 runcmd:
+  # Take ownership of the home directory before anything else runs: write_files/defer set
+  # ownership per-file, but this fixes any root-owned parent dirs cloud-init created and
+  # ensures install.sh (and its .zshenv append) operate on a user-owned tree.
+  - chown -R __TARGET_USER__:__TARGET_USER__ /home/__TARGET_USER__
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
   - git -C /opt/wsl-cloud-init sparse-checkout set wsl/distros/ubuntu/scripts
   - git -C /opt/wsl-cloud-init checkout __COMMIT__

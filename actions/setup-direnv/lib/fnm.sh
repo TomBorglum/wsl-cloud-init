@@ -18,7 +18,7 @@ use_fnm() {
   # Standard fnm install into ~/.fnm; guard only to skip re-downloading on a warm
   # rerun / full cache hit. --proto '=https' --tlsv1.2 pins the transfer to
   # HTTPS/TLS 1.2+ (no plaintext redirects), matching the repo's other installers
-  # (wsl/distros/ubuntu/scripts/06-install-fnm.sh).
+  # (wsl/distros/ubuntu/scripts/05-install-fnm.sh).
   if [[ ! -d "$HOME/.fnm" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install \
       | bash -s -- --install-dir "$HOME/.fnm" --skip-shell
