@@ -25,7 +25,7 @@ use_pixi() {
   # transfer to HTTPS/TLS 1.2+ (no plaintext redirects); PIXI_NO_PATH_UPDATE=1 is
   # the pixi analog of fnm's --skip-shell — it stops the installer editing shell rc
   # files, a no-op in CI since we put pixi on PATH ourselves. Matches
-  # wsl/distros/ubuntu/scripts/05-install-pixi.sh.
+  # wsl/distros/ubuntu/scripts/04-install-pixi.sh.
   if [[ ! -d "$pixi_home" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://pixi.sh/install.sh \
       | PIXI_HOME="$pixi_home" PIXI_NO_PATH_UPDATE=1 bash

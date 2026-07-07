@@ -14,7 +14,7 @@ fi
 # authenticates gh on demand from the Windows "git:https://github.com" credential — on
 # first use and after a token rotation — via the shared wsl_interop_credential helper,
 # so no gh token is provisioned here. No eager sign-in: the wrapper handles it lazily on
-# first use (mirroring 10, which likewise only installs its wrapper). The credential is
+# first use (mirroring 09, which likewise only installs its wrapper). The credential is
 # the Git Credential Manager one, hence the INSTALL_GIT_CONFIG gate above.
 #
 # The wrapper is a real file under wsl/system, installed (idempotent overwrite) with the

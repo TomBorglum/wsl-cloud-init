@@ -50,12 +50,11 @@ export POWERSHELL
 
 # Persist the resolved powershell.exe path so the open/gh wrappers read it from the
 # environment at runtime rather than baking it in. Append it once and never override: if a
-# POWERSHELL line already exists we leave it (that is the idempotency rule). cloud-init
-# pre-creates .zshenv owned by TARGET_USER, so appending works here even while the home
-# directory is still root-owned — appending to an already-owned file needs only file-write
-# permission, not a writable parent dir. The value is written unquoted so its
-# backslash-escaped spaces resolve when zsh sources .zshenv (System32 has none, but this
-# keeps the escaping honest).
+# POWERSHELL line already exists we leave it (that is the idempotency rule). cloud-init's
+# first runcmd chowns the home directory to TARGET_USER before install.sh runs, so this
+# `sudo -u "$TARGET_USER" tee -a` both creates .zshenv (when absent) and writes it as the
+# user. The value is written unquoted so its backslash-escaped spaces resolve when zsh
+# sources .zshenv (System32 has none, but this keeps the escaping honest).
 : "${POWERSHELL:?POWERSHELL is required}"
 zshenv="/home/$TARGET_USER/.zshenv"
 if ! sudo -u "$TARGET_USER" grep -q '^export POWERSHELL=' "$zshenv" 2>/dev/null; then
