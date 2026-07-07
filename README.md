@@ -182,7 +182,7 @@ These commands reach from the Linux shell back into Windows:
 Opt-in via `-InstallGitConfig`: your git identity, plus both Git and `gh` authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in). `gh` authenticates itself from that credential on first use — nothing is stored at provisioning time, and a rotated token is picked up automatically on the next `gh` call.
 
 ### Shell helpers
-`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` (plus the `use update-branch` direnv directive) streamline everyday Git work.
+`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` streamline everyday Git work.
 
 ### Base packages
 Installed from the cloud-init package list:
@@ -212,14 +212,6 @@ use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
 ```
 
 then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and installs the requested versions automatically on first use. Versions must be fully qualified — an exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
-
-#### Auto-update on branch switch
-The `use update-branch` directive runs [update-branch](#update-branch) automatically, rebasing the current branch onto the remote default whenever you switch branches in the project:
-
-```bash
-# .envrc
-use update-branch
-```
 
 ### clone-repo
 Clone one of your GitHub repos into `~/projects/<name>` and drop you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
@@ -256,7 +248,7 @@ pj my-project   # cd into ~/projects/my-project
 ```
 
 ### update-branch
-Rebase the current branch onto the remote's default branch (e.g. `main`). Run it manually, or let direnv run it automatically whenever you switch branches inside a project.
+Rebase the current branch onto the remote's default branch (e.g. `main`).
 
 ```bash
 update-branch

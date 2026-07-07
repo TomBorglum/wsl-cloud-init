@@ -48,9 +48,9 @@ Every tree is copied into place by one Ubuntu install script under `distros/ubun
 
 ## The one place the mirror is not literal: `git/`
 
-The `git/` subfolders under `user/.config/direnv/lib/` and
-`system/usr/local/share/zsh/site-functions/` are a **source-side grouping**, not a real
-destination subdirectory. They hold the helpers installed only when `INSTALL_GIT_CONFIG=true`,
-and the install scripts **flatten** them into the parent directory (e.g.
-`user/.config/direnv/lib/git/update-branch.sh` lands at `~/.config/direnv/lib/update-branch.sh`,
-not in a `git/` subdir). Everything outside `git/` is always installed.
+The `git/` subfolder under `system/usr/local/share/zsh/site-functions/` is a **source-side
+grouping**, not a real destination subdirectory. It holds the helpers installed only when
+`INSTALL_GIT_CONFIG=true`, and the install script **flattens** it into the parent directory (e.g.
+`system/usr/local/share/zsh/site-functions/git/update-branch.zsh` lands at
+`/usr/local/share/zsh/site-functions/update-branch.zsh`, not in a `git/` subdir). Everything
+outside `git/` is always installed.
