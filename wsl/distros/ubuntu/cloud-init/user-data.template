@@ -52,6 +52,8 @@ write_files:
       eval "$(direnv hook zsh)"
 
       export PROJECT_PATHS=(~/projects)
+      # Must run after `source $ZSH/oh-my-zsh.sh` above: these files can redefine
+      # plugin functions/completions (e.g. _pj), and the later definition wins.
       for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
 
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
