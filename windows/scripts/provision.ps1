@@ -10,6 +10,9 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$WindowsDir = Split-Path $PSScriptRoot -Parent   # windows/
+$RepoRoot   = Split-Path $WindowsDir  -Parent    # repo root
+
 # Only pinned LTS distro names are supported. The bare "Ubuntu" name installs whatever
 # Ubuntu the Store currently ships, which the in-distro setup does not support
 # (e.g. Docker has no apt repo for its codename). Add new names here as they are validated.
@@ -24,7 +27,7 @@ Only these pinned LTS versions are supported: $($SupportedDistros -join ', ')
 
 if (-not $InstanceName) { $InstanceName = $DistroInstallName }
 
-. "$PSScriptRoot\lib\Wsl.ps1"
+. "$WindowsDir\lib\Wsl.ps1"
 
 $exists = Test-WslInstanceExists $InstanceName
 if ($exists -and -not $Force) {
@@ -44,7 +47,6 @@ if (-not $TargetUser) { Write-Host "Could not derive a valid Linux username from
 
 # The distro provisions the exact commit this checkout is on. Require a clean tree that is not
 # ahead of origin, so cloud-init can reproduce the commit by cloning it from GitHub.
-$RepoRoot = Split-Path $PSScriptRoot -Parent
 $Branch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
 $CommitSha = (git -C $RepoRoot rev-parse HEAD).Trim()
 
@@ -66,7 +68,7 @@ Write-Host "Provisioning $InstanceName from $Branch @ $($CommitSha.Substring(0, 
 $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
-$template = Get-Content "$PSScriptRoot\..\wsl\distros\$DistroTemplatePath\cloud-init\user-data.template" -Raw
+$template = Get-Content "$RepoRoot\wsl\distros\$DistroTemplatePath\cloud-init\user-data.template" -Raw
 
 # String.Replace (literal) rather than -replace (regex), so a value containing
 # '$' is never interpreted as a regex backreference.
@@ -77,7 +79,7 @@ $template = $template.
     Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
     Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue)
 
-$userDataDir = "$PSScriptRoot\..\user-data"
+$userDataDir = "$RepoRoot\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
 $userDataPath = "$userDataDir\$InstanceName.user-data"
 $template | Set-Content $userDataPath -NoNewline
