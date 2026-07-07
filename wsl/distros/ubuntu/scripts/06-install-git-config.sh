@@ -23,6 +23,8 @@ fi
 # instance still (re)install the wrapper.
 install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/gh /usr/local/bin/gh
 
+sudo -u "$TARGET_USER" git config --global fetch.prune true
+
 if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
   echo "git already configured for $TARGET_USER, skipping"
   exit 0
