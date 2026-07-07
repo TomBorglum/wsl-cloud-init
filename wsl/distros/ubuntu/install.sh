@@ -22,10 +22,11 @@ SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 # numbered script): install.sh sources the lib itself to derive POWERSHELL, and the
 # gh wrapper re-sources it at runtime to re-authenticate after a Windows-side token
 # rotation — neither can depend on the /opt checkout being present or writable.
-# Idempotent: install(1) and `sparse-checkout add` overwrite cleanly on re-runs.
+# The source paths (wsl/system/usr/local/lib/wsl-cloud-init, windows/lib) are provided
+# by the sparse checkout declared in user-data.template's runcmd. Idempotent: install(1)
+# overwrites cleanly on re-runs.
 INTEROP_DIR=/usr/local/lib/wsl-cloud-init
 INTEROP_SRC="$REPO/wsl/system/usr/local/lib/wsl-cloud-init"
-git -C "$REPO" sparse-checkout add wsl/system/usr/local/lib/wsl-cloud-init windows/lib >/dev/null
 install -D -m 644 "$INTEROP_SRC/wsl-interop.sh"       "$INTEROP_DIR/wsl-interop.sh"
 install -D -m 644 "$REPO/windows/lib/Wsl.ps1"         "$INTEROP_DIR/Wsl.ps1"
 install -D -m 644 "$REPO/windows/lib/Credentials.ps1" "$INTEROP_DIR/Credentials.ps1"
