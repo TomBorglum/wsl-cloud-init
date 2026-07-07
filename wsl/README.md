@@ -18,9 +18,7 @@ wsl/
 │       └── scripts/NN-install-*.sh         # ordered install steps
 ├── user/                                   # → /home/$TARGET_USER/   (installed owned by the user)
 │   ├── .claude/skills/…                        → ~/.claude/skills/
-│   └── .config/direnv/lib/
-│       ├── *.sh                                → ~/.config/direnv/lib/
-│       └── git/*.sh
+│   └── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
 └── system/                                 # → /   (root-owned)
     └── usr/local/share/zsh/site-functions/
         ├── *.zsh                               → /usr/local/share/zsh/site-functions/
