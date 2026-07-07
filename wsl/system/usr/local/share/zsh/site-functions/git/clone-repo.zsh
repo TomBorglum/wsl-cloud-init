@@ -77,6 +77,10 @@ _clone-repo_complete() {
   [[ -f "$cache" ]] || return
   local -a repos
   repos=(${(f)"$(cat "$cache")"})
-  compadd "${repos[@]}"
+  # Enter interactive menu selection on the first Tab rather than dumping a static
+  # columnar list. A static listing taller than the terminal scrolls the prompt
+  # off-screen and becomes unusable; menu selection (enabled globally by oh-my-zsh's
+  # `menu select`) instead scrolls the matches in place, keeping the prompt visible.
+  compadd -- "${repos[@]}" && compstate[insert]=menu
 }
 compdef _clone-repo_complete clone-repo
