@@ -51,7 +51,8 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 The script renders the cloud-init config, installs Ubuntu, waits for setup to
 finish, and launches you into the new instance — signed in with passwordless sudo
 and `zsh` as your shell. Pinned Ubuntu LTS versions are supported: `Ubuntu-26.04`,
-`Ubuntu-24.04`, and `Ubuntu-22.04`.
+`Ubuntu-24.04`, and `Ubuntu-22.04`. Add `-Ref v<version>` to provision a released
+version instead of the latest.
 
 See the [full documentation and opt-in features](https://github.com/TomBorglum/wsl-cloud-init#readme)
 on GitHub.

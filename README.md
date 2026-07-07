@@ -40,12 +40,14 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
-Provisioning uses whatever commit your checkout is on (cloud-init clones the repo
-and checks out that exact commit). For a reproducible, released version, check out
-a release tag before provisioning; stay on `main` for the latest changes.
+By default, provisioning uses whatever commit your checkout is on (cloud-init clones
+the repo and checks out that exact commit) — stay on `main` for the latest changes. For
+a reproducible, released version, pass `-Ref` with a release tag (or any branch or commit).
+It pins that version without touching your working tree; the ref just has to exist on origin.
 
 ```powershell
-git checkout v1.0.0   # or omit to use the latest on main
+# add to the provision command below, e.g.
+-Ref v1.0.0   # provision the v1.0.0 release; omit -Ref to use the current checkout
 ```
 
 ### 2. Provision an instance
@@ -62,6 +64,7 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
+- `-Ref <ref>` — provision a specific tag, branch, or commit (e.g. `v1.0.0`); defaults to the current checkout. Must exist on origin.
 - `-InstallClaudeCode` — install Claude Code. See [Opt-in features](#opt-in-features).
 - `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth. See [Opt-in features](#opt-in-features).
 - `-InstallVsCodeInterop` — install the `code` Windows interop wrapper. See [Opt-in features](#opt-in-features).
@@ -295,6 +298,7 @@ What you can set when provisioning, and how the instance is derived.
 - `-DistroTemplatePath` (required) — template directory under `wsl/distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
+- `-Ref` (optional) — provision a specific tag, branch, or commit; defaults to the current checkout's commit. Must exist on origin.
 - `-InstallClaudeCode` (optional) — install Claude Code.
 - `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
