@@ -2,9 +2,9 @@
 set -euo pipefail
 shopt -s nullglob
 
-# Shared zsh functions (system-wide). Idempotent: each run re-selects the current
-# set and install overwrites, so re-running can add helpers that were skipped before.
-git -C /opt/wsl-cloud-init sparse-checkout add wsl/system/usr/local/share/zsh/site-functions
+# Shared zsh functions (system-wide), sourced from the sparse checkout declared in
+# user-data.template. Idempotent: each run re-installs the current set (install
+# overwrites), so re-running can add helpers that were skipped before.
 mkdir -p /usr/local/share/zsh/site-functions
 
 # Non-git helpers (always); the git/ subdir is gated on INSTALL_GIT_CONFIG.

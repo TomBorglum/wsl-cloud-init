@@ -4,9 +4,9 @@ shopt -s nullglob
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
-# direnv functions (per-user). Idempotent: each run re-selects the current set and
-# install overwrites, so re-running can add directives that were skipped before.
-git -C /opt/wsl-cloud-init sparse-checkout add wsl/user/.config/direnv/lib
+# direnv functions (per-user), sourced from the sparse checkout declared in
+# user-data.template. Idempotent: each run re-installs the current set (install
+# overwrites), so re-running can add directives that were skipped before.
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 
 # Runtime directives (always); the git/ subdir is gated on INSTALL_GIT_CONFIG.

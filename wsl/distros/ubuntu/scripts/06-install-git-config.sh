@@ -17,11 +17,10 @@ fi
 # first use (mirroring 09, which likewise only installs its wrapper). The credential is
 # the Git Credential Manager one, hence the INSTALL_GIT_CONFIG gate above.
 #
-# The wrapper is a real file under wsl/system, installed (idempotent overwrite) with the
-# executable bit; sparse-checkout add makes it available in the /opt checkout at install.
-# This runs before the git-config early-exit below so that on-demand re-runs of an
-# already-configured instance still (re)install the wrapper.
-git -C /opt/wsl-cloud-init sparse-checkout add wsl/system/usr/local/bin >/dev/null
+# The wrapper is a real file under wsl/system (provided by the sparse checkout declared in
+# user-data.template), installed (idempotent overwrite) with the executable bit. This runs
+# before the git-config early-exit below so that on-demand re-runs of an already-configured
+# instance still (re)install the wrapper.
 install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/gh /usr/local/bin/gh
 
 if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then

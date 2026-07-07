@@ -74,7 +74,16 @@ runcmd:
   # ensures install.sh (and its .zshenv append) operate on a user-owned tree.
   - chown -R __TARGET_USER__:__TARGET_USER__ /home/__TARGET_USER__
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
-  - git -C /opt/wsl-cloud-init sparse-checkout set wsl/distros/ubuntu/scripts
+  # Single source of truth for the sparse checkout: this is the only place that declares
+  # which paths the /opt checkout materializes. install.sh and the numbered install
+  # scripts assume every path they consume is already present here and add none of their
+  # own. `wsl/system` and `wsl/user` are pulled whole; the distros branch is narrowed to
+  # `scripts` so the sibling `cloud-init/` (holding user-data.template, which is rendered
+  # Windows-side by provision.ps1 and never read from this checkout) stays out. install.sh
+  # still comes along as a cone-ancestor file of scripts. `windows/lib` holds the interop
+  # PowerShell helpers install.sh installs. Runs before `checkout __COMMIT__` so the working
+  # tree materializes at the pinned commit.
+  - git -C /opt/wsl-cloud-init sparse-checkout set wsl/system wsl/user wsl/distros/ubuntu/scripts windows/lib
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
   - |
     export TARGET_USER="__TARGET_USER__"

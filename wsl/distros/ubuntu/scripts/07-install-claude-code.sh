@@ -44,7 +44,7 @@ sudo -u "$TARGET_USER" tee "/home/$TARGET_USER/.claude/settings.json" > /dev/nul
 }
 EOF
 
-# Claude skills (per-user); cp -r since this is a directory tree, not flat files
-git -C /opt/wsl-cloud-init sparse-checkout add wsl/user/.claude/skills
+# Claude skills (per-user), sourced from the sparse checkout declared in
+# user-data.template; cp -r since this is a directory tree, not flat files
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.claude/skills"
 sudo -u "$TARGET_USER" cp -r /opt/wsl-cloud-init/wsl/user/.claude/skills/. "/home/$TARGET_USER/.claude/skills/"
