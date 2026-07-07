@@ -53,7 +53,7 @@ git checkout v1.0.0   # or omit to use the latest on main
 In **PowerShell**:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
   -DistroInstallName Ubuntu-26.04 `
   -InstanceName dev
@@ -115,7 +115,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 Once the setup above is in place, add the flags to the Getting Started command:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
   -DistroInstallName Ubuntu-26.04 `
   -InstanceName dev `
@@ -288,7 +288,7 @@ What you can set when provisioning, and how the instance is derived.
 
 ### Provisioning parameters
 
-`windows/provision.ps1` takes:
+`windows/scripts/provision.ps1` takes:
 
 - `-DistroTemplatePath` (required) — template directory under `wsl/distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.

@@ -42,7 +42,7 @@ You need only an up-to-date **WSL 2** and **Git for Windows**. Then, in
 ```powershell
 git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
-powershell -ExecutionPolicy Bypass -File .\windows\provision.ps1 `
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
   -DistroInstallName Ubuntu-26.04 `
   -InstanceName dev
