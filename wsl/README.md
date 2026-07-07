@@ -49,6 +49,6 @@ Every tree is copied into place by one Ubuntu install script under `distros/ubun
 The `git/` subfolder under `system/usr/local/share/zsh/site-functions/` is a **source-side
 grouping**, not a real destination subdirectory. It holds the helpers installed only when
 `INSTALL_GIT_CONFIG=true`, and the install script **flattens** it into the parent directory (e.g.
-`system/usr/local/share/zsh/site-functions/git/update-branch.zsh` lands at
-`/usr/local/share/zsh/site-functions/update-branch.zsh`, not in a `git/` subdir). Everything
+`system/usr/local/share/zsh/site-functions/git/rebase-branch.zsh` lands at
+`/usr/local/share/zsh/site-functions/rebase-branch.zsh`, not in a `git/` subdir). Everything
 outside `git/` is always installed.

@@ -182,7 +182,7 @@ These commands reach from the Linux shell back into Windows:
 Opt-in via `-InstallGitConfig`: your git identity, plus both Git and `gh` authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in). `gh` authenticates itself from that credential on first use — nothing is stored at provisioning time, and a rotated token is picked up automatically on the next `gh` call.
 
 ### Shell helpers
-`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `update-branch` streamline everyday Git work.
+`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, and `rebase-branch` streamline everyday Git work.
 
 ### Base packages
 Installed from the cloud-init package list:
@@ -247,11 +247,11 @@ Jump straight into a checked-out project under `~/projects` without typing the f
 pj my-project   # cd into ~/projects/my-project
 ```
 
-### update-branch
+### rebase-branch
 Rebase the current branch onto the remote's default branch (e.g. `main`).
 
 ```bash
-update-branch
+rebase-branch
 ```
 
 It refuses on a dirty working tree or detached HEAD, and stops on rebase conflicts so you can resolve them.
