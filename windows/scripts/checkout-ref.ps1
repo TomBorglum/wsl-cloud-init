@@ -98,12 +98,12 @@ try {
   }
 }
 catch {
-  # Introspection failed (unexpected script shape) — fall back to the known baseline params.
+  # Introspection failed (unexpected script shape) -- fall back to the known baseline params.
   $mandatoryArgs = @('-DistroTemplatePath ubuntu', '-DistroInstallName Ubuntu-26.04')
   $optionalParts = @()
 }
 
-Write-Host "Next, provision this version (runs from any folder — the path is absolute):"
+Write-Host "Next, provision this version (runs from any folder - the path is absolute):"
 Write-Host ""
 Write-Host "  powershell -ExecutionPolicy Bypass -File `"$absEntrypoint`" $($mandatoryArgs -join ' ')"
 if ($optionalParts) {
