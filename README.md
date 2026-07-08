@@ -40,15 +40,21 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
-By default, provisioning uses whatever commit your checkout is on (cloud-init clones
-the repo and checks out that exact commit) — stay on `main` for the latest changes. For
-a reproducible, released version, pass `-Ref` with a release tag (or any branch or commit).
-It pins that version without touching your working tree; the ref just has to exist on origin.
+Provisioning uses whatever commit your checkout is on (cloud-init clones the repo and
+checks out that exact commit) — stay on `main` for the latest changes. The commit just
+has to exist on origin.
+
+To provision a reproducible, released version instead, check that version out into its own
+directory first with `checkout-ref.ps1`, then provision from there. This keeps each version
+self-contained (the script, template, and in-distro setup all match) and leaves this
+checkout untouched:
 
 ```powershell
-# add to the provision command below, e.g.
--Ref v1.0.0   # provision the v1.0.0 release; omit -Ref to use the current checkout
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 `
+  -Ref v1.0.0 -Destination ..\wsl-cloud-init-v1.0.0
 ```
+
+It prints the exact provision command to run from the new directory.
 
 ### 2. Provision an instance
 
@@ -64,7 +70,6 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
 - `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
-- `-Ref <ref>` — provision a specific tag, branch, or commit (e.g. `v1.0.0`); defaults to the current checkout. Must exist on origin.
 - `-InstallClaudeCode` — install Claude Code. See [Opt-in features](#opt-in-features).
 - `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth. See [Opt-in features](#opt-in-features).
 - `-InstallVsCodeInterop` — install the `code` Windows interop wrapper. See [Opt-in features](#opt-in-features).
@@ -298,11 +303,25 @@ What you can set when provisioning, and how the instance is derived.
 - `-DistroTemplatePath` (required) — template directory under `wsl/distros/` to render (e.g. `ubuntu`).
 - `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
-- `-Ref` (optional) — provision a specific tag, branch, or commit; defaults to the current checkout's commit. Must exist on origin.
 - `-InstallClaudeCode` (optional) — install Claude Code.
 - `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
 - `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
+
+`provision.ps1` always provisions the commit its own checkout is on (which must exist on origin).
+To provision a specific released version, use `checkout-ref.ps1` to lay that version down first.
+
+### Provisioning a released version
+
+`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so
+that version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup
+all come from the same commit, and your working tree is left untouched. It takes:
+
+- `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
+- `-Destination` (required) — empty/new directory to clone into.
+
+It prints the exact `provision.ps1` command to run from the new directory (that version's own,
+which may live at `windows\provision.ps1` for older releases).
 
 ### Credentials
 
