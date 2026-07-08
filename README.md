@@ -50,11 +50,17 @@ self-contained (the script, template, and in-distro setup all match) and leaves 
 checkout untouched:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 `
-  -Ref v1.0.0 -Destination ..\wsl-cloud-init-v1.0.0
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
 ```
 
-It prints the exact provision command to run from the new directory.
+It clones the ref into `%TEMP%\wsl-cloud-init-v1.0.0` (pass `-Destination <dir>` to choose
+your own path), then prints a copy-paste-ready provision command with an **absolute** path —
+so you can run it straight away without changing directory:
+
+```powershell
+# printed by checkout-ref.ps1 — copy, paste, run (edit the distro/flags to taste):
+powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cloud-init-v1.0.0\windows\provision.ps1" -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04
+```
 
 ### 2. Provision an instance
 
@@ -318,10 +324,12 @@ that version provisions itself — its `provision.ps1`, cloud-init template, and
 all come from the same commit, and your working tree is left untouched. It takes:
 
 - `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
-- `-Destination` (required) — empty/new directory to clone into.
+- `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
+  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt.
 
-It prints the exact `provision.ps1` command to run from the new directory (that version's own,
-which may live at `windows\provision.ps1` for older releases).
+It then prints a copy-paste-runnable `provision.ps1` command with an **absolute** path (no `cd`
+needed), built from that version's own parameter declaration — so it stays correct even for
+older releases whose entrypoint lives at `windows\provision.ps1`.
 
 ### Credentials
 

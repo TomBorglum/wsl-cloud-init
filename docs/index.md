@@ -52,8 +52,8 @@ The script renders the cloud-init config, installs Ubuntu, waits for setup to
 finish, and launches you into the new instance — signed in with passwordless sudo
 and `zsh` as your shell. Pinned Ubuntu LTS versions are supported: `Ubuntu-26.04`,
 `Ubuntu-24.04`, and `Ubuntu-22.04`. To provision a released version instead of the
-latest, check it out first with `windows\scripts\checkout-ref.ps1 -Ref v<version>
--Destination <dir>`, then provision from that directory.
+latest, run `windows\scripts\checkout-ref.ps1 -Ref v<version>`; it checks that version
+out and prints a copy-paste-ready provision command.
 
 See the [full documentation and opt-in features](https://github.com/TomBorglum/wsl-cloud-init#readme)
 on GitHub.
