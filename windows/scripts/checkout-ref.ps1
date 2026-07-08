@@ -93,7 +93,7 @@ $common = [System.Management.Automation.PSCmdlet]::CommonParameters +
           [System.Management.Automation.PSCmdlet]::OptionalCommonParameters
 
 $mandatoryArgs = @()
-$optionalComments = @()
+$optionalFlags = @()
 try {
   $params = (Get-Command $absEntrypoint).Parameters.Values |
     Where-Object { $common -notcontains $_.Name }
@@ -110,25 +110,22 @@ try {
     }
     # Never suggest -Force: it destroys an existing instance and is irrelevant to a fresh run.
     elseif ($p.Name -eq 'Force') { continue }
-    elseif ($isSwitch) { $optionalComments += "# -$($p.Name)  # (opt-in)" }
-    else { $optionalComments += "# -$($p.Name) <value>  # (optional)" }
+    elseif ($isSwitch) { $optionalFlags += "-$($p.Name)" }
+    else { $optionalFlags += "-$($p.Name) <value>" }
   }
 }
 catch {
   # Introspection failed (unexpected script shape) -- fall back to the known baseline params.
   $mandatoryArgs = @('-DistroTemplatePath ubuntu', '-DistroInstallName Ubuntu-26.04')
-  $optionalComments = @(
-    '# -InstanceName <value>  # (optional)',
-    '# -InstallClaudeCode  # (opt-in)',
-    '# -InstallGitConfig  # (opt-in)',
-    '# -InstallVsCodeInterop  # (opt-in)'
-  )
+  $optionalFlags = @('-InstanceName <value>', '-InstallClaudeCode', '-InstallGitConfig', '-InstallVsCodeInterop')
 }
 
-# Print the command wrapped across lines with backtick continuation. The mandatory args form
-# the runnable command; the optional flags follow as commented lines the user can uncomment.
-# Everything after a '#' is ignored, so the block runs verbatim with just the mandatory args.
-$block = @("powershell -ExecutionPolicy Bypass -File `"$absEntrypoint`"") + $mandatoryArgs + $optionalComments
+# Print the command wrapped across lines with backtick continuation. The mandatory args form the
+# runnable command; the optional flags follow on a SINGLE trailing comment line. Keep it to one
+# comment line: pasting a continued command with two or more comment lines makes PowerShell run it
+# on paste, whereas one comment line (or none) waits for the user to press Enter.
+$block = @("powershell -ExecutionPolicy Bypass -File `"$absEntrypoint`"") + $mandatoryArgs
+if ($optionalFlags) { $block += "# optional: $($optionalFlags -join '  ')" }
 Write-Host "Next, to provision this version run"
 Write-Host ""
 for ($i = 0; $i -lt $block.Count; $i++) {

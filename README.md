@@ -58,14 +58,11 @@ your own path), then prints a copy-paste-ready provision command with an **absol
 so you can run it straight away without changing directory:
 
 ```powershell
-# printed by checkout-ref.ps1 - copy, paste, run (uncomment optional flags as needed):
+# printed by checkout-ref.ps1 - copy, paste, then press Enter (append optional flags first if wanted):
 powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cloud-init-v1.0.0\windows\provision.ps1" `
   -DistroTemplatePath ubuntu `
   -DistroInstallName Ubuntu-26.04 `
-  # -InstanceName <value>  # (optional) `
-  # -InstallClaudeCode  # (opt-in) `
-  # -InstallGitConfig  # (opt-in) `
-  # -InstallVsCodeInterop  # (opt-in)
+  # optional: -InstanceName <value>  -InstallClaudeCode  -InstallGitConfig  -InstallVsCodeInterop
 ```
 
 ### 2. Provision an instance
