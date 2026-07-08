@@ -25,12 +25,27 @@ if (-not $Destination) {
   }
 }
 
-# Don't clobber an existing checkout / non-empty directory.
+# If the destination already holds files, offer to wipe it and re-clone. checkout-ref exists to
+# produce a pristine, ref-exact tree, so overwrite means delete-and-re-clone rather than reusing
+# a possibly-dirty or foreign directory. It's destructive, so default to No.
 if (Test-Path $Destination) {
   $hasChildren = Get-ChildItem -Force -Path $Destination -ErrorAction SilentlyContinue | Select-Object -First 1
   if ($hasChildren) {
-    Write-Host "Destination '$Destination' already exists and is not empty. Choose an empty or new path."
-    exit 1
+    # Never delete the checkout this script is running from (e.g. -Destination . at the repo root).
+    # The destination exists here (Test-Path above), so Resolve-Path gives a normalized absolute path.
+    $destFull = (Resolve-Path -LiteralPath $Destination).Path
+    $selfRepo = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..\..')).Path
+    $sep = [System.IO.Path]::DirectorySeparatorChar
+    if ($destFull -eq $selfRepo -or $selfRepo.StartsWith($destFull + $sep, [System.StringComparison]::OrdinalIgnoreCase)) {
+      Write-Host "Refusing to delete '$destFull' - it contains the checkout-ref.ps1 you're running. Choose another -Destination."
+      exit 1
+    }
+    $answer = Read-Host "Destination '$Destination' already exists and is not empty. Delete it and re-clone? [y/N]"
+    if ($answer -notmatch '^(y|yes)$') {
+      Write-Host "Aborted. Choose an empty or new path with -Destination."
+      exit 0
+    }
+    Remove-Item -Recurse -Force -LiteralPath $Destination
   }
 }
 
@@ -78,7 +93,7 @@ $common = [System.Management.Automation.PSCmdlet]::CommonParameters +
           [System.Management.Automation.PSCmdlet]::OptionalCommonParameters
 
 $mandatoryArgs = @()
-$optionalParts = @()
+$optionalComments = @()
 try {
   $params = (Get-Command $absEntrypoint).Parameters.Values |
     Where-Object { $common -notcontains $_.Name }
@@ -93,20 +108,31 @@ try {
       $value = if ($knownDefaults.ContainsKey($p.Name)) { $knownDefaults[$p.Name] } else { "<$($p.Name)>" }
       $mandatoryArgs += "-$($p.Name) $value"
     }
-    elseif ($isSwitch) { $optionalParts += "-$($p.Name)" }
-    else { $optionalParts += "-$($p.Name) <value>" }
+    # Never suggest -Force: it destroys an existing instance and is irrelevant to a fresh run.
+    elseif ($p.Name -eq 'Force') { continue }
+    elseif ($isSwitch) { $optionalComments += "# -$($p.Name)  # (opt-in)" }
+    else { $optionalComments += "# -$($p.Name) <value>  # (optional)" }
   }
 }
 catch {
   # Introspection failed (unexpected script shape) -- fall back to the known baseline params.
   $mandatoryArgs = @('-DistroTemplatePath ubuntu', '-DistroInstallName Ubuntu-26.04')
-  $optionalParts = @()
+  $optionalComments = @(
+    '# -InstanceName <value>  # (optional)',
+    '# -InstallClaudeCode  # (opt-in)',
+    '# -InstallGitConfig  # (opt-in)',
+    '# -InstallVsCodeInterop  # (opt-in)'
+  )
 }
 
-Write-Host "Next, provision this version (runs from any folder - the path is absolute):"
+# Print the command wrapped across lines with backtick continuation. The mandatory args form
+# the runnable command; the optional flags follow as commented lines the user can uncomment.
+# Everything after a '#' is ignored, so the block runs verbatim with just the mandatory args.
+$block = @("powershell -ExecutionPolicy Bypass -File `"$absEntrypoint`"") + $mandatoryArgs + $optionalComments
+Write-Host "Next, to provision this version run"
 Write-Host ""
-Write-Host "  powershell -ExecutionPolicy Bypass -File `"$absEntrypoint`" $($mandatoryArgs -join ' ')"
-if ($optionalParts) {
-  Write-Host ""
-  Write-Host "  # optional, append as needed: $($optionalParts -join ' ')"
+for ($i = 0; $i -lt $block.Count; $i++) {
+  $indent = if ($i -eq 0) { '  ' } else { '    ' }
+  $cont = if ($i -lt $block.Count - 1) { ' `' } else { '' }
+  Write-Host "$indent$($block[$i])$cont"
 }

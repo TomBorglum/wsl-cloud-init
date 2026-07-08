@@ -58,8 +58,14 @@ your own path), then prints a copy-paste-ready provision command with an **absol
 so you can run it straight away without changing directory:
 
 ```powershell
-# printed by checkout-ref.ps1 — copy, paste, run (edit the distro/flags to taste):
-powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cloud-init-v1.0.0\windows\provision.ps1" -DistroTemplatePath ubuntu -DistroInstallName Ubuntu-26.04
+# printed by checkout-ref.ps1 - copy, paste, run (uncomment optional flags as needed):
+powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cloud-init-v1.0.0\windows\provision.ps1" `
+  -DistroTemplatePath ubuntu `
+  -DistroInstallName Ubuntu-26.04 `
+  # -InstanceName <value>  # (optional) `
+  # -InstallClaudeCode  # (opt-in) `
+  # -InstallGitConfig  # (opt-in) `
+  # -InstallVsCodeInterop  # (opt-in)
 ```
 
 ### 2. Provision an instance
@@ -325,7 +331,8 @@ all come from the same commit, and your working tree is left untouched. It takes
 
 - `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
 - `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
-  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt.
+  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
+  directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
 
 It then prints a copy-paste-runnable `provision.ps1` command with an **absolute** path (no `cd`
 needed), built from that version's own parameter declaration — so it stays correct even for
