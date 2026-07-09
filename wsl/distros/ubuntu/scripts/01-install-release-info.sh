@@ -57,16 +57,7 @@ fi
 # script onto an instance provisioned before it existed -- an in-place upgrade by another
 # name, since the older instance's own scripts/ has no 01-install-release-info.sh to run.
 if [[ ! -f "$RELEASE_FILE" ]]; then
-  cat >&2 <<EOF
-$RELEASE_FILE is missing, but $REPO is at $COMMIT_SHORT, which records it.
-This instance was provisioned by an older version and $REPO has since been moved.
-
-Upgrading a running instance in place is not supported: the other install scripts skip
-whatever is already present, so this run would apply only part of $COMMIT_SHORT.
-
-Either restore $REPO to the commit this instance was provisioned from, or re-provision it
-with 'provision.ps1 -Force'.
-EOF
+  echo "$RELEASE_FILE is missing" >&2
   exit 1
 fi
 
@@ -75,17 +66,7 @@ RECORDED_COMMIT="$( . "$RELEASE_FILE" && printf '%s' "${COMMIT:-}" )"
 RECORDED_SHORT="${RECORDED_COMMIT:0:8}"
 
 if [[ "$RECORDED_COMMIT" != "$COMMIT" ]]; then
-  cat >&2 <<EOF
-$REPO is at $COMMIT_SHORT, but this instance was provisioned from $RECORDED_SHORT
-(recorded in $RELEASE_FILE).
-
-Upgrading a running instance in place is not supported: the other install scripts skip
-whatever is already present, so this run would apply only part of $COMMIT_SHORT and leave
-the instance matching no version at all.
-
-Either restore $REPO to $RECORDED_SHORT, or re-provision the instance with
-'provision.ps1 -Force' to move it to $COMMIT_SHORT.
-EOF
+  echo "$RELEASE_FILE records $RECORDED_SHORT, but $REPO is at $COMMIT_SHORT" >&2
   exit 1
 fi
 
