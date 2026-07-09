@@ -378,10 +378,8 @@ Windows Credential Manager provides:
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
 `git` and `gh` authenticate from that single credential — no second token to create, and no
-`gh auth login` to run. `gh` re-reads it whenever its own session stops working.
-
-After rotating the token on GitHub, refresh the Windows credential with any `git` HTTPS operation
-(Git Credential Manager re-prompts); `gh` picks up the new token on its next call.
+`gh auth login` to run. When `gh`'s session stops working it re-reads the credential and retries,
+so a token rotated in Windows Credential Manager takes effect on the next `gh` call.
 
 ### Target user
 
