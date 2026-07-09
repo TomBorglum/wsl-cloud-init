@@ -3,8 +3,9 @@
 ## Supported Versions
 
 This project provisions WSL development environments and is maintained on a
-rolling basis. Only the latest commit on the `main` branch is supported; please
-make sure you are on `main` before reporting an issue.
+rolling basis. Fixes land only on `main`; please reproduce against the latest
+commit on `main` before reporting an issue. Tagged releases can be provisioned,
+but they are not patched — a fix ships in the next release.
 
 ## Reporting a Vulnerability
 

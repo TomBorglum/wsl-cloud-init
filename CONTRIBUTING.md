@@ -54,18 +54,13 @@ not open a release PR until a `feat`/`fix`/`deps` lands.
 > That is deliberate for `deps`; be intentional before un-hiding anything else
 > (a `docs:`-only change cutting a release is usually noise).
 
-### `deps:` vs `ci:` — shipped tools vs CI tooling
+### `deps:` vs `ci:`
 
-`deps:` is releasable on purpose: it's how an update to a tool that is **shipped
-into the provisioned environment** produces a new release. The lazydocker
-auto-update workflow uses `deps:` so that bumping lazydocker cuts a patch release
-of wsl-cloud-init — users get the newer tool in a tagged version.
-
-Dependabot, by contrast, updates the GitHub Actions used only in CI. Those never
-reach a provisioned environment, so its PRs use `ci:` (hidden, non-releasable):
-they keep CI current without cutting a product release. Rule of thumb: **if the
-change alters what a user receives when they provision, it's `deps:` (or
-`feat`/`fix`); if it only touches the build/CI, it's `ci:`/`chore:`.**
+**If the change alters what a user receives when they provision, it's `deps:` (or
+`feat`/`fix`); if it only touches the build or CI, it's `ci:`/`chore:`.** That is
+why the lazydocker auto-update workflow uses `deps:` (bumping a shipped tool cuts
+a patch release) while Dependabot's GitHub Actions bumps use `ci:` (they never
+reach a provisioned environment).
 
 ## Breaking changes
 
@@ -82,7 +77,7 @@ feat: drop Ubuntu-22.04 support
 BREAKING CHANGE: 22.04 is no longer provisioned; use 24.04 or newer.
 ```
 
-## Squash merges: the PR title is what counts
+## Squash merges
 
 Pull requests are **squash-merged**, so the whole branch collapses into a single
 commit on `main` whose subject is taken from the **PR title** — the individual
@@ -97,15 +92,15 @@ will neither appear in the changelog nor bump the version. Title it
 The one thing release-please still reads from a squash commit's body is a
 `BREAKING CHANGE:` footer, so put that in the PR description when it applies.
 
-### When you want several distinct changelog entries from one branch
+### Multiple changelog entries from one branch
 
-Because a squash gives exactly one changelog entry (the PR title), prefer
+A squash-merged PR yields exactly one changelog entry: its title. So prefer
 **focused PRs** — one logical change, one type. If you genuinely need a single
-branch to produce multiple separate entries (e.g. several `feat:` lines), merge
-that PR with a **merge commit** instead of a squash so each Conventional Commit
+branch to produce several separate entries (e.g. several `feat:` lines), merge
+that PR with a **merge commit** instead of a squash, so each Conventional Commit
 on the branch is preserved and parsed individually.
 
-## How the version is chosen
+## Version selection
 
 release-please aggregates **every commit merged since the last release** (across
 all PRs, not just one branch) and applies the highest-impact bump:
@@ -136,14 +131,14 @@ docs/readme-opt-in
 
 Optionally prefix an issue number: `feat/123-opensuse-template`.
 
-## The release flow, end to end
+## The release flow
 
 1. Open a PR with a Conventional Commit **title** and let the SonarCloud check pass.
 2. Merge it. release-please opens or updates the **chore(main): release X.Y.Z** PR.
 3. Merge that release PR — the version is tagged and the GitHub Release is
    published automatically. No manual tagging.
 
-## PowerShell scripts must be ASCII
+## ASCII-only PowerShell scripts
 
 Keep every `.ps1` file (e.g. [`windows/scripts/`](windows/scripts/)) **ASCII-only**. The
 provisioning entrypoints run under **Windows PowerShell 5.1** (`powershell.exe`), which reads
@@ -158,25 +153,22 @@ equivalents in strings and comments: `-` or `--`, `->`, straight `"` / `'`, `...
 Check before committing:
 
 ```bash
-grep -rnP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
+git grep -nP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
 ```
 
 (This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
 characters freely — this document does.)
 
-## The `setup-direnv` CI directives — why they are a separate copy
+## The `setup-direnv` CI directives
 
 The [`setup-direnv`](actions/setup-direnv/) composite action lets CI honor the same `.envrc`
 a developer uses locally, so a runtime version is declared **once** (`use sdk java
 21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
-shared `.envrc` is the real single source of truth, and it is what prevents version drift.
+shared `.envrc` is the single source of truth that prevents version drift.
 
-The directive **implementations**, however, are intentionally *not* shared. `actions/setup-direnv/lib/`
-holds its own self-contained copy of each `use_*` function, separate from the terminal ones
-in `wsl/user/.config/direnv/lib/`. Do **not** try to unify them behind one file or a wrapper.
-
-The two copies look similar but differ at nearly every step, and the differences are
-essential, not incidental:
+The directive **implementations** are deliberately kept as two separate copies:
+`actions/setup-direnv/lib/` for CI, `wsl/user/.config/direnv/lib/` for the terminal. Do not
+unify them. They differ at nearly every step:
 
 | | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
 | --- | --- | --- |
@@ -186,26 +178,16 @@ essential, not incidental:
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
 
-A unified function would have to branch on all of those axes — one file with two code
-paths — which is harder to read and reason about than two short, self-contained files, and
-would not actually reduce the CI-only hardening (that code has to exist regardless of
-sharing). Duplication here is cheaper than the abstraction that would remove it.
-
-Note that each directive is **generic over its argument**, so most additions cost nothing.
-`use_sdk` passes `<candidate> <version>` straight to SDKMAN and exposes the result the same
-way for **every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME`
-(`JAVA_HOME`, `MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`,
-`use sdk gradle 8.7`, etc. already work through the existing function with **no code change**
-and no per-candidate special-casing.
+Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
+passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
+**every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME` (`JAVA_HOME`,
+`MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`, `use sdk gradle
+8.7`, and the like already work with **no code change**.
 
 You therefore only touch the CI copy for an entirely **new directive** (`use_fnm`, `use_pixi`,
-a new backend) — a new function, not a variant of `use_sdk`.
-
-When you do add a new directive, guard against local↔CI drift by:
+a new backend) — a new function, not a variant of `use_sdk`. When you add one, guard against
+local↔CI drift by:
 
 1. mirroring the terminal directive's **name and accepted arguments** in the CI copy, and
 2. adding a fixture `.envrc` to `.github/workflows/setup-direnv-test.yml` that exercises it
    end to end (install + cross-step propagation).
-
-Keep each CI directive small and self-contained; reach for a fixture test, not a shared
-implementation, to keep local and CI behavior aligned.

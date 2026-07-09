@@ -18,16 +18,83 @@ installs the distro, and waits for setup to finish. On first boot cloud-init run
 series of scripts that build the environment and wire Windows tools — VS Code, Git
 Credential Manager — into the Linux shell.
 
+## What you get
+
+Every provisioned instance comes ready with the baseline below. Three additions are
+opt-in, each behind a provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`,
+and `-InstallVsCodeInterop`.
+
+### Shell
+
+Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions
+plus the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for
+per-directory environment loading.
+
+### Language runtimes
+
+**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and
+**[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right
+versions activate automatically as you enter each project.
+
+### Docker
+
+**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin —
+ready to run without extra setup — plus **[lazydocker](https://github.com/jesseduffield/lazydocker)**,
+a terminal UI for managing containers, images, and volumes.
+
+### Git
+
+Opt-in via `-InstallGitConfig`: your Git identity, the credential helper, `gh` auth, and the
+Git shell helpers. Both `git` and `gh` authenticate through Windows
+**[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing
+the GitHub sign-in you already have on Windows. Nothing is stored in the instance at
+provisioning time.
+
+### Claude Code
+
+Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the
+**[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled
+install-script skill.
+
+### WSL interop
+
+- **`open`** — launches a file or URL with its default Windows app. Always installed.
+- **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
+
+### Shell helpers
+
+`pj` jumps between checkouts under `~/projects`. Always installed.
+
+Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, `rebase-branch`,
+and `prune-branches` streamline everyday Git work.
+
+### Base packages
+
+Installed from the cloud-init package list:
+
+- build-essential
+- curl
+- direnv
+- gh
+- git
+- jq
+- unzip
+- zip
+- zsh
+
 ## Prerequisites
 
-The baseline environment needs only two things on the Windows side — the Ubuntu environment is built for you:
+The baseline environment needs only two things on the Windows side — the Ubuntu environment
+is built for you:
 
 - **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
-- **Git for Windows** — the provisioning script itself runs local `git`.
+- **Git for Windows** — `provision.ps1` runs local `git` to resolve the commit your checkout
+  is on, verify that commit exists on origin, and record it in the instance.
 
-The opt-in features need a little extra Windows-side setup first — see [Opt-in features](#opt-in-features).
+Each opt-in flag needs some additional Windows-side setup, described under
+[Opt-in features](#opt-in-features).
 
-## Getting Started
+## Getting started
 
 Both steps run on **Windows**. This is the whole baseline path — no accounts or secrets required.
 
@@ -40,29 +107,13 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
-Provisioning uses whatever commit your checkout is on (cloud-init clones the repo and
-checks out that exact commit) — stay on `main` for the latest changes. The commit just
-has to exist on origin.
-
-To provision a reproducible, released version instead, check that version out into its own
-directory first with `checkout-ref.ps1`, then provision from there. This keeps each version
-self-contained (the script, template, and in-distro setup all match) and leaves this
-checkout untouched:
+Provisioning uses whatever commit your checkout is on, so stay on `main` for the latest
+changes. To provision a specific released version instead, use `checkout-ref.ps1` to lay that
+version down in its own directory first; it prints a ready-to-run provision command when it's
+done. See [Provisioning a released version](#provisioning-a-released-version).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
-```
-
-It clones the ref into `%TEMP%\wsl-cloud-init-v1.0.0` (pass `-Destination <dir>` to choose
-your own path), then prints a copy-paste-ready provision command with an **absolute** path —
-so you can run it straight away without changing directory:
-
-```powershell
-# printed by checkout-ref.ps1 - copy, paste, then press Enter (append optional flags first if wanted):
-powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cloud-init-v1.0.0\windows\provision.ps1" `
-  -DistroTemplatePath ubuntu `
-  -DistroInstallName Ubuntu-26.04 `
-  # optional: -InstanceName <value>  -InstallClaudeCode  -InstallGitConfig  -InstallVsCodeInterop
 ```
 
 ### 2. Provision an instance
@@ -77,149 +128,106 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 ```
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
+Every parameter is described under [Provisioning parameters](#provisioning-parameters).
 
-- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
-- `-InstallClaudeCode` — install Claude Code. See [Opt-in features](#opt-in-features).
-- `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth. See [Opt-in features](#opt-in-features).
-- `-InstallVsCodeInterop` — install the `code` Windows interop wrapper. See [Opt-in features](#opt-in-features).
-- `-Force` — replace an existing instance of the same name (destroys it first).
-
-The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
-
-This bare command gives you the full baseline environment described in [What you get](#what-you-get).
+The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then
+launches you into the new instance — signed in as a Linux user derived from your Windows
+username, with passwordless sudo and `zsh` as the shell.
 
 ## Opt-in features
 
-Three flags add tooling on top of the baseline: `-InstallGitConfig`, `-InstallClaudeCode`, and `-InstallVsCodeInterop`. Each needs a little Windows-side setup first. You can enable them **when provisioning** (add the flag to the Getting Started command) or **add them later** to a running instance — the same setup applies either way.
+Three flags add tooling on top of the baseline: `-InstallClaudeCode`, `-InstallGitConfig`, and
+`-InstallVsCodeInterop`. Each needs some Windows-side setup first. You can enable them when
+provisioning, or add them later to a running instance.
 
-### Set up Git identity
+### Windows setup
 
-Only needed for `-InstallGitConfig` — provisioning copies these into the new instance.
+Do the setup for each flag you intend to use.
+
+#### `-InstallClaudeCode` — a Context7 API key
+
+Store a **[Context7](https://context7.com) API key** as a **generic credential** in Windows
+Credential Manager, with username `wsl-cloud-init`.
+
+Using `cmdkey` in PowerShell:
+
+```powershell
+cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key>
+```
+
+Or via the GUI — Control Panel → **Credential Manager** → **Windows Credentials** →
+**Add a generic credential**:
+
+| Internet or network address | User name | Password |
+| --- | --- | --- |
+| `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key |
+
+#### `-InstallGitConfig` — a Git identity and a GitHub sign-in
+
+Set your Git identity on Windows; provisioning copies it into the new instance.
 
 ```powershell
 git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
 ```
 
-### Sign in to GitHub
+Then make sure you are signed in to GitHub on Windows. Both `git` and `gh` reuse the
+`git:https://github.com` credential that **Git Credential Manager** stores in Windows Credential
+Manager. There is **no separate token to create**: a single `git clone` or `git push` against a
+private repo on Windows — or `git-credential-manager github login` — signs you in and creates it.
 
-Only needed for `-InstallGitConfig`. Both Git **and** `gh` reuse your existing Windows GitHub sign-in — the `git:https://github.com` credential that **Git Credential Manager** stores in Windows Credential Manager. There is **no separate token to create**: a single `git clone`/`git push` against a private repo on Windows (or `git-credential-manager github login`) signs you in and creates it. See [Configuration](#credentials).
+#### `-InstallVsCodeInterop` — VS Code on your PATH
 
-`gh` is **not** authenticated at provisioning time — a wrapper on `PATH` reads that credential and authenticates `gh` the first time you invoke it, so rotating the token on GitHub is picked up automatically on the next `gh` call.
+No secret is needed. Install **VS Code** on Windows and make sure the `code` command is on your
+Windows `PATH`.
 
-### Create and store secrets
+### Enabling at provision time
 
-Only needed for `-InstallClaudeCode`: a **[Context7](https://context7.com) API key**, stored as a **generic credential** with username `wsl-cloud-init` — see [Configuration](#credentials) for how it's used.
-
-`-InstallVsCodeInterop` needs no secret — only **VS Code** with the `code` command on your `PATH`.
-
-#### Option A — cmdkey (PowerShell)
-
-```powershell
-cmdkey /generic:wsl-cloud-init:CONTEXT7_API_KEY /user:wsl-cloud-init /pass:<context7-key> # only for `-InstallClaudeCode`
-```
-
-#### Option B — Credential Manager GUI
-
-Control Panel → **Credential Manager** → **Windows Credentials** → **Add a generic credential**:
-
-| Internet or network address | User name | Password |
-| --- | --- | --- |
-| `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key (only for `-InstallClaudeCode`) |
-
-### Enable when provisioning
-
-Once the setup above is in place, add the flags to the Getting Started command:
+Add the flags to the provisioning command:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
   -DistroInstallName Ubuntu-26.04 `
   -InstanceName dev `
-  -InstallGitConfig `
   -InstallClaudeCode `
+  -InstallGitConfig `
   -InstallVsCodeInterop
 ```
 
-### Enable later in a running instance
+### Enabling on a running instance
 
-Provisioned without one of the opt-in flags and want it now? You don't need to re-provision. Re-run the same provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` flags for what you want to add:
+Provisioned without one of the flags and want it now? You don't need to re-provision. Re-run the
+provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` variable matching the
+flag you want to add. The Windows-side setup for that flag must be in place first — `install.sh`
+fetches what it needs from Windows at runtime.
 
 ```bash
-# Git identity, gh auth, and the Git shell helpers
-sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
-
 # Claude Code
 sudo INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
+
+# Git identity, gh auth, and the Git shell helpers
+sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
 # the `code` VS Code interop wrapper
 sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
-Combine flags to add several at once:
+Combine variables to add several at once:
 
 ```bash
-sudo INSTALL_GIT_CONFIG=true INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
+sudo INSTALL_CLAUDE_CODE=true INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
-
-Each flag corresponds to the provisioning parameter of the same name:
-
-| Provisioning parameter | On-demand flag |
-| --- | --- |
-| `-InstallClaudeCode` | `INSTALL_CLAUDE_CODE=true` |
-| `-InstallGitConfig` | `INSTALL_GIT_CONFIG=true` |
-| `-InstallVsCodeInterop` | `INSTALL_VS_CODE_INTEROP=true` |
-
-The same prerequisites apply as at provisioning time: `-InstallGitConfig` needs your Git identity set and a GitHub sign-in in Windows Credential Manager (`git:https://github.com`); `-InstallClaudeCode` needs its Context7 key stored there. `install.sh` fetches what it needs from Windows at runtime, so set them up first if you didn't before.
-
-## What you get
-
-Every provisioned instance comes ready with:
-
-### Shell
-Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for per-directory environment loading.
-
-### Language runtimes
-**[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and **[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions activate automatically as you enter each project (see [Usage](#direnv)).
-
-### Docker
-**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin — ready to run without extra setup
-
-**[lazydocker](https://github.com/jesseduffield/lazydocker)**, a terminal UI for managing containers, images, and volumes.
-
-### Claude Code
-Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the **[Context7](https://context7.com)** MCP for up-to-date library docs, plus a bundled install-script skill.
-
-### WSL interop
-These commands reach from the Linux shell back into Windows:
-
-- **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
-- **`open`** — launches a file or URL with its default Windows app.
-
-Opt-in via `-InstallGitConfig`: your git identity, plus both Git and `gh` authenticating through Windows **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)** (reusing your existing Windows sign-in). `gh` authenticates itself from that credential on first use — nothing is stored at provisioning time, and a rotated token is picked up automatically on the next `gh` call.
-
-### Shell helpers
-`pj` jumps between checkouts under `~/projects` — see [Usage](#usage). Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, `rebase-branch`, and `prune-branches` streamline everyday Git work.
-
-### Base packages
-Installed from the cloud-init package list:
-
-- build-essential
-- curl
-- direnv
-- gh
-- git
-- jq
-- unzip
-- zip
-- zsh
 
 ## Usage
 
 The following day-to-day commands and per-project setup are included in the provisioned instance.
 
 ### direnv
-fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs through direnv (already hooked into your shell). Add an `.envrc` to the project root with the directives you need:
+
+fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs
+through direnv (already hooked into your shell). Add an `.envrc` to the project root with the
+directives you need:
 
 ```bash
 # .envrc
@@ -228,62 +236,81 @@ use pixi                 # Python environment from pixi.toml (created if missing
 use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
 ```
 
-then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and installs the requested versions automatically on first use. Versions must be fully qualified — an exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
+then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
+installs the requested versions automatically on first use. Versions must be fully qualified — an
+exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
+
+### pj
+
+Jump straight into a checked-out project under `~/projects` without typing the full path — supports
+Tab-completion.
+
+```bash
+pj my-project   # cd into ~/projects/my-project
+```
 
 ### clone-repo
-Clone one of your GitHub repos into `~/projects/<name>` and drop you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
+
+*Requires `-InstallGitConfig`.* Clone one of your GitHub repos into `~/projects/<name>` and drop
+you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
 
 ```bash
 clone-repo my-project                 # clones <you>/my-project
 clone-repo --owner some-owner service # clones some-owner/service
 ```
 
-Cloning a private repo uses the GitHub token's **Contents (read)** permission.
-
 ### create-repo
-Create a new **private** GitHub repo, clone it to `~/projects/<name>`, seed a README and initial commit, and `cd` in.
+
+*Requires `-InstallGitConfig`.* Create a new **private** GitHub repo, clone it to
+`~/projects/<name>`, seed a README and initial commit, and `cd` in.
 
 ```bash
 create-repo my-new-project             # creates <you>/my-new-project
 create-repo --owner some-owner service # creates some-owner/service
 ```
 
-Creating and pushing use the token's **Administration (create)** and **Contents (write)** permissions.
-
 ### create-branch
-Create a branch off the repo's default branch and check it out with tracking, so a plain `git push` just works. If the branch already exists on origin it's just checked out; it refuses a local-only branch that isn't on origin yet.
+
+*Requires `-InstallGitConfig`.* Create a branch off the repo's default branch and check it out with
+tracking, so a plain `git push` just works. If the branch already exists on origin it's just checked
+out; it refuses a local-only branch that isn't on origin yet.
 
 ```bash
 create-branch my-feature   # branch off the default branch, tracking origin/my-feature
 ```
 
-### pj
-Jump straight into a checked-out project under `~/projects` without typing the full path — supports Tab-completion.
-
-```bash
-pj my-project   # cd into ~/projects/my-project
-```
-
 ### rebase-branch
-Rebase the current branch onto the remote's default branch (e.g. `main`).
+
+*Requires `-InstallGitConfig`.* Rebase the current branch onto the remote's default branch
+(e.g. `main`).
 
 ```bash
 rebase-branch
 ```
 
-It refuses on a dirty working tree or detached HEAD, and stops on rebase conflicts so you can resolve them.
+It refuses on a dirty working tree or detached HEAD, and stops on rebase conflicts so you can
+resolve them.
 
 ### prune-branches
-Tidy up local branches whose remote branch is gone — merged and auto-deleted, or just deleted. Those are the branches that pile up locally once their life at the remote has ended.
+
+*Requires `-InstallGitConfig`.* Tidy up local branches whose remote branch is gone — merged and
+auto-deleted, or just deleted. Those are the branches that pile up locally once their life at the
+remote has ended.
 
 ```bash
 prune-branches        # ask before deleting each gone branch
 prune-branches -y     # delete them all without prompting
 ```
 
-It asks before each deletion (default keeps; `y` deletes, `a` deletes all remaining, `q` stops) — pass `-y`/`--yes` to skip the prompts. It keeps branches that were never pushed (no upstream — purely-local work is always safe) and branches still tracking a live upstream (work in progress), and never touches the branch you're on. Each deletion prints the tip SHA (`Deleted my-feature (was 1a2b3c4)`) so it's recoverable with `git branch my-feature 1a2b3c4` until git eventually garbage-collects it. Stale `origin/*` refs are pruned automatically by git's `fetch.prune` (set as part of the opt-in git config).
+It asks before each deletion (default keeps; `y` deletes, `a` deletes all remaining, `q` stops) —
+pass `-y`/`--yes` to skip the prompts. It keeps branches that were never pushed (no upstream —
+purely-local work is always safe) and branches still tracking a live upstream (work in progress),
+and never touches the branch you're on. Each deletion prints the tip SHA so the branch is
+recoverable with `git branch <name> <sha>` until git eventually garbage-collects it. Stale
+`origin/*` refs are pruned automatically by git's `fetch.prune`, which `-InstallGitConfig` sets.
 
 ### open
+
 Open a file or URL with its default Windows application.
 
 ```bash
@@ -291,10 +318,13 @@ open report.pdf
 open https://example.com
 ```
 
-`open` is also your `$BROWSER`, so web links from command-line tools (e.g. `gh repo view --web`) open in your Windows browser.
+`open` is also your `$BROWSER`, so web links from command-line tools (e.g. `gh repo view --web`)
+open in your Windows browser.
 
 ### code
-Open a file or folder in your Windows VS Code (via the WSL remote).
+
+*Requires `-InstallVsCodeInterop`.* Open a file or folder in your Windows VS Code (via the WSL
+remote).
 
 ```bash
 code .            # open the current folder
@@ -309,96 +339,21 @@ What you can set when provisioning, and how the instance is derived.
 
 `windows/scripts/provision.ps1` takes:
 
-- `-DistroTemplatePath` (required) — template directory under `wsl/distros/` to render (e.g. `ubuntu`).
-- `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned LTS versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
+- `-DistroTemplatePath` (required) — the cloud-init template to render. `ubuntu` is the only
+  supported value.
+- `-DistroInstallName` (required) — WSL distro passed to `wsl --install`. Only pinned Ubuntu LTS
+  versions are supported: `Ubuntu-26.04`, `Ubuntu-24.04`, or `Ubuntu-22.04`.
 - `-InstanceName` (optional) — name for the new WSL instance. Defaults to `-DistroInstallName`.
 - `-InstallClaudeCode` (optional) — install Claude Code.
-- `-InstallGitConfig` (optional) — configure git identity, the credential helper, `gh` auth, and the Git shell helpers.
+- `-InstallGitConfig` (optional) — configure the Git identity, the credential helper, `gh` auth,
+  and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
-- `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
+- `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
 
-`provision.ps1` always provisions the commit its own checkout is on (which must exist on origin).
-To provision a specific released version, use `checkout-ref.ps1` to lay that version down first.
-Whichever ref it resolves is recorded inside the instance — see
-[Checking the provisioned version](#checking-the-provisioned-version).
-
-### Provisioning a released version
-
-`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so
-that version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup
-all come from the same commit, and your working tree is left untouched. It takes:
-
-- `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
-- `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
-  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
-  directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
-
-It then prints a copy-paste-runnable `provision.ps1` command with an **absolute** path (no `cd`
-needed), built from that version's own parameter declaration — so it stays correct even for
-older releases whose entrypoint lives at `windows\provision.ps1`.
-
-### Checking the provisioned version
-
-Every instance records the version it was built from in `/etc/wsl-cloud-init-release`,
-written in the style of `/etc/os-release` — `KEY="value"` pairs you can read or source.
-
-```bash
-cat /etc/wsl-cloud-init-release
-```
-
-```sh
-NAME="wsl-cloud-init"
-ID=wsl-cloud-init
-REF="v1.0.0"
-COMMIT="9a6addd0c1f2e3b4a5968778695a4f3c2d1e0b9a"
-COMMIT_SHORT="9a6addd0"
-INSTANCE_NAME="Ubuntu-26.04"
-PRETTY_NAME="wsl-cloud-init v1.0.0 (9a6addd0)"
-SOURCE_URL="https://github.com/TomBorglum/wsl-cloud-init"
-```
-
-Source it to read a single field:
-
-```bash
-. /etc/wsl-cloud-init-release && echo "$REF @ $COMMIT_SHORT"
-```
-
-`REF` is resolved by `provision.ps1` from the checkout it runs out of, preferring the most
-specific name available:
-
-| Provisioned from | `REF` |
-| --- | --- |
-| a tagged commit (e.g. via `checkout-ref.ps1 -Ref v1.0.0`) | the tag — `v1.0.0` |
-| a branch tip | the branch name — `main` |
-| a detached, untagged commit | the short SHA — `9a6addd0` |
-
-`REF` is a **label captured at provision time, not a live pointer**: an instance built from
-`main` keeps `REF="main"` even after `main` moves on. `COMMIT` is the authoritative
-identifier — it is the commit `/opt/wsl-cloud-init` is checked out at.
-
-### Upgrading an instance in place is not supported
-
-The file is written **once**, by cloud-init, and never updated. An instance is tied to the
-commit it was provisioned from for its whole life.
-
-Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not**
-upgrade the instance. Each install script skips whatever it finds already installed —
-`02-install-docker.sh` sees `docker` on `PATH` and exits — so only the handful of scripts
-that rewrite their payload unconditionally would apply, leaving an instance that matches no
-version at all.
-
-`01-install-release-info.sh` therefore checks, before anything else runs, that
-`/opt/wsl-cloud-init` is still at the commit the file records. If it is not, the run aborts:
-
-```
-/etc/wsl-cloud-init-release records 9a6addd6, but /opt/wsl-cloud-init is at dd64a051
-install.sh: 01-install-release-info.sh failed; aborting
-```
-
-To move an instance to a new version, re-provision it with `provision.ps1 -Force` (which
-destroys and recreates it). Adding an [opt-in feature](#enable-later-in-a-running-instance)
-to an existing instance is unaffected — that re-run leaves `/opt` where it is, so the check
-passes and the file is left untouched.
+`provision.ps1` provisions the commit its own checkout is on, and refuses to run against a dirty
+working tree — commit or stash your changes first. That commit must also exist on origin, because
+cloud-init reproduces the environment by cloning this repo from GitHub *inside* the instance and
+checking that commit out; an unpushed commit cannot be fetched there.
 
 ### Credentials
 
@@ -406,24 +361,88 @@ Windows Credential Manager provides:
 
 | Credential | Used for |
 | --- | --- |
-| `git:https://github.com` | Your Windows GitHub sign-in (stored by Git Credential Manager). Both Git and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
+| `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
-`gh` is not authenticated during provisioning. A wrapper on `PATH` (`/usr/local/bin/gh`) reads `git:https://github.com` and authenticates `gh` the first time it's invoked — so a rotated token is picked up automatically on the next call.
+`gh` is not authenticated during provisioning. A wrapper on `PATH` reads `git:https://github.com`
+and authenticates `gh` the first time it's invoked, so a token rotated on GitHub is picked up
+automatically on the next `gh` call.
 
 ### Target user
 
-The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped to `[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker` group, `zsh` as its shell, and is set as the WSL **default user**.
+The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped to
+`[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker` group,
+`zsh` as its shell, and is set as the WSL **default user**.
+
+## Versioning
+
+### Provisioning a released version
+
+`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so that
+version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup all come
+from the same commit, and your working tree is left untouched. It takes:
+
+- `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
+- `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
+  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
+  directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
+
+It then prints a `provision.ps1` command you can copy, paste, and run. The path is absolute, so no
+`cd` is needed, and the parameters are read from that version's own declaration, so the command
+stays correct even for older releases whose entrypoint sits at a different path.
+
+### The provisioned version
+
+Every instance records the version it was built from in `/etc/wsl-cloud-init-release`:
+
+```bash
+cat /etc/wsl-cloud-init-release
+```
+
+Two fields identify the build. `COMMIT` is the authoritative identifier — the commit
+`/opt/wsl-cloud-init` is checked out at. `REF` is the friendliest name `provision.ps1` could give
+that commit, resolved from the checkout it ran out of:
+
+| Provisioned from | `REF` |
+| --- | --- |
+| a tagged commit | the tag, e.g. `v1.0.0` |
+| a branch tip | the branch name, e.g. `main` |
+| a detached, untagged commit | the short SHA |
+
+`REF` is a **label captured at provision time, not a live pointer**: an instance built from `main`
+keeps `REF="main"` even after `main` moves on.
+
+### In-place upgrades are not supported
+
+`/etc/wsl-cloud-init-release` is written once, by cloud-init, and never updated. An instance is tied
+to the commit it was provisioned from for its whole life.
+
+Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not** upgrade the
+instance. Each install script skips whatever it finds already installed, so only the handful that
+rewrite their payload unconditionally would apply, leaving an instance that matches no version at
+all. To prevent that, the run aborts before anything else executes if `/opt/wsl-cloud-init` is no
+longer at the commit `/etc/wsl-cloud-init-release` records.
+
+To move an instance to a new version, re-provision it with `provision.ps1 -Force`, which destroys
+and recreates it. Adding an opt-in feature to an existing instance is unaffected: that re-run leaves
+`/opt/wsl-cloud-init` where it is, so the check passes and the file is left untouched.
 
 ## Troubleshooting
 
-**Provisioning failed** — inspect the logs inside the instance; if the cause was transient (e.g. a network blip), re-provision with `-Force`.
+**Provisioning failed** — inspect the logs inside the instance; if the cause was transient (e.g. a
+network blip), re-provision with `-Force`.
 
 ```bash
 less /var/log/cloud-init-output.log   # install-script output
 less /var/log/cloud-init.log          # cloud-init's own log
 ```
 
-**WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec format error". The instance will self-heal within ~10 seconds; wait and try again.
+**WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec
+format error". WSL's `binfmt_misc` interop handler is shared across the VM and another distro can
+flush it. A systemd timer re-registers it every 10 seconds, so wait a moment and try again.
 
-**The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`. It's intermittent and the instance still works. To clear it, run `wsl --shutdown` and relaunch the instance. To check whether an instance is affected, run `systemctl is-active user@1000.service` — it prints `failed` when the session didn't start, or `active` when it's running normally.
+**The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other
+instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`.
+It's intermittent and the instance still works. To clear it, run `wsl --shutdown` and relaunch the
+instance. To check whether an instance is affected, run `systemctl is-active user@1000.service` — it
+prints `failed` when the session didn't start, or `active` when it's running normally.
