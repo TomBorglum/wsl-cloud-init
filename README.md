@@ -376,6 +376,33 @@ specific name available:
 `main` keeps `REF="main"` even after `main` moves on. `COMMIT` is the authoritative
 identifier — it is the commit `/opt/wsl-cloud-init` is checked out at.
 
+### Upgrading an instance in place is not supported
+
+The file is written **once**, by cloud-init, and never updated. An instance is tied to the
+commit it was provisioned from for its whole life.
+
+Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not**
+upgrade the instance. Each install script skips whatever it finds already installed —
+`02-install-docker.sh` sees `docker` on `PATH` and exits — so only the handful of scripts
+that rewrite their payload unconditionally would apply, leaving an instance that matches no
+version at all.
+
+`01-install-release-info.sh` therefore checks, before anything else runs, that
+`/opt/wsl-cloud-init` is still at the commit the file records. If it is not, the run aborts:
+
+```
+/opt/wsl-cloud-init is at dd64a051, but this instance was provisioned from 9a6addd6
+(recorded in /etc/wsl-cloud-init-release).
+...
+Either restore /opt/wsl-cloud-init to 9a6addd6, or re-provision the instance with
+'provision.ps1 -Force' to move it to dd64a051.
+```
+
+To move an instance to a new version, re-provision it with `provision.ps1 -Force` (which
+destroys and recreates it). Adding an [opt-in feature](#enable-later-in-a-running-instance)
+to an existing instance is unaffected — that re-run leaves `/opt` where it is, so the check
+passes and the file is left untouched.
+
 ### Credentials
 
 Windows Credential Manager provides:
