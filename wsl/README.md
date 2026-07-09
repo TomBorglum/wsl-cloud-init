@@ -40,9 +40,9 @@ Every tree is copied into place by one Ubuntu install script under `distros/ubun
 
 | Source (`wsl/…`)                                | Destination                             | Installed by                          | Gating |
 | ----------------------------------------------- | --------------------------------------- | ------------------------------------- | ------ |
-| `user/.claude/skills/`                          | `~/.claude/skills/`                     | `distros/ubuntu/scripts/07-install-claude-code.sh`   | `INSTALL_CLAUDE_CODE` |
-| `user/.config/direnv/lib/`                      | `~/.config/direnv/lib/`                 | `distros/ubuntu/scripts/13-install-direnv-functions.sh` | — |
-| `system/usr/local/share/zsh/site-functions/`    | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/12-install-zsh-functions.sh`    | — |
+| `user/.claude/skills/`                          | `~/.claude/skills/`                     | `distros/ubuntu/scripts/08-install-claude-code.sh`   | `INSTALL_CLAUDE_CODE` |
+| `user/.config/direnv/lib/`                      | `~/.config/direnv/lib/`                 | `distros/ubuntu/scripts/14-install-direnv-functions.sh` | — |
+| `system/usr/local/share/zsh/site-functions/`    | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/13-install-zsh-functions.sh`    | — |
 
 ## The one place the mirror is not literal: `git/`
 

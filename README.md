@@ -319,6 +319,8 @@ What you can set when provisioning, and how the instance is derived.
 
 `provision.ps1` always provisions the commit its own checkout is on (which must exist on origin).
 To provision a specific released version, use `checkout-ref.ps1` to lay that version down first.
+Whichever ref it resolves is recorded inside the instance — see
+[Checking the provisioned version](#checking-the-provisioned-version).
 
 ### Provisioning a released version
 
@@ -334,6 +336,69 @@ all come from the same commit, and your working tree is left untouched. It takes
 It then prints a copy-paste-runnable `provision.ps1` command with an **absolute** path (no `cd`
 needed), built from that version's own parameter declaration — so it stays correct even for
 older releases whose entrypoint lives at `windows\provision.ps1`.
+
+### Checking the provisioned version
+
+Every instance records the version it was built from in `/etc/wsl-cloud-init-release`,
+written in the style of `/etc/os-release` — `KEY="value"` pairs you can read or source.
+
+```bash
+cat /etc/wsl-cloud-init-release
+```
+
+```sh
+NAME="wsl-cloud-init"
+ID=wsl-cloud-init
+REF="v1.0.0"
+COMMIT="9a6addd0c1f2e3b4a5968778695a4f3c2d1e0b9a"
+COMMIT_SHORT="9a6addd0"
+INSTANCE_NAME="Ubuntu-26.04"
+PRETTY_NAME="wsl-cloud-init v1.0.0 (9a6addd0)"
+SOURCE_URL="https://github.com/TomBorglum/wsl-cloud-init"
+```
+
+Source it to read a single field:
+
+```bash
+. /etc/wsl-cloud-init-release && echo "$REF @ $COMMIT_SHORT"
+```
+
+`REF` is resolved by `provision.ps1` from the checkout it runs out of, preferring the most
+specific name available:
+
+| Provisioned from | `REF` |
+| --- | --- |
+| a tagged commit (e.g. via `checkout-ref.ps1 -Ref v1.0.0`) | the tag — `v1.0.0` |
+| a branch tip | the branch name — `main` |
+| a detached, untagged commit | the short SHA — `9a6addd0` |
+
+`REF` is a **label captured at provision time, not a live pointer**: an instance built from
+`main` keeps `REF="main"` even after `main` moves on. `COMMIT` is the authoritative
+identifier — it is the commit `/opt/wsl-cloud-init` is checked out at.
+
+### Upgrading an instance in place is not supported
+
+The file is written **once**, by cloud-init, and never updated. An instance is tied to the
+commit it was provisioned from for its whole life.
+
+Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not**
+upgrade the instance. Each install script skips whatever it finds already installed —
+`02-install-docker.sh` sees `docker` on `PATH` and exits — so only the handful of scripts
+that rewrite their payload unconditionally would apply, leaving an instance that matches no
+version at all.
+
+`01-install-release-info.sh` therefore checks, before anything else runs, that
+`/opt/wsl-cloud-init` is still at the commit the file records. If it is not, the run aborts:
+
+```
+/etc/wsl-cloud-init-release records 9a6addd6, but /opt/wsl-cloud-init is at dd64a051
+install.sh: 01-install-release-info.sh failed; aborting
+```
+
+To move an instance to a new version, re-provision it with `provision.ps1 -Force` (which
+destroys and recreates it). Adding an [opt-in feature](#enable-later-in-a-running-instance)
+to an existing instance is unaffected — that re-run leaves `/opt` where it is, so the check
+passes and the file is left untouched.
 
 ### Credentials
 
