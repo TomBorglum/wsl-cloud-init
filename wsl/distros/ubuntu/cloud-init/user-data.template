@@ -87,6 +87,8 @@ runcmd:
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
   - |
     export TARGET_USER="__TARGET_USER__"
+    export WSL_CLOUD_INIT_REF="__REF__"
+    export WSL_CLOUD_INIT_INSTANCE_NAME="__INSTANCE_NAME__"
     export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
     export INSTALL_GIT_CONFIG="__INSTALL_GIT_CONFIG__"
     export INSTALL_VS_CODE_INTEROP="__INSTALL_VS_CODE_INTEROP__"

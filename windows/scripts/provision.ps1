@@ -59,10 +59,31 @@ if (-not (git -C $RepoRoot branch -r --contains $CommitSha 2>$null)) {
   Write-Host "Commit $($CommitSha.Substring(0, 8)) is not on origin. Push it before provisioning, or use windows\scripts\checkout-ref.ps1 to provision a released version."
   exit 1
 }
-# Display label: the branch name, or the short SHA when HEAD is detached.
+# The ref this instance is based on, recorded in /etc/wsl-cloud-init-release by the
+# in-distro 01-install-release-info.sh. It must be resolved here: checkout-ref.ps1 and
+# cloud-init both leave a detached HEAD, so a branch name is unrecoverable in the distro.
+# Prefer an exact tag, so a version laid down by checkout-ref.ps1 reads as 'v1.0.0' rather
+# than a bare SHA; a normal clone of a branch reads as that branch.
+#
+# `tag --points-at` rather than `describe --tags --exact-match`: describe fails loudly on an
+# untagged commit, and $ErrorActionPreference = "Stop" turns a native command's stderr into a
+# terminating NativeCommandError even when it is redirected to $null. points-at just prints
+# nothing and exits 0. Newest tag wins when a commit carries more than one.
+$Tag = git -C $RepoRoot tag --points-at $CommitSha --sort=-v:refname | Select-Object -First 1
 $Branch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
-$SourceLabel = if ($Branch -eq 'HEAD') { $CommitSha.Substring(0, 8) } else { $Branch }
-Write-Host "Provisioning $InstanceName from $SourceLabel @ $($CommitSha.Substring(0, 8))"
+$Ref = if ($Tag) { $Tag.Trim() } elseif ($Branch -ne 'HEAD') { $Branch } else { $CommitSha.Substring(0, 8) }
+
+# $Ref and $InstanceName are substituted into shell `export` lines in the cloud-init
+# runcmd. Git allows '$', '"' and '`' in ref names, so reject anything that would break out
+# of the quoting rather than emitting user-data that executes a branch name.
+foreach ($pair in @(@{ Name = 'Ref'; Value = $Ref }, @{ Name = 'InstanceName'; Value = $InstanceName })) {
+  if ($pair.Value -notmatch '^[A-Za-z0-9._/-]+$') {
+    Write-Host "$($pair.Name) '$($pair.Value)' contains characters that cannot be embedded in cloud-init user-data. Use only letters, digits, '.', '_', '/', and '-'."
+    exit 1
+  }
+}
+
+Write-Host "Provisioning $InstanceName from $Ref @ $($CommitSha.Substring(0, 8))"
 
 # Substitute template. The template carries no secrets and no derived Windows
 # paths: install.sh fetches/derives those at runtime inside the distro.
@@ -76,6 +97,8 @@ $template = Get-Content "$RepoRoot\wsl\distros\$DistroTemplatePath\cloud-init\us
 $template = $template.
     Replace('__TARGET_USER__',             $TargetUser).
     Replace('__COMMIT__',                  $CommitSha).
+    Replace('__REF__',                     $Ref).
+    Replace('__INSTANCE_NAME__',           $InstanceName).
     Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
     Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
     Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue)
