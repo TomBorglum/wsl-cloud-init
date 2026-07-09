@@ -47,8 +47,8 @@ a terminal UI for managing containers, images, and volumes.
 Opt-in via `-InstallGitConfig`: your Git identity, the credential helper, `gh` auth, and the
 Git shell helpers. Both `git` and `gh` authenticate through Windows
 **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing
-the GitHub sign-in you already have on Windows. Nothing is stored in the instance at
-provisioning time.
+the GitHub sign-in you already have on Windows — one credential serves both, so there is no
+second token to create and no `gh auth login` to run.
 
 ### Claude Code
 
@@ -377,9 +377,11 @@ Windows Credential Manager provides:
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
-`gh` is not authenticated during provisioning. A wrapper on `PATH` reads `git:https://github.com`
-and authenticates `gh` the first time it's invoked, so a token rotated on GitHub is picked up
-automatically on the next `gh` call.
+`git` and `gh` authenticate from that single credential — no second token to create, and no
+`gh auth login` to run. `gh` re-reads it whenever its own session stops working.
+
+After rotating the token on GitHub, refresh the Windows credential with any `git` HTTPS operation
+(Git Credential Manager re-prompts); `gh` picks up the new token on its next call.
 
 ### Target user
 
