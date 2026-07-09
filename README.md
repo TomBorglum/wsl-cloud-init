@@ -52,28 +52,29 @@ In **PowerShell**:
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
-  -DistroInstallName Ubuntu-26.04
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev
 ```
 
 `-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 
-Those two parameters are the only required ones. `-DistroInstallName` accepts only **pinned
-Ubuntu LTS versions** (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`), and also names the
-new instance unless you pass `-InstanceName`. Flags that add tooling on top are covered in
-[Opt-in features](#opt-in-features); the full parameter list is under
+`-DistroTemplatePath` and `-DistroInstallName` are the only required parameters.
+`-DistroInstallName` accepts only **pinned Ubuntu LTS versions** (`Ubuntu-26.04`,
+`Ubuntu-24.04`, `Ubuntu-22.04`). `-InstanceName` names the new instance and is optional —
+leave it out and the instance takes the name of the distro. Flags that add tooling on top
+are covered in [Opt-in features](#opt-in-features); the full parameter list is under
 [Provisioning parameters](#provisioning-parameters).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
 
-This bare command gives you the full baseline environment described in [What you get](#what-you-get).
+This command gives you the full baseline environment described in [What you get](#what-you-get).
 
 ## Provisioning a released version
 
-Getting Started provisions the commit your checkout is on. To build from a reproducible,
-released version instead, check that version out into its own directory first with
-`checkout-ref.ps1`, then provision from there. Each version stays self-contained — the
-script, template, and in-distro setup all come from the same commit — and your existing
-checkout is left untouched.
+`checkout-ref.ps1` checks a released version out into its own directory, so you can
+provision a reproducible build from there. Everything that version needs — the provisioning
+script, the cloud-init template, and the in-distro setup — comes from that one commit, and
+the checkout you run the script from is left untouched.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0

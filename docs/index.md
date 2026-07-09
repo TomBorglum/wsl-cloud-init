@@ -44,7 +44,8 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -DistroTemplatePath ubuntu `
-  -DistroInstallName Ubuntu-26.04
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev
 ```
 
 The script renders the cloud-init config, installs Ubuntu, waits for setup to
