@@ -80,10 +80,16 @@ runcmd:
   # own. `wsl/system` and `wsl/user` are pulled whole; the distros branch is narrowed to
   # `scripts` so the sibling `cloud-init/` (holding user-data.template, which is rendered
   # Windows-side by provision.ps1 and never read from this checkout) stays out. install.sh
-  # still comes along as a cone-ancestor file of scripts. `windows/lib` holds the interop
-  # PowerShell helpers install.sh installs. Runs before `checkout __COMMIT__` so the working
-  # tree materializes at the pinned commit.
-  - git -C /opt/wsl-cloud-init sparse-checkout set wsl/system wsl/user wsl/distros/ubuntu/scripts windows/lib
+  # is named on its own. `windows/lib` holds the interop PowerShell helpers install.sh
+  # installs.
+  #
+  # --no-cone because cone mode always materializes every file at the repo root: /opt would
+  # carry README.md, CHANGELOG.md, LICENSE and friends -- noise for anyone who cds in -- and
+  # a root .envrc would fire direnv on every visit. Non-cone rules are gitignore-style: a
+  # leading `/` anchors to the repo root, a trailing `/` takes the directory recursively, and
+  # nothing appears unless a rule names it (so no ancestor files come along for free).
+  # Runs before `checkout __COMMIT__` so the working tree materializes at the pinned commit.
+  - git -C /opt/wsl-cloud-init sparse-checkout set --no-cone '/wsl/system/' '/wsl/user/' '/wsl/distros/ubuntu/scripts/' '/wsl/distros/ubuntu/install.sh' '/windows/lib/'
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
   - |
     export TARGET_USER="__TARGET_USER__"
