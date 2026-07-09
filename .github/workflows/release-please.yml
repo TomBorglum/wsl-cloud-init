@@ -5,11 +5,12 @@ name: Release Please
 # manifest from the Conventional Commit messages since the last tag. Merging that
 # PR creates the git tag and the GitHub Release with the generated notes.
 #
-# Uses the AUTOMATION_PAT secret (not GITHUB_TOKEN) so the release PR triggers the
-# required SonarCloud gate and the resulting tag/release can trigger downstream
-# workflows. The PAT is the same fine-grained token used by update-lazydocker.yml
-# (Contents: read/write and Pull requests: read/write), which covers opening the
-# PR, pushing the tag, and publishing the release.
+# Authenticates as the wsl-cloud-init-bot GitHub App rather than with GITHUB_TOKEN,
+# because events created by GITHUB_TOKEN do not trigger further workflow runs: the
+# release PR would never run the required SonarCloud gate, and the tag/release could
+# not trigger downstream workflows. App installation tokens have no such restriction.
+# The App needs Contents: read/write (branch, tag, release), Pull requests:
+# read/write (the release PR) and Issues: read/write (the autorelease:* labels).
 
 on:
   push:
@@ -23,8 +24,14 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
       - uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.AUTOMATION_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
