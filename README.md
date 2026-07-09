@@ -391,11 +391,8 @@ version at all.
 `/opt/wsl-cloud-init` is still at the commit the file records. If it is not, the run aborts:
 
 ```
-/opt/wsl-cloud-init is at dd64a051, but this instance was provisioned from 9a6addd6
-(recorded in /etc/wsl-cloud-init-release).
-...
-Either restore /opt/wsl-cloud-init to 9a6addd6, or re-provision the instance with
-'provision.ps1 -Force' to move it to dd64a051.
+/etc/wsl-cloud-init-release records 9a6addd6, but /opt/wsl-cloud-init is at dd64a051
+install.sh: 01-install-release-info.sh failed; aborting
 ```
 
 To move an instance to a new version, re-provision it with `provision.ps1 -Force` (which
