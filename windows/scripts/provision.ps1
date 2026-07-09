@@ -2,7 +2,6 @@ param(
   [Parameter(Mandatory)][string]$DistroTemplatePath,
   [Parameter(Mandatory)][string]$DistroInstallName,
   [string]$InstanceName,
-  [string]$Ref,
   [switch]$InstallClaudeCode,
   [switch]$InstallGitConfig,
   [switch]$InstallVsCodeInterop,
@@ -46,38 +45,23 @@ $WindowsUsername = $env:USERNAME
 $TargetUser = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
 if (-not $TargetUser) { Write-Host "Could not derive a valid Linux username from '$WindowsUsername'"; exit 1 }
 
-# Resolve the commit to provision. By default this is the commit the local checkout is on;
-# -Ref pins an explicit tag/branch/SHA instead, without touching the working tree. Either
-# way the commit must exist on origin so cloud-init can reproduce it by cloning from GitHub.
-if ($Ref) {
-  git -C $RepoRoot fetch origin --tags --quiet 2>$null
-  $CommitSha = (git -C $RepoRoot rev-parse --verify --quiet "$Ref^{commit}")
-  if (-not $CommitSha) {
-    Write-Host "Ref '$Ref' did not resolve to a commit. Check the name (fetch first if it's new)."
-    exit 1
-  }
-  $CommitSha = $CommitSha.Trim()
-  if (-not (git -C $RepoRoot branch -r --contains $CommitSha 2>$null)) {
-    Write-Host "Commit $($CommitSha.Substring(0, 8)) for ref '$Ref' is not on origin. Push it before provisioning."
-    exit 1
-  }
-  $SourceLabel = $Ref
+# Provision the commit this checkout is on. cloud-init reproduces it by cloning from GitHub,
+# so the commit must exist on origin. This holds for a normal clone (a branch tip) and for a
+# detached checkout produced by checkout-ref.ps1 (a released tag), so a single path covers
+# both: verify HEAD's commit is on origin rather than reasoning about branches.
+$CommitSha = (git -C $RepoRoot rev-parse HEAD).Trim()
+if (git -C $RepoRoot status --porcelain) {
+  Write-Host "Working tree has uncommitted changes. Commit or stash them before provisioning."
+  exit 1
 }
-else {
-  $Branch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
-  $CommitSha = (git -C $RepoRoot rev-parse HEAD).Trim()
-  if (git -C $RepoRoot status --porcelain) {
-    Write-Host "Working tree has uncommitted changes. Commit or stash them, or pass -Ref to provision a specific version."
-    exit 1
-  }
-  git -C $RepoRoot fetch origin $Branch --quiet 2>$null
-  $ahead = git -C $RepoRoot rev-list --count "origin/$Branch..HEAD" 2>$null
-  if ($LASTEXITCODE -ne 0 -or [int]$ahead -gt 0) {
-    Write-Host "Branch '$Branch' is ahead of origin. Push it before provisioning, or pass -Ref."
-    exit 1
-  }
-  $SourceLabel = $Branch
+git -C $RepoRoot fetch origin --tags --quiet 2>$null
+if (-not (git -C $RepoRoot branch -r --contains $CommitSha 2>$null)) {
+  Write-Host "Commit $($CommitSha.Substring(0, 8)) is not on origin. Push it before provisioning, or use windows\scripts\checkout-ref.ps1 to provision a released version."
+  exit 1
 }
+# Display label: the branch name, or the short SHA when HEAD is detached.
+$Branch = (git -C $RepoRoot rev-parse --abbrev-ref HEAD).Trim()
+$SourceLabel = if ($Branch -eq 'HEAD') { $CommitSha.Substring(0, 8) } else { $Branch }
 Write-Host "Provisioning $InstanceName from $SourceLabel @ $($CommitSha.Substring(0, 8))"
 
 # Substitute template. The template carries no secrets and no derived Windows

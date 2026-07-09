@@ -143,6 +143,27 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 3. Merge that release PR — the version is tagged and the GitHub Release is
    published automatically. No manual tagging.
 
+## PowerShell scripts must be ASCII
+
+Keep every `.ps1` file (e.g. [`windows/scripts/`](windows/scripts/)) **ASCII-only**. The
+provisioning entrypoints run under **Windows PowerShell 5.1** (`powershell.exe`), which reads
+a script that has no byte-order mark as ANSI (Windows-1252), not UTF-8. A stray non-ASCII
+character therefore gets mangled into invalid bytes and aborts parsing at provision time —
+the failure surfaces on the user's machine, not in review.
+
+The usual culprits are characters an editor or paste inserts automatically: em/en dashes
+(`—` `–`), smart quotes (`“” ‘’`), arrows (`→ ↔`), and ellipses (`…`). Use their ASCII
+equivalents in strings and comments: `-` or `--`, `->`, straight `"` / `'`, `...`.
+
+Check before committing:
+
+```bash
+grep -rnP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
+```
+
+(This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
+characters freely — this document does.)
+
 ## The `setup-direnv` CI directives — why they are a separate copy
 
 The [`setup-direnv`](actions/setup-direnv/) composite action lets CI honor the same `.envrc`
