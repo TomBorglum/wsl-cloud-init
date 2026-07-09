@@ -125,9 +125,8 @@ The script renders the cloud-init config, installs Ubuntu, waits for cloud-init 
 launches you into the new instance — signed in as a Linux user derived from your Windows
 username, with passwordless sudo and `zsh` as the shell.
 
-To provision a specific released version rather than the latest, `checkout-ref.ps1` clones that
-version into its own directory and prints a ready-to-run provision command for it — see
-[Provisioning a released version](#provisioning-a-released-version).
+To provision a specific released version rather than the latest, use `checkout-ref.ps1` — see
+[Released-version parameters](#released-version-parameters).
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
@@ -354,6 +353,21 @@ working tree — commit or stash your changes first. That commit must also exist
 cloud-init reproduces the environment by cloning this repo from GitHub *inside* the instance and
 checking that commit out; an unpushed commit cannot be fetched there.
 
+### Released-version parameters
+
+`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so that
+version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup all come
+from the same commit, and your working tree is left untouched. It takes:
+
+- `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
+- `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
+  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
+  directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
+
+It then prints a `provision.ps1` command you can copy, paste, and run. The path is absolute, so no
+`cd` is needed, and the parameters are read from that version's own declaration, so the command
+stays correct even for older releases whose entrypoint sits at a different path.
+
 ### Credentials
 
 Windows Credential Manager provides:
@@ -374,21 +388,6 @@ The Linux user is derived from your Windows username (`$env:USERNAME`), lowercas
 `zsh` as its shell, and is set as the WSL **default user**.
 
 ## Versioning
-
-### Provisioning a released version
-
-`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so that
-version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup all come
-from the same commit, and your working tree is left untouched. It takes:
-
-- `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
-- `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
-  shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
-  directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
-
-It then prints a `provision.ps1` command you can copy, paste, and run. The path is absolute, so no
-`cd` is needed, and the parameters are read from that version's own declaration, so the command
-stays correct even for older releases whose entrypoint sits at a different path.
 
 ### The provisioned version
 
