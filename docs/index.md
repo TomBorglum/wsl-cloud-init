@@ -30,9 +30,10 @@ Every provisioned instance comes ready with:
 - **Zsh + Oh My Zsh** — autosuggestions and the git, docker, z, sudo, and pj plugins, plus **direnv** for per-directory environment loading.
 - **Language runtimes** — fnm (Node), pixi (Python), and SDKMAN (JVM), wired into direnv so the right versions activate per project.
 - **Docker** — Engine, CLI, and Compose, plus the lazydocker terminal UI — ready with no extra setup.
-- **Windows interop** — `code` opens files in your Windows VS Code; `open` launches files and URLs with their default Windows app.
-- **Git, the easy way** *(opt-in)* — your Git identity, `gh` auth, and Git Credential Manager reusing your existing Windows sign-in, plus `clone-repo` / `create-repo` / `create-branch` / `rebase-branch` / `prune-branches` helpers.
-- **Claude Code** *(opt-in)* — the CLI pre-wired to the Context7 MCP for up-to-date library docs.
+- **Windows interop** — `open` launches files and URLs with their default Windows app.
+- **Claude Code** *(opt-in: `-InstallClaudeCode`)* — the CLI pre-wired to the Context7 MCP for up-to-date library docs.
+- **Git, the easy way** *(opt-in: `-InstallGitConfig`)* — your Git identity, `gh` auth, and Git Credential Manager reusing your existing Windows sign-in, plus `clone-repo` / `create-repo` / `create-branch` / `rebase-branch` / `prune-branches` helpers.
+- **VS Code** *(opt-in: `-InstallVsCodeInterop`)* — `code` opens files and folders in your Windows VS Code.
 
 ## Provision in one command
 
