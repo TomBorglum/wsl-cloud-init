@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "deny": ["WebSearch"]
+  },
+  "env": {
+    "CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1"
+  },
+  "spinnerTipsEnabled": false,
+  "effortLevel": "high",
+  "model": "opus"
+}
