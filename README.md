@@ -107,15 +107,6 @@ git clone https://github.com/TomBorglum/wsl-cloud-init.git
 cd wsl-cloud-init
 ```
 
-Provisioning uses whatever commit your checkout is on, so stay on `main` for the latest
-changes. To provision a specific released version instead, use `checkout-ref.ps1` to lay that
-version down in its own directory first; it prints a ready-to-run provision command when it's
-done. See [Provisioning a released version](#provisioning-a-released-version).
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
-```
-
 ### 2. Provision an instance
 
 In **PowerShell**:
@@ -133,6 +124,14 @@ Every parameter is described under [Provisioning parameters](#provisioning-param
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then
 launches you into the new instance — signed in as a Linux user derived from your Windows
 username, with passwordless sudo and `zsh` as the shell.
+
+To provision a specific released version rather than the latest, `checkout-ref.ps1` clones that
+version into its own directory and prints a ready-to-run provision command for it — see
+[Provisioning a released version](#provisioning-a-released-version).
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
+```
 
 ## Opt-in features
 
