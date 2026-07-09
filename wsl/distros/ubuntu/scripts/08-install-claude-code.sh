@@ -27,7 +27,6 @@ sudo -u "$TARGET_USER" bash /tmp/claude-install.sh
 rm -f /tmp/claude-install.sh
 
 sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << 'EOF'
-export ENABLE_CLAUDEAI_MCP_SERVERS=false
 export PATH="$HOME/.local/bin:$PATH"
 EOF
 
