@@ -211,12 +211,6 @@ sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install
 sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
-Combine variables to add several at once:
-
-```bash
-sudo INSTALL_CLAUDE_CODE=true INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
-```
-
 ## Usage
 
 The following day-to-day commands and per-project setup are included in the provisioned instance.
