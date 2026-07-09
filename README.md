@@ -41,13 +41,40 @@ cd wsl-cloud-init
 ```
 
 Provisioning uses whatever commit your checkout is on (cloud-init clones the repo and
-checks out that exact commit) — stay on `main` for the latest changes. The commit just
-has to exist on origin.
+checks out that exact commit) — stay on `main` for the latest changes. To provision a
+specific released version instead, see
+[Provisioning a released version](#provisioning-a-released-version).
 
-To provision a reproducible, released version instead, check that version out into its own
-directory first with `checkout-ref.ps1`, then provision from there. This keeps each version
-self-contained (the script, template, and in-distro setup all match) and leaves this
-checkout untouched:
+### 2. Provision an instance
+
+In **PowerShell**:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
+  -DistroTemplatePath ubuntu `
+  -DistroInstallName Ubuntu-26.04 `
+  -InstanceName dev
+```
+
+`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
+
+`-DistroTemplatePath` and `-DistroInstallName` are the only required parameters.
+`-DistroInstallName` accepts only **pinned Ubuntu LTS versions** (`Ubuntu-26.04`,
+`Ubuntu-24.04`, `Ubuntu-22.04`). `-InstanceName` names the new instance and is optional —
+leave it out and the instance takes the name of the distro. Flags that add tooling on top
+are covered in [Opt-in features](#opt-in-features); the full parameter list is under
+[Provisioning parameters](#provisioning-parameters).
+
+The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
+
+This command gives you the full baseline environment described in [What you get](#what-you-get).
+
+## Provisioning a released version
+
+`checkout-ref.ps1` checks a released version out into its own directory, so you can
+provision a reproducible build from there. Everything that version needs — the provisioning
+script, the cloud-init template, and the in-distro setup — comes from that one commit, and
+the checkout you run the script from is left untouched.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref v1.0.0
@@ -65,28 +92,8 @@ powershell -ExecutionPolicy Bypass -File "C:\Users\you\AppData\Local\Temp\wsl-cl
   # optional: -InstanceName <value>  -InstallClaudeCode  -InstallGitConfig  -InstallVsCodeInterop
 ```
 
-### 2. Provision an instance
-
-In **PowerShell**:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
-  -DistroTemplatePath ubuntu `
-  -DistroInstallName Ubuntu-26.04 `
-  -InstanceName dev
-```
-
-`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
-
-- `-DistroInstallName <name>` — only **pinned Ubuntu LTS versions** are supported (`Ubuntu-26.04`, `Ubuntu-24.04`, `Ubuntu-22.04`).
-- `-InstallClaudeCode` — install Claude Code. See [Opt-in features](#opt-in-features).
-- `-InstallGitConfig` — configure git identity, the credential helper, and `gh` auth. See [Opt-in features](#opt-in-features).
-- `-InstallVsCodeInterop` — install the `code` Windows interop wrapper. See [Opt-in features](#opt-in-features).
-- `-Force` — replace an existing instance of the same name (destroys it first).
-
-The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then launches you into the new instance — signed in as a Linux user derived from your Windows username, with passwordless sudo and `zsh` as the shell.
-
-This bare command gives you the full baseline environment described in [What you get](#what-you-get).
+Whichever ref you provision from is recorded inside the instance — see
+[Checking the provisioned version](#checking-the-provisioned-version).
 
 ## Opt-in features
 
@@ -129,7 +136,7 @@ Control Panel → **Credential Manager** → **Windows Credentials** → **Add a
 
 ### Enable when provisioning
 
-Once the setup above is in place, add the flags to the Getting Started command:
+Once the setup above is in place, add the flags to the provisioning command:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
@@ -318,24 +325,22 @@ What you can set when provisioning, and how the instance is derived.
 - `-Force` (optional) — unregister an existing instance of the same name first (this destroys it).
 
 `provision.ps1` always provisions the commit its own checkout is on (which must exist on origin).
-To provision a specific released version, use `checkout-ref.ps1` to lay that version down first.
-Whichever ref it resolves is recorded inside the instance — see
+To provision a specific released version, use `checkout-ref.ps1` to lay that version down first —
+see [Provisioning a released version](#provisioning-a-released-version). Whichever ref it resolves
+is recorded inside the instance — see
 [Checking the provisioned version](#checking-the-provisioned-version).
 
-### Provisioning a released version
+### checkout-ref.ps1 parameters
 
-`windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so
-that version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup
-all come from the same commit, and your working tree is left untouched. It takes:
+`windows/scripts/checkout-ref.ps1` ([Provisioning a released version](#provisioning-a-released-version)) takes:
 
 - `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
 - `-Destination` (optional) — directory to clone into. Defaults to `%TEMP%\wsl-cloud-init-<ref>`,
   shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
   directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
 
-It then prints a copy-paste-runnable `provision.ps1` command with an **absolute** path (no `cd`
-needed), built from that version's own parameter declaration — so it stays correct even for
-older releases whose entrypoint lives at `windows\provision.ps1`.
+The `provision.ps1` command it prints is built from that version's own parameter declaration — so
+it stays correct even for older releases whose entrypoint lives at `windows\provision.ps1`.
 
 ### Checking the provisioned version
 
