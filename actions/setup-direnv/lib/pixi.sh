@@ -6,43 +6,39 @@
 # outside GitHub Actions. Self-contained by design: it sources no other file in
 # this repository.
 #
-# Deliberately simpler than the terminal directive in
-# wsl/user/.config/direnv/lib/pixi.sh: that version's PATH_add exists to keep
-# direnv's interactive load/unload clean, which CI does not do. It also does NOT
+# Deliberately simpler than the interactive terminal directive: its PATH_add exists to
+# keep direnv's interactive load/unload clean, which CI does not do. It also does NOT
 # scaffold a pixi.toml — CI activates a workspace the repo already commits, so a
 # missing manifest is a hard error, not a convenience to paper over. pixi has no
-# canonical <TOOL>_HOME convention, so this exports only bin dirs to $GITHUB_PATH
-# (no $GITHUB_ENV, like use_fnm and unlike use_sdk).
+# canonical <TOOL>_HOME convention, so this exports only bin dirs to $GITHUB_PATH (no
+# $GITHUB_ENV).
 use_pixi() {
   # Install pixi under an explicit home rather than relying on the installer's
   # default: PIXI_HOME pins the location (binary at $PIXI_HOME/bin/pixi), and this
-  # one variable drives the guard, PATH, and $GITHUB_PATH below — the pixi analog
-  # of fnm's --install-dir. Value stays ~/.pixi to match action.yml's cache path.
+  # one variable drives the guard, PATH, and $GITHUB_PATH below. Value stays ~/.pixi so
+  # it matches the toolchain cache path the action restores.
   local pixi_home="$HOME/.pixi"
 
   # Guard on the install dir only to skip re-downloading on a warm rerun / full
-  # cache hit, mirroring fnm.sh's ~/.fnm guard. --proto '=https' --tlsv1.2 pins the
-  # transfer to HTTPS/TLS 1.2+ (no plaintext redirects); PIXI_NO_PATH_UPDATE=1 is
-  # the pixi analog of fnm's --skip-shell — it stops the installer editing shell rc
-  # files, a no-op in CI since we put pixi on PATH ourselves. Matches
-  # wsl/distros/ubuntu/scripts/05-install-pixi.sh.
+  # cache hit. --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no
+  # plaintext redirects); PIXI_NO_PATH_UPDATE=1 stops the installer editing shell rc
+  # files, a no-op in CI since we put pixi on PATH ourselves. Matches how pixi is
+  # installed at provision time.
   if [[ ! -d "$pixi_home" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://pixi.sh/install.sh \
       | PIXI_HOME="$pixi_home" PIXI_NO_PATH_UPDATE=1 bash
   fi
-  # Put pixi on PATH (CI has no shell integration / PATH_add) so it is callable
-  # below, the same way fnm.sh does after --skip-shell.
+  # Put pixi on PATH (CI has no shell integration / PATH_add) so it is callable below.
   export PATH="$pixi_home/bin:$PATH"
 
   # Install the workspace's environment. `pixi install` is idempotent: it reuses an
   # environment that already exists (e.g. restored from cache) and only solves
-  # what is missing, so it respects what is already there. Unlike `sdk install` it
-  # returns non-zero on real failure, so gate on its exit code directly (rather
-  # than `|| true` + a later check). This single gate is the success signal — like
-  # fnm.sh's node resolution — and catches both a failed pixi install
+  # what is missing, so it respects what is already there. It returns non-zero on real
+  # failure, so gate on its exit code directly (rather than `|| true` + a later check).
+  # This single gate is the success signal, and catches both a failed pixi install
   # (command-not-found) and a missing manifest, which pixi rejects more accurately
-  # than a pixi.toml/pyproject.toml file test would. The terminal directive
-  # scaffolds a manifest; CI does not.
+  # than a pixi.toml/pyproject.toml file test would. The terminal directive scaffolds a
+  # manifest; CI does not.
   if ! pixi install; then
     echo "use_pixi: pixi install failed in $(pwd)" >&2
     # exit, not return: direnv silently ignores a directive that `return`s a
@@ -55,8 +51,7 @@ use_pixi() {
   # .pixi/envs/default — `pixi run` activates the default environment and exports
   # the conda-style $CONDA_PREFIX, so this tracks wherever the environment
   # actually lives (a detached-environments config or a cache-restored prefix).
-  # This is the resolve-via-the-tool approach the terminal directives use
-  # (fnm's `fnm exec`, SDKMAN's `sdk home`).
+  # Ask the tool where it lives rather than assuming its on-disk layout.
   local env_prefix
   env_prefix="$(pixi run bash -c 'printf %s "$CONDA_PREFIX"' 2>/dev/null || true)"
   if [[ -z "$env_prefix" || ! -d "$env_prefix/bin" ]]; then
