@@ -4,10 +4,10 @@
 # SonarCloud dashboards aren't publicly reachable). Add `use sonarqube_mcp` to a project's
 # .envrc; both files it touches are secret-free and meant to be committed and shared.
 #
-# On first use it scaffolds a .mcp.json (like use_pixi scaffolds pixi.toml) whose env
-# references ${SONARQUBE_TOKEN:-} / ${SONARQUBE_ORG:-}, and on every load it exports those
-# from Windows Credential Manager so Claude can authenticate. The secret never touches disk in
-# the project; direnv unsets the exports when you leave the directory.
+# On first use it scaffolds a .mcp.json whose env references ${SONARQUBE_TOKEN:-} /
+# ${SONARQUBE_ORG:-}, and on every load it exports those from Windows Credential Manager so
+# Claude can authenticate. The secret never touches disk in the project; direnv unsets the
+# exports when you leave the directory.
 #
 # It runs in the direnv context, so it MUST NOT break the .envrc: every path returns (never
 # exits), and unmet prerequisites are reported as warnings rather than failures. A correctly

@@ -11,8 +11,7 @@ sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 
 # Runtime directives (fnm, pixi, sdk) always; the claude/ subdir (use_sonarqube_mcp) is
 # gated on INSTALL_CLAUDE_CODE since it only makes sense with Claude Code. Both install flat
-# into ~/.config/direnv/lib (direnv globs that dir non-recursively), mirroring how
-# 13-install-zsh-functions.sh gates its git/ subdir.
+# into ~/.config/direnv/lib (direnv globs that dir non-recursively).
 src=/opt/wsl-cloud-init/wsl/user/.config/direnv/lib
 dirs=("$src")
 if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" ]]; then

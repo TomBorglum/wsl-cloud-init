@@ -191,3 +191,16 @@ local↔CI drift by:
 1. mirroring the terminal directive's **name and accepted arguments** in the CI copy, and
 2. adding a fixture `.envrc` to `.github/workflows/setup-direnv-test.yml` that exercises it
    end to end (install + cross-step propagation).
+
+### Two directive conventions
+
+**A directive may scaffold a project file** on first activation. `use_pixi` writes a starter
+`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`. Each prints a reminder to commit it —
+those generated files are part of the repository, so commit them.
+
+**An optional directive must not break the `.envrc`.** The failure-signal row above (`return
+1`) is for *runtime* directives, where a missing Node/JVM is a genuine failure worth surfacing.
+A directive for an *optional* integration instead warns to stderr and `return`s 0 when a
+prerequisite is missing, so the rest of the environment still loads. `use_sonarqube_mcp`
+follows this pattern: a missing credential or an unreachable Credential Manager produces a
+warning, never a failed load.
