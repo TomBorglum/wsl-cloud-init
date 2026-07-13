@@ -1,0 +1,112 @@
+#!/bin/bash
+# add-sonarqube-mcp: register the SonarQube Cloud MCP server into the CURRENT project's
+# .mcp.json, so Claude Code can read and fix Sonar issues for that repo — including
+# private repos whose SonarCloud dashboards aren't publicly reachable.
+#
+# Installed with -InstallClaudeCode (see 15-install-sonarqube-mcp.sh) but dormant until you
+# run it: it does nothing at provision time and owns all of its own validation here. Run it
+# from inside the project directory you want to enable it for.
+#
+# It needs two generic credentials in Windows Credential Manager:
+#   wsl-cloud-init:SONARQUBE_TOKEN   a SonarQube Cloud user token
+#   wsl-cloud-init:SONARQUBE_ORG     your SonarQube Cloud organization key
+# read at runtime through the shared wsl_interop_credential helper (the same durable,
+# git-free bundle the gh wrapper uses): the value is fetched inside PowerShell and only the
+# fetch code crosses the boundary.
+#
+# The Sonar MCP server is a stdio server run via Docker (installed at 02-install-docker.sh;
+# the user is in the docker group). The image is pinned and pulled once on first use.
+#
+# Registration is delegated to `claude mcp add --scope project`, which creates or updates
+# .mcp.json in the current directory. The fetched token and org are embedded into that
+# file, so .mcp.json contains a secret: do not commit it.
+
+set -euo pipefail
+
+# Pinned image tag for reproducibility; bump deliberately. See:
+# https://hub.docker.com/r/sonarsource/sonarqube-mcp/tags
+IMAGE="sonarsource/sonarqube-mcp:1.22.0.3040"
+
+usage() {
+  cat >&2 <<EOF
+Usage: add-sonarqube-mcp [-y|--yes]
+
+Register the SonarQube Cloud MCP server into ./.mcp.json for the current project.
+Pulls the pinned Docker image on first use and reads SONARQUBE_TOKEN / SONARQUBE_ORG
+from Windows Credential Manager.
+
+  -y, --yes    skip the confirmation prompt
+  -h, --help   show this help
+EOF
+}
+
+assume_yes=false
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    -y|--yes) assume_yes=true; shift ;;
+    --) shift; break ;;
+    *) echo "add-sonarqube-mcp: unknown argument: $1" >&2; usage; exit 1 ;;
+  esac
+done
+
+source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
+
+# $POWERSHELL is inherited from the environment (exported from ~/.zshenv, derived once in
+# install.sh); the credential read below needs it. Fail early with a clear message rather
+# than a raw PowerShell error.
+if [[ ! -x "${POWERSHELL:-}" ]]; then
+  echo "add-sonarqube-mcp: Windows powershell.exe not found at '${POWERSHELL:-}' (\$POWERSHELL)." >&2
+  exit 1
+fi
+
+if ! command -v claude >/dev/null 2>&1; then
+  echo "add-sonarqube-mcp: 'claude' not found on PATH — provision with -InstallClaudeCode first." >&2
+  exit 1
+fi
+
+# Confirm before writing into the current directory (the project we're enabling).
+if [[ "$assume_yes" != true ]]; then
+  printf 'Register the SonarQube MCP server into %s/.mcp.json? [y/N] ' "$PWD" >&2
+  read -r reply
+  case "$reply" in
+    [yY]|[yY][eE][sS]) ;;
+    *) echo "Aborted." >&2; exit 1 ;;
+  esac
+fi
+
+# Read both credentials from Windows first, before the expensive image pull, so a missing
+# credential fails fast. The helper prints the value on stdout (CR stripped) and yields
+# nothing when the credential is missing; give a curated message like the gh wrapper rather
+# than letting an empty token flow into the config.
+token="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_TOKEN" 2>/dev/null || true)"
+if [[ -z "$token" ]]; then
+  echo "add-sonarqube-mcp: no 'wsl-cloud-init:SONARQUBE_TOKEN' credential in Windows Credential Manager." >&2
+  exit 1
+fi
+org="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_ORG" 2>/dev/null || true)"
+if [[ -z "$org" ]]; then
+  echo "add-sonarqube-mcp: no 'wsl-cloud-init:SONARQUBE_ORG' credential in Windows Credential Manager." >&2
+  exit 1
+fi
+
+# Ensure the pinned image is present; pull once on first use.
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  echo "Pulling $IMAGE..." >&2
+  docker pull "$IMAGE"
+fi
+
+# Register into ./.mcp.json. Remove any prior 'sonarqube' entry first so re-running is
+# idempotent (add errors if the name already exists). --pull=always is intentionally
+# omitted from the docker command: the image is pinned and pulled above. The container
+# reads SONARQUBE_TOKEN/SONARQUBE_ORG from the MCP server process env (`-e NAME` without a
+# value), which Claude populates from the --env values below.
+claude mcp remove sonarqube --scope project >/dev/null 2>&1 || true
+claude mcp add sonarqube --scope project \
+  --env "SONARQUBE_TOKEN=$token" \
+  --env "SONARQUBE_ORG=$org" \
+  -- docker run --init -i --rm -e SONARQUBE_TOKEN -e SONARQUBE_ORG "$IMAGE"
+
+echo "" >&2
+echo "Registered the 'sonarqube' MCP server in $PWD/.mcp.json." >&2
+echo "Note: .mcp.json now contains your Sonar token — do not commit it (add it to .gitignore)." >&2
