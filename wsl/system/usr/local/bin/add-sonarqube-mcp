@@ -40,6 +40,14 @@ from Windows Credential Manager.
 EOF
 }
 
+# Report a missing credential and how to add it, so a fresh instance pinpoints exactly what
+# to store rather than leaving the user guessing. cmdkey runs on Windows (PowerShell).
+missing_credential() {
+  local name="$1"
+  echo "add-sonarqube-mcp: no 'wsl-cloud-init:$name' credential in Windows Credential Manager." >&2
+  echo "  Add it on Windows (PowerShell): cmdkey /generic:wsl-cloud-init:$name /user:wsl-cloud-init /pass:<value>" >&2
+}
+
 assume_yes=false
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -65,6 +73,15 @@ if ! command -v claude >/dev/null 2>&1; then
   exit 1
 fi
 
+# Read and validate both credentials from Windows first — before the prompt and the
+# expensive image pull — so an unconfigured instance fails fast with an actionable message
+# instead of a bare "Aborted." The helper prints the value on stdout (CR stripped) and
+# yields nothing when the credential is missing.
+token="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_TOKEN" 2>/dev/null || true)"
+if [[ -z "$token" ]]; then missing_credential SONARQUBE_TOKEN; exit 1; fi
+org="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_ORG" 2>/dev/null || true)"
+if [[ -z "$org" ]]; then missing_credential SONARQUBE_ORG; exit 1; fi
+
 # Confirm before writing into the current directory (the project we're enabling).
 if [[ "$assume_yes" != true ]]; then
   printf 'Register the SonarQube MCP server into %s/.mcp.json? [y/N] ' "$PWD" >&2
@@ -73,21 +90,6 @@ if [[ "$assume_yes" != true ]]; then
     [yY]|[yY][eE][sS]) ;;
     *) echo "Aborted." >&2; exit 1 ;;
   esac
-fi
-
-# Read both credentials from Windows first, before the expensive image pull, so a missing
-# credential fails fast. The helper prints the value on stdout (CR stripped) and yields
-# nothing when the credential is missing; give a curated message like the gh wrapper rather
-# than letting an empty token flow into the config.
-token="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_TOKEN" 2>/dev/null || true)"
-if [[ -z "$token" ]]; then
-  echo "add-sonarqube-mcp: no 'wsl-cloud-init:SONARQUBE_TOKEN' credential in Windows Credential Manager." >&2
-  exit 1
-fi
-org="$(wsl_interop_credential "wsl-cloud-init:SONARQUBE_ORG" 2>/dev/null || true)"
-if [[ -z "$org" ]]; then
-  echo "add-sonarqube-mcp: no 'wsl-cloud-init:SONARQUBE_ORG' credential in Windows Credential Manager." >&2
-  exit 1
 fi
 
 # Ensure the pinned image is present; pull once on first use.
