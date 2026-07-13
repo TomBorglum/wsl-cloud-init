@@ -160,6 +160,40 @@ Or via the GUI — Control Panel → **Credential Manager** → **Windows Creden
 | --- | --- | --- |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | `wsl-cloud-init` | your Context7 key |
 
+##### Optional: the `use sonarqube_mcp` direnv directive (private repos)
+
+`-InstallClaudeCode` also installs a [direnv](https://direnv.net) directive,
+`use sonarqube_mcp`, that enables the [SonarQube Cloud MCP
+server](https://github.com/SonarSource/sonarqube-mcp-server) for a project, so Claude can
+read and fix Sonar issues — handy for **private** repos whose SonarCloud dashboards aren't
+publicly reachable. The server runs via Docker (pulled once on first use), so nothing extra
+is installed at provision time.
+
+Add `use sonarqube_mcp` to a project's `.envrc` (like `use pixi` / `use sdk`) and run
+`direnv allow`. On first activation the directive scaffolds a **secret-free** `.mcp.json`
+that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not the values), and on every
+activation direnv supplies those variables from your Windows Credential Manager. Because no
+secret is stored in the project, both `.envrc` and `.mcp.json` are safe to commit and share
+with your team — each teammate just keeps their own credentials (below), and the directive
+is a no-op in CI.
+
+Store two more generic credentials (a [SonarQube Cloud
+token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens/)
+and your organization key):
+
+```powershell
+cmdkey /generic:wsl-cloud-init:SONARQUBE_TOKEN /user:wsl-cloud-init /pass:<sonar-token>
+cmdkey /generic:wsl-cloud-init:SONARQUBE_ORG   /user:wsl-cloud-init /pass:<sonar-org-key>
+```
+
+| Internet or network address | User name | Password |
+| --- | --- | --- |
+| `wsl-cloud-init:SONARQUBE_TOKEN` | `wsl-cloud-init` | your SonarQube Cloud token |
+| `wsl-cloud-init:SONARQUBE_ORG` | `wsl-cloud-init` | your SonarQube Cloud organization key |
+
+Then, in the project you want it for, add `use sonarqube_mcp` to `.envrc` and run
+`direnv allow`.
+
 #### `-InstallGitConfig` — a Git identity and a GitHub sign-in
 
 Set your Git identity on Windows; provisioning copies it into the new instance.
@@ -369,6 +403,8 @@ Windows Credential Manager provides:
 | Credential | Used for |
 | --- | --- |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
+| `wsl-cloud-init:SONARQUBE_TOKEN` | Read by direnv for the `use sonarqube_mcp` directive (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
+| `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `use sonarqube_mcp` directive (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
 `git` and `gh` authenticate from that single credential — no second token to create, and no

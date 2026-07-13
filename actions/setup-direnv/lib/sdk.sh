@@ -6,17 +6,16 @@
 # outside GitHub Actions. Self-contained by design: it sources no other file in
 # this repository.
 #
-# Deliberately simpler than the terminal directive in
-# wsl/user/.config/direnv/lib/sdk.sh: that version's arg checks, SDKMAN_DIR override,
-# subshell and PATH_add exist to keep direnv's interactive load/unload clean, which
-# CI does not do.
+# Deliberately simpler than the interactive terminal directive: arg checks, an
+# SDKMAN_DIR override, a subshell and PATH_add exist to keep direnv's interactive
+# load/unload clean, which CI does not do.
 use_sdk() {
   local candidate=$1
   local version=$2
 
   # Standard SDKMAN install; guard only to skip re-downloading on a warm rerun.
   # --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no plaintext
-  # redirects), matching the repo's other installers.
+  # redirects), matching how the runtime is installed at provision time.
   if [[ ! -d "$HOME/.sdkman" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io | bash
   fi
@@ -44,8 +43,7 @@ use_sdk() {
 
   # Expose the runtime to subsequent workflow steps: the bin on $GITHUB_PATH, plus
   # SDKMAN's <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …) on $GITHUB_ENV. The name is
-  # derived from the candidate (SDKMAN's convention), not hardcoded — matching the
-  # terminal directive in wsl/user/.config/direnv/lib/sdk.sh.
+  # derived from the candidate (SDKMAN's convention), not hardcoded.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
   echo "${candidate^^}_HOME=$candidate_dir" >> "$GITHUB_ENV"
   return 0

@@ -5,11 +5,10 @@
 # this file onto the runner's ~/.config/direnv/lib; it is never run outside GitHub
 # Actions. Self-contained by design: it sources no other file in this repository.
 #
-# Deliberately simpler than the terminal directive in
-# wsl/user/.config/direnv/lib/fnm.sh: that version's arg checks and PATH_add exist to
-# keep direnv's interactive load/unload clean, which CI does not do. Node has no
-# canonical <TOOL>_HOME convention, so this exports only the bin dir to $GITHUB_PATH
-# (no $GITHUB_ENV, unlike use_sdk).
+# Deliberately simpler than the interactive terminal directive: arg checks and PATH_add
+# exist to keep direnv's interactive load/unload clean, which CI does not do. Node has no
+# canonical <TOOL>_HOME convention, so this exports only the bin dir to $GITHUB_PATH (no
+# $GITHUB_ENV).
 use_fnm() {
   # $1 is the trusted tool token ('node'); fnm is Node-only, so ignore it and take
   # the version. CI trusts the committed .envrc — no arg validation.
@@ -17,8 +16,8 @@ use_fnm() {
 
   # Standard fnm install into ~/.fnm; guard only to skip re-downloading on a warm
   # rerun / full cache hit. --proto '=https' --tlsv1.2 pins the transfer to
-  # HTTPS/TLS 1.2+ (no plaintext redirects), matching the repo's other installers
-  # (wsl/distros/ubuntu/scripts/06-install-fnm.sh).
+  # HTTPS/TLS 1.2+ (no plaintext redirects), matching how the runtime is installed at
+  # provision time.
   if [[ ! -d "$HOME/.fnm" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install \
       | bash -s -- --install-dir "$HOME/.fnm" --skip-shell
@@ -32,7 +31,7 @@ use_fnm() {
   fnm install "$version" || true
 
   # Resolve the installed node's real bin dir instead of hardcoding fnm's on-disk
-  # layout — the resolve-via-tool approach, like sdk.sh's `sdk home`. `fnm install`
+  # layout — ask the tool where it lives rather than assuming its layout. `fnm install`
   # does NOT put node on PATH, and CI has no shell integration (GitHub Actions runs
   # steps with `bash --noprofile --norc`), so a bare `which node` would find
   # nothing. `fnm exec --using` activates the version for one subprocess; `readlink

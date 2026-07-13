@@ -80,6 +80,26 @@ jobs:
           python --version
           command -v python | grep -q "/actions/setup-direnv/test/fixture-pixi/.pixi/envs/default/bin/"
 
+  activate-sonarqube:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Run setup-direnv against the sonarqube fixture
+        uses: ./actions/setup-direnv
+        with:
+          working-directory: actions/setup-direnv/test/fixture-sonarqube
+
+      - name: Assert the no-op directive did not fail or export anything
+        run: |
+          set -euo pipefail
+          # use sonarqube_mcp is a deliberate CI no-op: the action must succeed on the
+          # committed .envrc (proving the directive is defined so evaluation doesn't error),
+          # and it must export nothing to later steps.
+          echo "SONARQUBE_TOKEN=${SONARQUBE_TOKEN:-<unset>}  SONARQUBE_ORG=${SONARQUBE_ORG:-<unset>}"
+          test -z "${SONARQUBE_TOKEN:-}"
+          test -z "${SONARQUBE_ORG:-}"
+
   missing-envrc:
     runs-on: ubuntu-latest
     steps:

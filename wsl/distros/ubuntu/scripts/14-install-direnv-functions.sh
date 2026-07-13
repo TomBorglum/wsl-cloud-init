@@ -9,9 +9,17 @@ shopt -s nullglob
 # overwrites), so re-running can add directives that were skipped before.
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 
-# Runtime directives (fnm, pixi, sdk) — always installed.
+# Runtime directives (fnm, pixi, sdk) always; the claude/ subdir (use_sonarqube_mcp) is
+# gated on INSTALL_CLAUDE_CODE since it only makes sense with Claude Code. Both install flat
+# into ~/.config/direnv/lib (direnv globs that dir non-recursively).
 src=/opt/wsl-cloud-init/wsl/user/.config/direnv/lib
-files=("$src"/*.sh)
-if [[ ${#files[@]} -gt 0 ]]; then
-  install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 "${files[@]}" "/home/$TARGET_USER/.config/direnv/lib/"
+dirs=("$src")
+if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" ]]; then
+  dirs+=("$src/claude")
 fi
+for dir in "${dirs[@]}"; do
+  files=("$dir"/*.sh)
+  if [[ ${#files[@]} -gt 0 ]]; then
+    install -o "$TARGET_USER" -g "$TARGET_USER" -m 644 "${files[@]}" "/home/$TARGET_USER/.config/direnv/lib/"
+  fi
+done
