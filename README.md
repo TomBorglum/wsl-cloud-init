@@ -163,13 +163,20 @@ Or via the GUI — Control Panel → **Credential Manager** → **Windows Creden
 ##### Optional: the `add-sonarqube-mcp` helper (private repos)
 
 `-InstallClaudeCode` also installs an `add-sonarqube-mcp` command. It is dormant until you
-run it: from inside a project directory it registers the [SonarQube Cloud MCP
-server](https://github.com/SonarSource/sonarqube-mcp-server) into that project's
-`.mcp.json`, so Claude can read and fix Sonar issues for the repo — handy for **private**
-repos whose SonarCloud dashboards aren't publicly reachable. The server runs via Docker
-(pulled once on first use), so nothing extra is installed at provision time.
+run it: from inside a project directory it enables the [SonarQube Cloud MCP
+server](https://github.com/SonarSource/sonarqube-mcp-server) for that repo, so Claude can
+read and fix Sonar issues — handy for **private** repos whose SonarCloud dashboards aren't
+publicly reachable. The server runs via Docker (pulled once on first use), so nothing extra
+is installed at provision time.
 
-To use it, store two more generic credentials (a [SonarQube Cloud
+It writes two **secret-free, committable** files: a `.mcp.json` that references
+`${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not the values), and a one-line `.envrc` so
+[direnv](https://direnv.net) supplies those variables from your Windows Credential Manager
+at launch time. Because no secret is stored in the project, both files are safe to commit
+and share with your team — each teammate just keeps their own credentials (below), and the
+whole thing is a no-op in CI.
+
+Store two more generic credentials (a [SonarQube Cloud
 token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens/)
 and your organization key):
 
@@ -183,8 +190,7 @@ cmdkey /generic:wsl-cloud-init:SONARQUBE_ORG   /user:wsl-cloud-init /pass:<sonar
 | `wsl-cloud-init:SONARQUBE_TOKEN` | `wsl-cloud-init` | your SonarQube Cloud token |
 | `wsl-cloud-init:SONARQUBE_ORG` | `wsl-cloud-init` | your SonarQube Cloud organization key |
 
-Then, inside the project you want it for, run `add-sonarqube-mcp`. The resulting `.mcp.json`
-holds your token, so **don't commit it** (add it to `.gitignore`).
+Then, inside the project you want it for, run `add-sonarqube-mcp` and `direnv allow`.
 
 #### `-InstallGitConfig` — a Git identity and a GitHub sign-in
 
@@ -395,8 +401,8 @@ Windows Credential Manager provides:
 | Credential | Used for |
 | --- | --- |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
-| `wsl-cloud-init:SONARQUBE_TOKEN` | The `add-sonarqube-mcp` helper (installed with `-InstallClaudeCode`) — **only required if you run that command** |
-| `wsl-cloud-init:SONARQUBE_ORG` | The `add-sonarqube-mcp` helper (installed with `-InstallClaudeCode`) — **only required if you run that command** |
+| `wsl-cloud-init:SONARQUBE_TOKEN` | Read by direnv for the `add-sonarqube-mcp` helper (installed with `-InstallClaudeCode`) — **only required if you use that helper** |
+| `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `add-sonarqube-mcp` helper (installed with `-InstallClaudeCode`) — **only required if you use that helper** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
 `git` and `gh` authenticate from that single credential — no second token to create, and no
