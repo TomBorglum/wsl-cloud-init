@@ -31,7 +31,7 @@ Every provisioned instance comes ready with:
 - **Language runtimes** — fnm (Node), pixi (Python), and SDKMAN (JVM), wired into direnv so the right versions activate per project.
 - **Docker** — Engine, CLI, and Compose, plus the lazydocker terminal UI — ready with no extra setup.
 - **Windows interop** — `open` launches files and URLs with their default Windows app.
-- **Claude Code** *(opt-in: `-InstallClaudeCode`)* — the CLI pre-wired to the Context7 MCP for up-to-date library docs, plus an `add-sonarqube-mcp` helper that enables the SonarQube Cloud MCP per project via a secret-free, committable `.mcp.json` (great for private repos).
+- **Claude Code** *(opt-in: `-InstallClaudeCode`)* — the CLI pre-wired to the Context7 MCP for up-to-date library docs, plus a `use sonarqube_mcp` direnv directive that enables the SonarQube Cloud MCP per project via a secret-free, committable `.mcp.json` (great for private repos).
 - **Git, the easy way** *(opt-in: `-InstallGitConfig`)* — your Git identity, `gh` auth, and Git Credential Manager reusing your existing Windows sign-in, plus `clone-repo` / `create-repo` / `create-branch` / `rebase-branch` / `prune-branches` helpers.
 - **VS Code** *(opt-in: `-InstallVsCodeInterop`)* — `code` opens files and folders in your Windows VS Code.
 
