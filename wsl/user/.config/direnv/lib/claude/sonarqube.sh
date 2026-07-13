@@ -15,29 +15,30 @@
 IMAGE="sonarsource/sonarqube-mcp:1.22.0.3040"
 
 use_sonarqube_mcp() {
-  # 1. Scaffold ./.mcp.json once. Skip cleanly if the server is already there; warn (don't
-  #    fail) if claude isn't available. claude mcp add's output goes to stderr because direnv
-  #    captures the .envrc's stdout as the environment diff.
-  if [[ -f .mcp.json ]] && jq -e '.mcpServers.sonarqube' .mcp.json >/dev/null 2>&1; then
-    :
-  elif command -v claude >/dev/null 2>&1; then
-    if claude mcp add sonarqube --scope project \
+  # 1. Scaffold ./.mcp.json once. Ask the CLI whether the server is already registered via
+  #    `claude mcp get`'s EXIT CODE only (0 = present, even when "Pending approval"; 1 = absent)
+  #    rather than reaching into the .mcp.json schema — and never parse its human-readable
+  #    output, which would be more brittle than the JSON. Warn (don't fail) if claude isn't
+  #    available. claude mcp add's output goes to stderr because direnv captures the .envrc's
+  #    stdout as the environment diff.
+  if ! command -v claude >/dev/null 2>&1; then
+    echo "direnv: use_sonarqube_mcp: 'claude' not on PATH — skipped .mcp.json setup." >&2
+  elif claude mcp get sonarqube >/dev/null 2>&1; then
+    :  # already registered — nothing to do
+  elif claude mcp add sonarqube --scope project \
          --env 'SONARQUBE_TOKEN=${SONARQUBE_TOKEN:-}' \
          --env 'SONARQUBE_ORG=${SONARQUBE_ORG:-}' \
          -- docker run --init -i --rm -e SONARQUBE_TOKEN -e SONARQUBE_ORG "$IMAGE" >&2; then
-      echo "direnv: use_sonarqube_mcp: added the sonarqube MCP server to .mcp.json — remember to commit it" >&2
-    else
-      echo "direnv: use_sonarqube_mcp: 'claude mcp add' failed — .mcp.json not updated." >&2
-    fi
+    echo "direnv: use_sonarqube_mcp: added the sonarqube MCP server to .mcp.json." >&2
   else
-    echo "direnv: use_sonarqube_mcp: 'claude' not on PATH — skipped .mcp.json setup." >&2
+    echo "direnv: use_sonarqube_mcp: 'claude mcp add' failed — .mcp.json not updated." >&2
   fi
 
   # 2. Export SONARQUBE_TOKEN / SONARQUBE_ORG from Windows Credential Manager. Warn (don't
   #    fail) if the interop bundle is unavailable or a credential isn't set; leave a value
   #    that's already in the environment untouched. direnv unsets these on leaving the dir.
   if [[ ! -x "${POWERSHELL:-}" || ! -f /usr/local/lib/wsl-cloud-init/wsl-interop.sh ]]; then
-    echo "direnv: use_sonarqube_mcp: WSL interop unavailable — SONARQUBE_TOKEN/ORG not set." >&2
+    echo "direnv: use_sonarqube_mcp: WSL interop unavailable — SONARQUBE_TOKEN/SONARQUBE_ORG not set." >&2
     return 0
   fi
   source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
