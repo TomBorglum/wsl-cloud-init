@@ -16,6 +16,7 @@
 #   POWERSHELL="$(wsl_interop_powershell_path)"
 #   VSCODE="$(wsl_interop_vscode_path)"
 #   ZED="$(wsl_interop_zed_path)"
+#   ZED_CONFIG_DIR="$(wsl_interop_zed_config_dir)"
 #   secret="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 
 # ---------------------------------------------------------------------------
@@ -148,5 +149,20 @@ wsl_interop_zed_path() {
   ps_tail+='  throw "wsl-interop: Zed '"'"'zed'"'"' shell launcher missing beside $src"'$'\n'
   ps_tail+='}'$'\n'
   ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
+}
+
+# Echo the WSL /mnt path to the Windows Zed config directory (%APPDATA%\Zed), for seeding
+# settings.json/keymap.json onto the Windows side from WSL. $env:APPDATA is always the Roaming
+# folder of the invoking Windows user; ConvertTo-WslPath maps it to /mnt form. As with the
+# launcher resolvers the spaces come back backslash-escaped (a Windows username may contain
+# them), so a caller that uses the path in a quoted bash context must unescape them first.
+wsl_interop_zed_config_dir() {
+  : "${POWERSHELL:?POWERSHELL is required}"
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$dir = Join-Path $env:APPDATA "Zed"'$'\n'
+  ps_tail+='Write-Output (ConvertTo-WslPath $dir)'
   _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
