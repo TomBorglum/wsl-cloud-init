@@ -15,6 +15,7 @@
 #   source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 #   POWERSHELL="$(wsl_interop_powershell_path)"
 #   VSCODE="$(wsl_interop_vscode_path)"
+#   ZED="$(wsl_interop_zed_path)"
 #   secret="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 
 # ---------------------------------------------------------------------------
@@ -124,6 +125,27 @@ wsl_interop_vscode_path() {
   ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "code"'$'\n'
   ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
   ps_tail+='  throw "wsl-interop: VS Code '"'"'code'"'"' shell launcher missing beside $src"'$'\n'
+  ps_tail+='}'$'\n'
+  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
+}
+
+# Echo the Windows Zed `zed` shell-script launcher in /mnt form, for baking into a
+# `zed` wrapper. Like VS Code, Zed ships a WSL-aware POSIX shell launcher (`zed`, no
+# extension) beside its `zed.exe`/`zed.cmd` siblings; the wrapper is invoked from bash
+# over /mnt, so it must point at that shell script, not the `.exe`. Resolve whatever
+# `Get-Command zed` returns to its directory and target the `zed` sibling directly, so
+# the result is correct regardless of which launcher is first on PATH; fail loudly if
+# that shell script is absent rather than baking a wrapper that can't run.
+wsl_interop_zed_path() {
+  : "${POWERSHELL:?POWERSHELL is required}"
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$src = (Get-Command zed).Source'$'\n'
+  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "zed"'$'\n'
+  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
+  ps_tail+='  throw "wsl-interop: Zed '"'"'zed'"'"' shell launcher missing beside $src"'$'\n'
   ps_tail+='}'$'\n'
   ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
   _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"

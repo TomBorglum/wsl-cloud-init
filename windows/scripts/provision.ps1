@@ -5,6 +5,7 @@ param(
   [switch]$InstallClaudeCode,
   [switch]$InstallGitConfig,
   [switch]$InstallVsCodeInterop,
+  [switch]$InstallZedInterop,
   [switch]$Force
 )
 
@@ -90,6 +91,7 @@ Write-Host "Provisioning $InstanceName from $Ref @ $($CommitSha.Substring(0, 8))
 $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
+$InstallZedInteropValue    = if ($InstallZedInterop)    { "true" } else { "false" }
 $template = Get-Content "$RepoRoot\wsl\distros\$DistroTemplatePath\cloud-init\user-data.template" -Raw
 
 # String.Replace (literal) rather than -replace (regex), so a value containing
@@ -101,7 +103,8 @@ $template = $template.
     Replace('__INSTANCE_NAME__',           $InstanceName).
     Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
     Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
-    Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue)
+    Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue).
+    Replace('__INSTALL_ZED_INTEROP__',     $InstallZedInteropValue)
 
 $userDataDir = "$RepoRoot\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null

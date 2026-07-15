@@ -98,4 +98,5 @@ runcmd:
     export INSTALL_CLAUDE_CODE="__INSTALL_CLAUDE_CODE__"
     export INSTALL_GIT_CONFIG="__INSTALL_GIT_CONFIG__"
     export INSTALL_VS_CODE_INTEROP="__INSTALL_VS_CODE_INTEROP__"
+    export INSTALL_ZED_INTEROP="__INSTALL_ZED_INTEROP__"
     bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
