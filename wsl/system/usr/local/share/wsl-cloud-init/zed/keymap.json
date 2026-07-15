@@ -1,0 +1,8 @@
+[
+  {
+    "context": "ProjectPanel",
+    "bindings": {
+      "enter": "project_panel::OpenPermanent"
+    }
+  }
+]

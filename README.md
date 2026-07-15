@@ -60,7 +60,8 @@ install-script skill.
 
 - **`open`** — launches a file or URL with its default Windows app. Always installed.
 - **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
-- **`zed`** — opens files and folders in your Windows Zed. Opt-in via `-InstallZedInterop`.
+- **`zed`** — opens files and folders in your Windows Zed. Opt-in via `-InstallZedInterop`, which
+  also seeds a default `settings.json`/`keymap.json` into your Windows Zed config.
 
 `code` and `zed` locate the Windows editor via a one-time interop lookup and cache the resolved
 path under `~/.cache/wsl-cloud-init/`, so only the first launch pays that cost; the cache
@@ -223,6 +224,11 @@ Windows `PATH`.
 No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed` command
 is on your Windows `PATH`.
 
+Opting in also **preconfigures Zed**: it writes a default `settings.json` and `keymap.json` into
+your Windows Zed config directory (`%APPDATA%\Zed`). Any existing file is moved aside to
+`<name>.bak` first, and the config is re-asserted on every opt-in — so if several WSL instances
+opt into Zed, they converge on the same config (the last run wins).
+
 ### Enabling at provision time
 
 Add the flags to the provisioning command:
@@ -255,7 +261,7 @@ sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install
 # the `code` VS Code interop wrapper
 sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
-# the `zed` Zed interop wrapper
+# the `zed` Zed interop wrapper (and the Windows-side Zed config seed)
 sudo INSTALL_ZED_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 

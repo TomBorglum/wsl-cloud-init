@@ -24,9 +24,11 @@ wsl/
     └── usr/local/
         ├── bin/{code,gh,open,zed}              → /usr/local/bin/
         ├── lib/wsl-cloud-init/wsl-interop.sh   → /usr/local/lib/wsl-cloud-init/
-        └── share/zsh/site-functions/
-            ├── pj-completion.zsh               → /usr/local/share/zsh/site-functions/
-            └── git/*.zsh                       → /usr/local/share/zsh/site-functions/ (flattened)
+        └── share/
+            ├── wsl-cloud-init/zed/*.json           → /usr/local/share/wsl-cloud-init/zed/ (then seeded to Windows)
+            └── zsh/site-functions/
+                ├── pj-completion.zsh               → /usr/local/share/zsh/site-functions/
+                └── git/*.zsh                       → /usr/local/share/zsh/site-functions/ (flattened)
 ```
 
 ## Which script installs what
@@ -40,6 +42,7 @@ wsl/
 | `system/usr/local/bin/gh` | `/usr/local/bin/gh` | `distros/ubuntu/scripts/07-install-git-config.sh` | `INSTALL_GIT_CONFIG` |
 | `system/usr/local/bin/open` | `/usr/local/bin/open` | `distros/ubuntu/scripts/09-install-open-interop.sh` | — |
 | `system/usr/local/bin/zed` | `/usr/local/bin/zed` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
+| `system/usr/local/share/wsl-cloud-init/zed/*.json` | `/usr/local/share/wsl-cloud-init/zed/` → Windows `%APPDATA%\Zed\` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
 | `system/usr/local/lib/wsl-cloud-init/` | `/usr/local/lib/wsl-cloud-init/` | `distros/ubuntu/install.sh` (bootstrap) | — |
 | `system/usr/local/share/zsh/site-functions/` | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/13-install-zsh-functions.sh` | — (`git/` needs `INSTALL_GIT_CONFIG`) |
 
@@ -57,3 +60,9 @@ so `git/rebase-branch.zsh` lands at `/usr/local/share/zsh/site-functions/rebase-
 **`/usr/local/lib/wsl-cloud-init/` also receives files from `windows/`.** Alongside `wsl-interop.sh`,
 `install.sh` installs `windows/lib/Wsl.ps1` and `windows/lib/Credentials.ps1` there, co-locating the
 shell helper with the PowerShell it dot-sources.
+
+**`share/wsl-cloud-init/zed/*.json` is also seeded onto Windows.** These Zed config assets install to
+the mirror path `/usr/local/share/wsl-cloud-init/zed/` like any other system file, but
+`15-install-zed-interop.sh` additionally copies them into the Windows Zed config directory
+(`%APPDATA%\Zed`, resolved over interop), backing up any existing file to `<name>.bak` first. This is
+the only place a provisioning step writes into the Windows filesystem rather than just reading from it.
