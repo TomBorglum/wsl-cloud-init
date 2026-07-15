@@ -70,30 +70,30 @@ _wsl_interop_run() {
   "$powershell" -NoProfile -NonInteractive -EncodedCommand "$encoded" | tr -d '\r'
 }
 
-# Cache directory for resolved Windows launcher paths. A launcher path is expensive to discover
-# (a full powershell.exe roundtrip, ~1s) but cheap to reuse, and it only changes when the Windows
-# editor is moved or reinstalled — so the *_launcher helpers cache it here and re-resolve only when
-# the cached path no longer exists. It lives under the user's cache dir (not an env var / not
-# .zshenv, which would surface in shell completion) and is regenerable; only the editor wrappers,
-# which run as the user, read or write it.
-_WSL_INTEROP_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wsl-cloud-init"
-
 # Echo a Windows launcher path, resolving over interop only on a cache miss or when the cached
-# path no longer exists on disk.
+# path no longer exists on disk. A launcher path is expensive to discover (a full powershell.exe
+# roundtrip, ~1s) but cheap to reuse, and only changes when the Windows editor is moved or
+# reinstalled, so the *_launcher helpers cache it under the user's cache dir (not an env var / not
+# .zshenv, which would surface in shell completion) and re-resolve only on a miss/stale entry.
 #
 #   _wsl_interop_cached <name> <resolver-fn>
 #
 # <name>        cache filename (e.g. zed-launcher).
 # <resolver-fn> a wsl_interop_*_path function that resolves the launcher fresh over interop.
 #
-# The cached value is the resolver's /mnt path verbatim, with spaces backslash-escaped so the
-# wrappers can `eval` it unchanged; the on-disk existence check tests the unescaped form. A
-# resolver failure (editor missing) propagates so a caller's `set -e` still fires.
+# The cache dir is computed here, lazily — never at source time. This lib is sourced by install.sh
+# and the numbered install scripts under `set -u`, inside a cloud-init runcmd where $HOME is unset;
+# a top-level `$HOME` reference would abort provisioning. Only the editor wrappers (which run as the
+# user, with $HOME set) ever call this. The cached value is the resolver's /mnt path verbatim, with
+# spaces backslash-escaped so the wrappers can `eval` it unchanged; the on-disk existence check
+# tests the unescaped form. A resolver failure (editor missing) propagates so a caller's `set -e`
+# still fires.
 _wsl_interop_cached() {
   # Separate `local` statements: within one `local` all RHS words expand before any assignment
   # takes effect, so a same-line cache="...$name" would see an unbound $name under `set -u`.
   local name="$1" resolver="$2" path
-  local cache="$_WSL_INTEROP_CACHE_DIR/$name"
+  local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wsl-cloud-init"
+  local cache="$cache_dir/$name"
   if [[ -f "$cache" ]]; then
     path="$(cat "$cache")"
     if [[ -n "$path" && -e "${path//\\ / }" ]]; then
@@ -102,7 +102,7 @@ _wsl_interop_cached() {
     fi
   fi
   path="$("$resolver")" || return 1   # interop roundtrip; propagates failure to the caller
-  mkdir -p "$_WSL_INTEROP_CACHE_DIR"
+  mkdir -p "$cache_dir"
   printf '%s\n' "$path" > "$cache"
   printf '%s\n' "$path"
 }
