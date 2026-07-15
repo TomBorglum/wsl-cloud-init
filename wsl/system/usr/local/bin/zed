@@ -1,0 +1,6 @@
+#!/bin/bash
+# Opens files/folders in the Windows Zed editor from inside WSL. $ZED is the /mnt path
+# to Zed's WSL-aware `zed` shell launcher, inherited from the environment (exported to
+# ~/.zshenv by 15-install-zed-interop.sh, resolved once at install time) rather than
+# baked in. Quoted so a Windows username with spaces in the path still resolves.
+"$ZED" "$@"

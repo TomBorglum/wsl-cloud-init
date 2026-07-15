@@ -13,15 +13,20 @@ if command -v zed >/dev/null 2>&1; then
   exit 0
 fi
 
-# Resolve the Windows Zed path over interop via wsl_interop_zed_path (all the
-# PowerShell lives in wsl-interop.sh), mapping it to its /mnt form. We are committed
-# to installing here (the zed-already-installed case exits above), so it is resolved
-# unconditionally.
+: "${TARGET_USER:?TARGET_USER is required}"
+
+# The wrapper is a real file under wsl/system (provided by the sparse checkout declared in
+# user-data.template), installed (idempotent overwrite) with the executable bit. It reads
+# $ZED from the environment at runtime rather than baking the path in.
+install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/zed /usr/local/bin/zed
+
+# Resolve the Windows Zed shell launcher over interop via wsl_interop_zed_path (all the
+# PowerShell lives in wsl-interop.sh) and persist it for the wrapper to read at runtime,
+# mirroring how install.sh persists POWERSHELL. The `command -v zed` guard above returns
+# early once the wrapper is on PATH, so this append runs only on the first install.
+# Written unquoted so its backslash-escaped spaces resolve when zsh sources .zshenv.
 ZED="$(wsl_interop_zed_path)"
 : "${ZED:?ZED is required}"
-
-tee /usr/local/bin/zed > /dev/null << EOF
-#!/bin/bash
-$ZED "\$@"
+sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << EOF
+export ZED=$ZED
 EOF
-chmod 755 /usr/local/bin/zed
