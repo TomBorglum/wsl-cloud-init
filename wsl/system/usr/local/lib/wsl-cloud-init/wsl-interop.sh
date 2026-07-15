@@ -14,8 +14,8 @@
 #
 #   source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 #   POWERSHELL="$(wsl_interop_powershell_path)"
-#   VSCODE="$(wsl_interop_vscode_path)"
-#   ZED="$(wsl_interop_zed_path)"
+#   VSCODE="$(wsl_interop_vscode_launcher)"   # cached; wsl_interop_vscode_path resolves fresh
+#   ZED="$(wsl_interop_zed_launcher)"         # cached; wsl_interop_zed_path resolves fresh
 #   secret="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 
 # ---------------------------------------------------------------------------
@@ -67,6 +67,43 @@ _wsl_interop_run() {
   encoded="$(printf '%s' "$program" | iconv -t UTF-16LE | base64 | tr -d '\n')"
   # Strip the trailing CR that PowerShell's Write-Output emits on each line.
   "$powershell" -NoProfile -NonInteractive -EncodedCommand "$encoded" | tr -d '\r'
+}
+
+# Cache directory for resolved Windows launcher paths. A launcher path is expensive to discover
+# (a full powershell.exe roundtrip, ~1s) but cheap to reuse, and it only changes when the Windows
+# editor is moved or reinstalled — so the *_launcher helpers cache it here and re-resolve only when
+# the cached path no longer exists. It lives under the user's cache dir (not an env var / not
+# .zshenv, which would surface in shell completion) and is regenerable; only the editor wrappers,
+# which run as the user, read or write it.
+_WSL_INTEROP_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/wsl-cloud-init"
+
+# Echo a Windows launcher path, resolving over interop only on a cache miss or when the cached
+# path no longer exists on disk.
+#
+#   _wsl_interop_cached <name> <resolver-fn>
+#
+# <name>        cache filename (e.g. zed-launcher).
+# <resolver-fn> a wsl_interop_*_path function that resolves the launcher fresh over interop.
+#
+# The cached value is the resolver's /mnt path verbatim, with spaces backslash-escaped so the
+# wrappers can `eval` it unchanged; the on-disk existence check tests the unescaped form. A
+# resolver failure (editor missing) propagates so a caller's `set -e` still fires.
+_wsl_interop_cached() {
+  # Separate `local` statements: within one `local` all RHS words expand before any assignment
+  # takes effect, so a same-line cache="...$name" would see an unbound $name under `set -u`.
+  local name="$1" resolver="$2" path
+  local cache="$_WSL_INTEROP_CACHE_DIR/$name"
+  if [[ -f "$cache" ]]; then
+    path="$(cat "$cache")"
+    if [[ -n "$path" && -e "${path//\\ / }" ]]; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  fi
+  path="$("$resolver")" || return 1   # interop roundtrip; propagates failure to the caller
+  mkdir -p "$_WSL_INTEROP_CACHE_DIR"
+  printf '%s\n' "$path" > "$cache"
+  printf '%s\n' "$path"
 }
 
 # ---------------------------------------------------------------------------
@@ -150,3 +187,10 @@ wsl_interop_zed_path() {
   ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
   _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
+
+# Cached variants of the editor launcher resolvers, for the code/zed wrappers to call on every
+# invocation. They return the same /mnt launcher path as wsl_interop_vscode_path / wsl_interop_zed_path
+# but pay the interop roundtrip only on the first launch (and again if the Windows editor moves),
+# reading a cached path on the ~40ms fast path otherwise. See _wsl_interop_cached.
+wsl_interop_vscode_launcher() { _wsl_interop_cached code-launcher wsl_interop_vscode_path; }
+wsl_interop_zed_launcher()    { _wsl_interop_cached zed-launcher  wsl_interop_zed_path; }

@@ -1,11 +1,12 @@
 #!/bin/bash
 # code wrapper: opens files/folders in the Windows VS Code editor from inside WSL.
 #
-# Resolves VS Code's WSL-aware `code` shell launcher on each invocation via the shared
-# wsl_interop_vscode_path helper (all the PowerShell lives in wsl-interop.sh), using
-# $POWERSHELL from the environment (exported from ~/.zshenv, derived once in
-# install.sh). Nothing is baked in and no per-editor value is persisted — mirroring
-# the open/gh wrappers.
+# Resolves VS Code's WSL-aware `code` shell launcher via the shared wsl_interop_vscode_launcher
+# helper (all the PowerShell lives in wsl-interop.sh), using $POWERSHELL from the environment
+# (exported from ~/.zshenv, derived once in install.sh). The launcher path is cached under the
+# user's cache dir after the first resolve, so most launches skip the ~1s interop roundtrip; it
+# re-resolves automatically if the cached path stops existing (VS Code moved/reinstalled). Nothing
+# is persisted to the shell environment — mirroring the open/gh wrappers.
 #
 # ConvertTo-WslPath returns the /mnt path with backslash-escaped spaces (a Windows
 # username may contain them), so the launcher is handed to `eval` rather than
@@ -16,5 +17,5 @@ set -euo pipefail
 
 source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
-launcher="$(wsl_interop_vscode_path)"   # set -e exits here if resolution fails
+launcher="$(wsl_interop_vscode_launcher)"   # cached; set -e exits here if resolution fails
 eval "$launcher" '"$@"'
