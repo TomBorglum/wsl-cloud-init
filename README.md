@@ -20,9 +20,9 @@ Credential Manager — into the Linux shell.
 
 ## What you get
 
-Every provisioned instance comes ready with the baseline below. Three additions are
+Every provisioned instance comes ready with the baseline below. Four additions are
 opt-in, each behind a provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`,
-and `-InstallVsCodeInterop`.
+`-InstallVsCodeInterop`, and `-InstallZedInterop`.
 
 ### Shell
 
@@ -60,6 +60,7 @@ install-script skill.
 
 - **`open`** — launches a file or URL with its default Windows app. Always installed.
 - **`code`** — opens files and folders in your Windows VS Code. Opt-in via `-InstallVsCodeInterop`.
+- **`zed`** — opens files and folders in your Windows Zed. Opt-in via `-InstallZedInterop`.
 
 ### Shell helpers
 
@@ -134,9 +135,9 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref
 
 ## Opt-in features
 
-Three flags add tooling on top of the baseline: `-InstallClaudeCode`, `-InstallGitConfig`, and
-`-InstallVsCodeInterop`. Each needs some Windows-side setup first. You can enable them when
-provisioning, or add them later to a running instance.
+Four flags add tooling on top of the baseline: `-InstallClaudeCode`, `-InstallGitConfig`,
+`-InstallVsCodeInterop`, and `-InstallZedInterop`. Each needs some Windows-side setup first. You
+can enable them when provisioning, or add them later to a running instance.
 
 ### Windows setup
 
@@ -213,6 +214,11 @@ private repo on Windows — or `git-credential-manager github login` — signs y
 No secret is needed. Install **VS Code** on Windows and make sure the `code` command is on your
 Windows `PATH`.
 
+#### `-InstallZedInterop` — Zed on your PATH
+
+No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed` command
+is on your Windows `PATH`.
+
 ### Enabling at provision time
 
 Add the flags to the provisioning command:
@@ -224,7 +230,8 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -InstanceName dev `
   -InstallClaudeCode `
   -InstallGitConfig `
-  -InstallVsCodeInterop
+  -InstallVsCodeInterop `
+  -InstallZedInterop
 ```
 
 ### Enabling on a running instance
@@ -243,6 +250,9 @@ sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install
 
 # the `code` VS Code interop wrapper
 sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
+
+# the `zed` Zed interop wrapper
+sudo INSTALL_ZED_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
 ## Usage
@@ -357,6 +367,16 @@ code .            # open the current folder
 code src/app.ts   # open a file
 ```
 
+### zed
+
+*Requires `-InstallZedInterop`.* Open a file or folder in your Windows Zed (via the WSL
+remote).
+
+```bash
+zed .             # open the current folder
+zed src/app.ts    # open a file
+```
+
 ## Configuration
 
 What you can set when provisioning, and how the instance is derived.
@@ -374,6 +394,7 @@ What you can set when provisioning, and how the instance is derived.
 - `-InstallGitConfig` (optional) — configure the Git identity, the credential helper, `gh` auth,
   and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
+- `-InstallZedInterop` (optional) — install the `zed` Windows interop wrapper.
 - `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
 
 `provision.ps1` provisions the commit its own checkout is on, and refuses to run against a dirty
