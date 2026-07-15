@@ -1,8 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
-
 if [[ "${INSTALL_VS_CODE_INTEROP:-}" != "true" ]]; then
   echo "INSTALL_VS_CODE_INTEROP not set, skipping VS Code interop install"
   exit 0
@@ -13,15 +11,8 @@ if command -v code >/dev/null 2>&1; then
   exit 0
 fi
 
-# Resolve the Windows VS Code path over interop via wsl_interop_vscode_path (all the
-# PowerShell lives in wsl-interop.sh), mapping it to its /mnt form. We are committed
-# to installing here (the code-already-installed case exits above), so it is resolved
-# unconditionally.
-VSCODE="$(wsl_interop_vscode_path)"
-: "${VSCODE:?VSCODE is required}"
-
-tee /usr/local/bin/code > /dev/null << EOF
-#!/bin/bash
-$VSCODE "\$@"
-EOF
-chmod 755 /usr/local/bin/code
+# The wrapper is a real file under wsl/system (sparse-checked-out per
+# user-data.template), installed idempotently with the executable bit. It resolves
+# VS Code's WSL-aware launcher itself at runtime via wsl_interop_vscode_path (using
+# $POWERSHELL from the env), so there is no per-editor value to persist here.
+install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/code /usr/local/bin/code

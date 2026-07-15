@@ -1,2 +1,2 @@
 #!/bin/bash
-$POWERSHELL -NoProfile -c "Start-Process '$1'"
+"$POWERSHELL" -NoProfile -c "Start-Process '$1'"
