@@ -63,6 +63,10 @@ install-script skill.
 - **`zed`** — opens files and folders in your Windows Zed. Opt-in via `-InstallZedInterop`, which
   also seeds a default `settings.json`/`keymap.json` into your Windows Zed config.
 
+`code` and `zed` locate the Windows editor via a one-time interop lookup and cache the resolved
+path under `~/.cache/wsl-cloud-init/`, so only the first launch pays that cost; the cache
+re-resolves automatically if the editor is later moved or reinstalled.
+
 ### Shell helpers
 
 `pj` jumps between checkouts under `~/projects`. Always installed.

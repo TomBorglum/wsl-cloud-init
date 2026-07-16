@@ -70,6 +70,85 @@ _wsl_interop_run() {
   "$powershell" -NoProfile -NonInteractive -EncodedCommand "$encoded" | tr -d '\r'
 }
 
+# Echo the Windows VS Code `code` shell-script launcher in /mnt form. The wrapper that consumes
+# it is invoked from bash over /mnt, so it must point at the WSL-aware POSIX shell script
+# (`bin/code`), not the `code.cmd`/`.exe` siblings. Resolve whatever `Get-Command code` returns to
+# its directory and target the `code` sibling directly, so the result is correct regardless of
+# which launcher is first on PATH; fail loudly if that shell script is absent rather than handing
+# back a path that can't run. Resolves fresh on every call — wsl_interop_vscode_path is the cached
+# public entry point.
+_wsl_interop_resolve_vscode_path() {
+  : "${POWERSHELL:?POWERSHELL is required}"
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$src = (Get-Command code).Source'$'\n'
+  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "code"'$'\n'
+  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
+  ps_tail+='  throw "wsl-interop: VS Code '"'"'code'"'"' shell launcher missing beside $src"'$'\n'
+  ps_tail+='}'$'\n'
+  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
+}
+
+# Echo the Windows Zed `zed` shell-script launcher in /mnt form. Like VS Code, Zed ships a
+# WSL-aware POSIX shell launcher (`zed`, no extension) beside its `zed.exe`/`zed.cmd` siblings;
+# the wrapper is invoked from bash over /mnt, so it must point at that shell script, not the
+# `.exe`. Resolve whatever `Get-Command zed` returns to its directory and target the `zed` sibling
+# directly, so the result is correct regardless of which launcher is first on PATH; fail loudly if
+# that shell script is absent rather than handing back a path that can't run. Resolves fresh on
+# every call — wsl_interop_zed_path is the cached public entry point.
+_wsl_interop_resolve_zed_path() {
+  : "${POWERSHELL:?POWERSHELL is required}"
+  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
+  # so no single source line runs off the screen.
+  local ps_tail=''
+  ps_tail+='$src = (Get-Command zed).Source'$'\n'
+  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "zed"'$'\n'
+  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
+  ps_tail+='  throw "wsl-interop: Zed '"'"'zed'"'"' shell launcher missing beside $src"'$'\n'
+  ps_tail+='}'$'\n'
+  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
+  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
+}
+
+# Echo a Windows launcher path, resolving over interop only on a cache miss or when the cached
+# path no longer exists on disk. A launcher path is expensive to discover (a full powershell.exe
+# roundtrip, ~1s) but cheap to reuse, and only changes when the Windows editor is moved or
+# reinstalled, so the editor path helpers cache it under the user's cache dir (not an env var /
+# not .zshenv, which would surface in shell completion) and re-resolve only on a miss/stale entry.
+#
+#   _wsl_interop_cached <name> <resolver-fn>
+#
+# <name>        cache filename (e.g. zed-launcher).
+# <resolver-fn> a _wsl_interop_resolve_* function that resolves the launcher fresh over interop.
+#
+# The cache dir is computed here, lazily — never at source time. This lib is sourced by install.sh
+# and the numbered install scripts under `set -u`, inside a cloud-init runcmd where $HOME is unset;
+# a top-level `$HOME` reference would abort provisioning. Only the editor wrappers (which run as the
+# user, with $HOME set) ever call this. The cached value is the resolver's /mnt path verbatim, with
+# spaces backslash-escaped so the wrappers can `eval` it unchanged; the on-disk existence check
+# tests the unescaped form. A resolver failure (editor missing) propagates so a caller's `set -e`
+# still fires.
+_wsl_interop_cached() {
+  # Separate `local` statements: within one `local` all RHS words expand before any assignment
+  # takes effect, so a same-line cache="...$name" would see an unbound $name under `set -u`.
+  local name="$1" resolver="$2" path
+  local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wsl-cloud-init"
+  local cache="$cache_dir/$name"
+  if [[ -f "$cache" ]]; then
+    path="$(cat "$cache")"
+    if [[ -n "$path" && -e "${path//\\ / }" ]]; then
+      printf '%s\n' "$path"
+      return 0
+    fi
+  fi
+  path="$("$resolver")" || return 1   # interop roundtrip; propagates failure to the caller
+  mkdir -p "$cache_dir"
+  printf '%s\n' "$path" > "$cache"
+  printf '%s\n' "$path"
+}
+
 # ---------------------------------------------------------------------------
 # Public API: bash functions that return plain values. No caller sees PowerShell.
 # ---------------------------------------------------------------------------
@@ -111,47 +190,6 @@ wsl_interop_git_config() {
   _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
 
-# Echo the Windows VS Code `code` shell-script launcher in /mnt form, for baking into a
-# `code` wrapper. The wrapper is invoked from bash over /mnt, so it must point at the
-# WSL-aware POSIX shell script (`bin/code`), not the `code.cmd`/`.exe` siblings. Resolve
-# whatever `Get-Command code` returns to its directory and target the `code` sibling
-# directly, so the result is correct regardless of which launcher is first on PATH; fail
-# loudly if that shell script is absent rather than baking a wrapper that can't run.
-wsl_interop_vscode_path() {
-  : "${POWERSHELL:?POWERSHELL is required}"
-  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
-  # so no single source line runs off the screen.
-  local ps_tail=''
-  ps_tail+='$src = (Get-Command code).Source'$'\n'
-  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "code"'$'\n'
-  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
-  ps_tail+='  throw "wsl-interop: VS Code '"'"'code'"'"' shell launcher missing beside $src"'$'\n'
-  ps_tail+='}'$'\n'
-  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
-  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
-}
-
-# Echo the Windows Zed `zed` shell-script launcher in /mnt form, for baking into a
-# `zed` wrapper. Like VS Code, Zed ships a WSL-aware POSIX shell launcher (`zed`, no
-# extension) beside its `zed.exe`/`zed.cmd` siblings; the wrapper is invoked from bash
-# over /mnt, so it must point at that shell script, not the `.exe`. Resolve whatever
-# `Get-Command zed` returns to its directory and target the `zed` sibling directly, so
-# the result is correct regardless of which launcher is first on PATH; fail loudly if
-# that shell script is absent rather than baking a wrapper that can't run.
-wsl_interop_zed_path() {
-  : "${POWERSHELL:?POWERSHELL is required}"
-  # Assembled line by line (each PowerShell statement one bash line, joined by $'\n')
-  # so no single source line runs off the screen.
-  local ps_tail=''
-  ps_tail+='$src = (Get-Command zed).Source'$'\n'
-  ps_tail+='$shell = Join-Path (Split-Path $src -Parent) "zed"'$'\n'
-  ps_tail+='if (-not (Test-Path -LiteralPath $shell)) {'$'\n'
-  ps_tail+='  throw "wsl-interop: Zed '"'"'zed'"'"' shell launcher missing beside $src"'$'\n'
-  ps_tail+='}'$'\n'
-  ps_tail+='Write-Output (ConvertTo-WslPath $shell)'
-  _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
-}
-
 # Echo the WSL /mnt path to the Windows Zed config directory (%APPDATA%\Zed), for seeding
 # settings.json/keymap.json onto the Windows side from WSL. $env:APPDATA is always the Roaming
 # folder of the invoking Windows user; ConvertTo-WslPath maps it to /mnt form. As with the
@@ -166,3 +204,10 @@ wsl_interop_zed_config_dir() {
   ps_tail+='Write-Output (ConvertTo-WslPath $dir)'
   _wsl_interop_run "$POWERSHELL" Wsl.ps1 "$ps_tail"
 }
+
+# Echo the Windows VS Code / Zed shell-script launcher in /mnt form, for the code/zed wrappers to
+# eval on every invocation. The interop roundtrip is paid on the first launch only (and again if
+# the Windows editor moves or is reinstalled); later launches read the cached path. Caching is an
+# implementation detail — see _wsl_interop_cached and the _wsl_interop_resolve_* resolvers.
+wsl_interop_vscode_path() { _wsl_interop_cached code-launcher _wsl_interop_resolve_vscode_path; }
+wsl_interop_zed_path()    { _wsl_interop_cached zed-launcher  _wsl_interop_resolve_zed_path; }
