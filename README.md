@@ -287,13 +287,31 @@ directives you need:
 ```bash
 # .envrc
 use fnm node 22.14.0     # Node via fnm
-use pixi                 # Python environment from pixi.toml (created if missing)
+use pixi                 # pixi environment from pixi.toml (minimal one created if missing)
+use pixi python          # ...or scaffold pixi.toml from the "python" project template
 use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
 ```
 
 then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
 installs the requested versions automatically on first use. Versions must be fully qualified — an
 exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
+
+#### pixi project templates
+
+pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name**. When a
+project has no `pixi.toml` yet, `use pixi <name>` scaffolds one from
+`~/.config/pixi/templates/<name>.toml` (substituting the project directory name), while bare
+`use pixi` writes the minimal `[workspace]`-only manifest as before. A `python` template ships by
+default (runtime deps plus an isolated `test` feature with pytest/basedpyright/ruff tasks and
+`default`/`prod` environments on a shared solve-group); drop more `*.toml` files into that directory
+to add your own. First-time setup is two steps — you create the `.envrc` by hand:
+
+```bash
+echo 'use pixi python' > .envrc && direnv allow
+```
+
+An unknown template name falls back to the minimal manifest rather than failing the `.envrc`. Once
+`pixi.toml` exists it is never overwritten, so the template name is only consulted on first scaffold.
 
 ### pj
 
