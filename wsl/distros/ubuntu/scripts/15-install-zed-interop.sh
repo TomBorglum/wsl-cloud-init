@@ -19,8 +19,8 @@ install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/zed /usr/local/bi
 # Preconfigure the Windows Zed editor: seed settings.json/keymap.json into %APPDATA%\Zed.
 # The assets are real files under wsl/system (sparse-checked-out whole); install them to a
 # durable mirror location so we copy from a stable local path rather than the /opt checkout.
-ASSET_DIR=/usr/local/share/wsl-cloud-init/zed
-ASSET_SRC=/opt/wsl-cloud-init/wsl/system/usr/local/share/wsl-cloud-init/zed
+ASSET_DIR=/usr/local/share/zed
+ASSET_SRC=/opt/wsl-cloud-init/wsl/system/usr/local/share/zed
 install -D -m 644 "$ASSET_SRC/settings.json" "$ASSET_DIR/settings.json"
 install -D -m 644 "$ASSET_SRC/keymap.json"   "$ASSET_DIR/keymap.json"
 
