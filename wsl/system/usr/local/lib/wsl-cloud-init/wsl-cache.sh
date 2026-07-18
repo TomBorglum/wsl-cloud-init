@@ -88,10 +88,12 @@ _wsl_cache_file() {
 # <owner>     user that owns the cache directory and file (home resolved via getent).
 # <name>      cache entry name; becomes the on-disk filename.
 # <namespace> groups related entries under a subdirectory.
-# <cache>     text content written verbatim to the file (may span multiple lines).
+# <cache>     text content written verbatim to the file (may span multiple lines, and
+#             may be empty — an empty string writes a 0-byte cache file).
 #
 # Writes <owner-home>/.cache/wsl-cloud-init/<namespace>/<name>. Both the directory
-# and the file are owned by <owner>. A missing mandatory argument is an error.
+# and the file are owned by <owner>. A missing argument is an error (an empty <cache>
+# is written, but the argument itself must be present).
 wsl_cache_set() {
   local owner="$1" name="$2" namespace="$3" cache="$4"
 
@@ -107,7 +109,7 @@ wsl_cache_set() {
     echo "wsl-cache: cache-namespace is required" >&2
     return 1
   fi
-  if [[ -z "$cache" ]]; then
+  if [[ $# -lt 4 ]]; then
     echo "wsl-cache: cache is required" >&2
     return 1
   fi

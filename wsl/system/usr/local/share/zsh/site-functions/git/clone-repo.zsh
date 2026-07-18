@@ -75,11 +75,12 @@ _clone-repo_complete() {
   age="$(_clone-repo_cache wsl_cache_age "$cache" clone-repo)"
   if [[ -z "$age" || "$age" -gt 3600 ]]; then
     zle -R "Fetching repos for ${owner:-your account}..."
+    # Cache the result unconditionally — including an empty list from a zero-repo or
+    # nonexistent owner (gh exits non-zero, tmp empty). The empty entry satisfies the
+    # TTL via wsl_cache_age so completion stops re-querying gh on every Tab.
     local tmp
-    if tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)" \
-       && [[ -n "$tmp" ]]; then
-      _clone-repo_cache wsl_cache_set "$(id -un)" "$cache" clone-repo "$tmp"
-    fi
+    tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"
+    _clone-repo_cache wsl_cache_set "$(id -un)" "$cache" clone-repo "$tmp"
     zle -R ""
   fi
   local repolist
