@@ -40,6 +40,22 @@ _wsl_cache_home() {
   printf '%s\n' "$home"
 }
 
+# Validate a single path segment used to build the cache path. Rejects anything
+# that could escape the cache tree: characters outside a conservative filename
+# set (notably '/'), or the special names "." and "..".
+#
+#   _wsl_cache_valid_segment <kind> <value>
+#
+# <kind>  human-readable label for the error message (e.g. cache-name).
+# <value> the segment to validate.
+_wsl_cache_valid_segment() {
+  local kind="$1" value="$2"
+  if [[ ! "$value" =~ ^[A-Za-z0-9._-]+$ || "$value" == "." || "$value" == ".." ]]; then
+    echo "wsl-cache: invalid $kind '$value' (allowed: A-Z a-z 0-9 . _ -; not '.' or '..')" >&2
+    return 1
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Public API: bash functions operating on <home>/.cache/wsl-cloud-init/<namespace>/.
 # ---------------------------------------------------------------------------
@@ -74,6 +90,9 @@ wsl_cache_set() {
     echo "wsl-cache: cache is required" >&2
     return 1
   fi
+
+  _wsl_cache_valid_segment cache-name "$name" || return 1
+  _wsl_cache_valid_segment cache-namespace "$namespace" || return 1
 
   local home dir dest tmp rc
   home="$(_wsl_cache_home "$owner")" || return 1
@@ -111,6 +130,9 @@ wsl_cache_get() {
     echo "wsl-cache: cache-namespace is required" >&2
     return 1
   fi
+
+  _wsl_cache_valid_segment cache-name "$name" || return 1
+  _wsl_cache_valid_segment cache-namespace "$namespace" || return 1
 
   local owner home file
   owner="$(id -un)" || return 1
