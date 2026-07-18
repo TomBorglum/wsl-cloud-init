@@ -270,7 +270,8 @@ sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/in
 sudo INSTALL_ZED_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
 # also seed the Windows Zed config (settings.json / keymap.json). WSL-only; requires interop
-sudo INSTALL_ZED_INTEROP=true INSTALL_ZED_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
+sudo INSTALL_ZED_INTEROP=true INSTALL_ZED_CONFIG=true \
+  bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
 ## Usage
