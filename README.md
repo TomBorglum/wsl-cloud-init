@@ -224,10 +224,15 @@ Windows `PATH`.
 No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed` command
 is on your Windows `PATH`.
 
-Opting in also **preconfigures Zed**: it writes a default `settings.json` and `keymap.json` into
-your Windows Zed config directory (`%APPDATA%\Zed`). Any existing file is moved aside to
-`<name>.bak` first, and the config is re-asserted on every opt-in — so if several WSL instances
-opt into Zed, they converge on the same config (the last run wins).
+This installs only the `zed` interop wrapper; it does **not** touch your Windows Zed config.
+
+Seeding a default config is a separate, WSL-only opt-in via `INSTALL_ZED_CONFIG` (there is no
+provision-time switch for it — see [Enabling on a running instance](#enabling-on-a-running-instance)).
+When set alongside `INSTALL_ZED_INTEROP`, it writes a default `settings.json` and `keymap.json` into
+your Windows Zed config directory (`%APPDATA%\Zed`). Any existing file is moved aside to `<name>.bak`
+first, and the config is re-asserted on every opt-in — so if several WSL instances seed the config,
+they converge on the same one (the last run wins). Because config requires interop, opting into the
+config without interop does nothing.
 
 ### Enabling at provision time
 
@@ -261,8 +266,11 @@ sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install
 # the `code` VS Code interop wrapper
 sudo INSTALL_VS_CODE_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 
-# the `zed` Zed interop wrapper (and the Windows-side Zed config seed)
+# the `zed` Zed interop wrapper (only)
 sudo INSTALL_ZED_INTEROP=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
+
+# also seed the Windows Zed config (settings.json / keymap.json). WSL-only; requires interop
+sudo INSTALL_ZED_INTEROP=true INSTALL_ZED_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
 ```
 
 ## Usage
