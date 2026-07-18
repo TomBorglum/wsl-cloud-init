@@ -33,14 +33,14 @@ clone-repo() {
 }
 # Path to the shared per-user cache library. Sourced only inside subshells (see
 # _clone-repo_cache) so its wsl_cache_* helpers never leak into the interactive shell.
-_clone-repo_cachelib=/usr/local/lib/wsl-cloud-init/wsl-cache.sh
+_clone_repo_cachelib=/usr/local/lib/wsl-cloud-init/wsl-cache.sh
 # Run a wsl_cache_* function in an isolated subshell so its helpers stay out of the
 # interactive shell. Cache reads echo to stdout; writes persist to disk regardless.
-_clone-repo_cache() { ( source "$_clone-repo_cachelib" || return; "$@" ) }
+_clone-repo_cache() { ( source "$_clone_repo_cachelib" || return; "$@" ) }
 
 _clone-repo_complete() {
   # The completion is inert without the shared cache library (e.g. a dev shell).
-  [[ -r $_clone-repo_cachelib ]] || return
+  [[ -r $_clone_repo_cachelib ]] || return
   local owner age
   if [[ ${words[CURRENT-1]} == "--owner" ]]; then
     [[ -n ${words[CURRENT]} ]] && compadd -S ' ' -- "${words[CURRENT]}"
