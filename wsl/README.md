@@ -42,7 +42,7 @@ wsl/
 | `system/usr/local/bin/gh` | `/usr/local/bin/gh` | `distros/ubuntu/scripts/07-install-git-config.sh` | `INSTALL_GIT_CONFIG` |
 | `system/usr/local/bin/open` | `/usr/local/bin/open` | `distros/ubuntu/scripts/09-install-open-interop.sh` | — |
 | `system/usr/local/bin/zed` | `/usr/local/bin/zed` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
-| `system/usr/local/share/zed/*.json` | `/usr/local/share/zed/` → Windows `%APPDATA%\Zed\` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
+| `system/usr/local/share/zed/*.json` | Windows `%APPDATA%\Zed\` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` + `INSTALL_ZED_CONFIG` |
 | `system/usr/local/lib/wsl-cloud-init/` | `/usr/local/lib/wsl-cloud-init/` | `distros/ubuntu/install.sh` (bootstrap) | — |
 | `system/usr/local/share/zsh/site-functions/` | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/13-install-zsh-functions.sh` | — (`git/` needs `INSTALL_GIT_CONFIG`) |
 
