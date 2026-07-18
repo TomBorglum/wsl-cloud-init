@@ -10,6 +10,7 @@
 # co-located with the Wsl.ps1 / Credentials.ps1 helpers it dot-sources. That makes it
 # self-contained: no git, no /opt checkout, no network at call time — so a runtime
 # consumer (the gh wrapper) can re-authenticate after a Windows-side token rotation.
+# It sources the co-located wsl-cache.sh for its per-user launcher-path caching.
 # Callers own `set -euo pipefail`; this file deliberately does not.
 #
 #   source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
@@ -27,6 +28,12 @@
 # Credentials.ps1) are copied here alongside it at install time, so they are read
 # relative to self rather than pulled from a repo checkout.
 _WSL_INTEROP_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+
+# Shared per-user cache helpers (wsl_cache_get / wsl_cache_set), co-located in the same
+# bundle. Sourcing is inert — the file only defines functions — so this is safe even when
+# wsl-interop.sh is sourced under `set -u` with $HOME unset (install.sh, numbered scripts);
+# the home lookup happens via getent passwd inside the functions, only when called.
+source "$_WSL_INTEROP_DIR/wsl-cache.sh"
 
 # Locate the Windows powershell.exe from its fixed OS location. It is part of
 # Windows itself (independent of anything we install) and serves only as the
@@ -115,37 +122,30 @@ _wsl_interop_resolve_zed_path() {
 # Echo a Windows launcher path, resolving over interop only on a cache miss or when the cached
 # path no longer exists on disk. A launcher path is expensive to discover (a full powershell.exe
 # roundtrip, ~1s) but cheap to reuse, and only changes when the Windows editor is moved or
-# reinstalled, so the editor path helpers cache it under the user's cache dir (not an env var /
-# not .zshenv, which would surface in shell completion) and re-resolve only on a miss/stale entry.
+# reinstalled, so the editor path helpers cache it (not an env var / not .zshenv, which would
+# surface in shell completion) and re-resolve only on a miss/stale entry.
 #
 #   _wsl_interop_cached <name> <resolver-fn>
 #
-# <name>        cache filename (e.g. zed-launcher).
+# <name>        cache entry name (e.g. zed).
 # <resolver-fn> a _wsl_interop_resolve_* function that resolves the launcher fresh over interop.
 #
-# The cache dir is computed here, lazily — never at source time. This lib is sourced by install.sh
-# and the numbered install scripts under `set -u`, inside a cloud-init runcmd where $HOME is unset;
-# a top-level `$HOME` reference would abort provisioning. Only the editor wrappers (which run as the
-# user, with $HOME set) ever call this. The cached value is the resolver's /mnt path verbatim, with
-# spaces backslash-escaped so the wrappers can `eval` it unchanged; the on-disk existence check
-# tests the unescaped form. A resolver failure (editor missing) propagates so a caller's `set -e`
-# still fires.
+# Persistence is delegated to wsl-cache.sh under the `wsl-interop` namespace: the user's home is
+# resolved via getent passwd (XDG_CACHE_HOME is deliberately not honored), and only the editor
+# wrappers — which run as the user — ever call this. The cached value is the resolver's /mnt path
+# verbatim, with spaces backslash-escaped so the wrappers can `eval` it unchanged; the on-disk
+# existence check tests the unescaped form. A resolver failure (editor missing) propagates so a
+# caller's `set -e` still fires; a cache-write failure propagates too — the cache is trusted until
+# a failed write proves otherwise, so surface it rather than silently re-resolve on every launch.
 _wsl_interop_cached() {
-  # Separate `local` statements: within one `local` all RHS words expand before any assignment
-  # takes effect, so a same-line cache="...$name" would see an unbound $name under `set -u`.
   local name="$1" resolver="$2" path
-  local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}/wsl-cloud-init"
-  local cache="$cache_dir/$name"
-  if [[ -f "$cache" ]]; then
-    path="$(cat "$cache")"
-    if [[ -n "$path" && -e "${path//\\ / }" ]]; then
-      printf '%s\n' "$path"
-      return 0
-    fi
+  path="$(wsl_cache_get "$name" wsl-interop)" || return 1
+  if [[ -n "$path" && -e "${path//\\ / }" ]]; then
+    printf '%s\n' "$path"
+    return 0
   fi
   path="$("$resolver")" || return 1   # interop roundtrip; propagates failure to the caller
-  mkdir -p "$cache_dir"
-  printf '%s\n' "$path" > "$cache"
+  wsl_cache_set "$(id -un)" "$name" wsl-interop "$path" || return 1  # fail fast on a broken cache
   printf '%s\n' "$path"
 }
 
@@ -209,5 +209,5 @@ wsl_interop_zed_config_dir() {
 # eval on every invocation. The interop roundtrip is paid on the first launch only (and again if
 # the Windows editor moves or is reinstalled); later launches read the cached path. Caching is an
 # implementation detail — see _wsl_interop_cached and the _wsl_interop_resolve_* resolvers.
-wsl_interop_vscode_path() { _wsl_interop_cached code-launcher _wsl_interop_resolve_vscode_path; }
-wsl_interop_zed_path()    { _wsl_interop_cached zed-launcher  _wsl_interop_resolve_zed_path; }
+wsl_interop_vscode_path() { _wsl_interop_cached code _wsl_interop_resolve_vscode_path; }
+wsl_interop_zed_path()    { _wsl_interop_cached zed  _wsl_interop_resolve_zed_path; }
