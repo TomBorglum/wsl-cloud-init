@@ -31,15 +31,23 @@ clone-repo() {
   gh repo clone "$spec" "$target" || return 1
   cd "$target"
 }
+# Path to the shared per-user cache library. Sourced only inside subshells (see
+# _clone-repo_cache) so its wsl_cache_* helpers never leak into the interactive shell.
+_clone_repo_cachelib=/usr/local/lib/wsl-cloud-init/wsl-cache.sh
+# Run a wsl_cache_* function in an isolated subshell so its helpers stay out of the
+# interactive shell. Cache reads echo to stdout; writes persist to disk regardless.
+_clone-repo_cache() { ( source "$_clone_repo_cachelib" || return; "$@" ) }
+
 _clone-repo_complete() {
-  local cache owner
+  # The completion is inert without the shared cache library (e.g. a dev shell).
+  [[ -r $_clone_repo_cachelib ]] || return
+  local owner age
   if [[ ${words[CURRENT-1]} == "--owner" ]]; then
     [[ -n ${words[CURRENT]} ]] && compadd -S ' ' -- "${words[CURRENT]}"
     return
   fi
   local cachekey
   local -a listargs
-  local cachedir="${XDG_CACHE_HOME:-$HOME/.cache}/clone-repo"
   if [[ ${words[2]} == "--owner" ]]; then
     # clone-repo --owner <owner> <repo> : repo is word 4
     (( CURRENT == 4 )) || return
@@ -48,35 +56,38 @@ _clone-repo_complete() {
     cachekey="${(L)owner}"
     listargs=("$owner")
   else
-    # clone-repo <repo> : repo is word 2. Resolve the gh login (cached to a file)
-    # so this shares a cache with an explicit --owner <self>.
+    # clone-repo <repo> : repo is word 2. Resolve the gh login (cached) so this
+    # shares a cache with an explicit --owner <self>.
     (( CURRENT == 2 )) || return
-    local logincache="$cachedir/login"
-    if [[ ! -s "$logincache" ]] || [[ -n $(find "$logincache" -mmin +60 2>/dev/null) ]]; then
-      mkdir -p "$cachedir"
+    age="$(_clone-repo_cache wsl_cache_age login clone-repo)"
+    if [[ -z "$age" || "$age" -gt 3600 ]]; then
       local login
       if login="$(gh api user -q .login 2>/dev/null)" && [[ -n "$login" ]]; then
-        print -r -- "$login" >| "$logincache"
+        _clone-repo_cache wsl_cache_set "$(id -un)" login clone-repo "$login"
       fi
     fi
-    [[ -s "$logincache" ]] && owner="$(<"$logincache")"
+    owner="$(_clone-repo_cache wsl_cache_get login clone-repo)"
     [[ -z "$owner" ]] && return
     cachekey="${(L)owner}"
     listargs=()
   fi
-  cache="$cachedir/repos_${cachekey}"
-  if [[ ! -f "$cache" ]] || [[ -n $(find "$cache" -mmin +60 2>/dev/null) ]]; then
-    mkdir -p "$cachedir"
+  local cache=repo_${cachekey}
+  age="$(_clone-repo_cache wsl_cache_age "$cache" clone-repo)"
+  if [[ -z "$age" || "$age" -gt 3600 ]]; then
     zle -R "Fetching repos for ${owner:-your account}..."
+    # Cache the result unconditionally — including an empty list from a zero-repo or
+    # nonexistent owner (gh exits non-zero, tmp empty). The empty entry satisfies the
+    # TTL via wsl_cache_age so completion stops re-querying gh on every Tab.
     local tmp
-    if tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"; then
-      echo "$tmp" > "$cache"
-    fi
+    tmp="$(gh repo list "${listargs[@]}" --limit 100 --json name -q '.[].name' 2>/dev/null)"
+    _clone-repo_cache wsl_cache_set "$(id -un)" "$cache" clone-repo "$tmp"
     zle -R ""
   fi
-  [[ -f "$cache" ]] || return
+  local repolist
+  repolist="$(_clone-repo_cache wsl_cache_get "$cache" clone-repo)"
+  [[ -n "$repolist" ]] || return
   local -a repos
-  repos=(${(f)"$(cat "$cache")"})
+  repos=(${(f)repolist})
   # Enter interactive menu selection on the first Tab rather than dumping a static
   # columnar list. A static listing taller than the terminal scrolls the prompt
   # off-screen and becomes unusable; menu selection (enabled globally by oh-my-zsh's
