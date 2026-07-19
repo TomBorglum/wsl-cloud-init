@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.3.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.2.0...v1.3.0) (2026-07-19)
+
+
+### Features
+
+* add wsl-cache.sh per-user cache helpers ([#65](https://github.com/TomBorglum/wsl-cloud-init/issues/65)) ([d8ecc8e](https://github.com/TomBorglum/wsl-cloud-init/commit/d8ecc8e6054e1c5ca2a74813680b4ccfe6730f32))
+* gate Zed config seed behind opt-in INSTALL_ZED_CONFIG ([#68](https://github.com/TomBorglum/wsl-cloud-init/issues/68)) ([38889a7](https://github.com/TomBorglum/wsl-cloud-init/commit/38889a7c011f86441d8eae1ccbd461846ce8e9f8))
+* opt-in Zed interop wrapper ([#59](https://github.com/TomBorglum/wsl-cloud-init/issues/59)) ([071268c](https://github.com/TomBorglum/wsl-cloud-init/commit/071268cd4f520a34f2b1d66e03278ee355e1e160))
+* pluggable pixi project templates via `use pixi <template>` ([#69](https://github.com/TomBorglum/wsl-cloud-init/issues/69)) ([060f7eb](https://github.com/TomBorglum/wsl-cloud-init/commit/060f7ebb668c6bde8764e8de91a8660b41224825))
+* seed Zed config on opt-in ([#62](https://github.com/TomBorglum/wsl-cloud-init/issues/62)) ([937cb16](https://github.com/TomBorglum/wsl-cloud-init/commit/937cb16e04c1b22db936e7ac62dc2fde3f3430bd))
+
 ## [1.2.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.1.0...v1.2.0) (2026-07-13)
 
 
