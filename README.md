@@ -310,8 +310,13 @@ to add your own. First-time setup is two steps — you create the `.envrc` by ha
 echo 'use pixi python' > .envrc && direnv allow
 ```
 
-An unknown template name falls back to the minimal manifest rather than failing the `.envrc`. Once
-`pixi.toml` exists it is never overwritten, so the template name is only consulted on first scaffold.
+An unknown template name is a hard error (`use_pixi: no '<name>' template found …`) — nothing is
+scaffolded and `pixi install` does not run — so a typo surfaces instead of silently producing a
+minimal manifest. Once `pixi.toml` exists it is never overwritten, so the template name is only
+consulted on first scaffold.
+
+`use pixi` also watches `pixi.toml` for you, so editing dependencies re-runs `pixi install` on the
+next `cd` into the project — you don't need a separate `watch_file pixi.toml` line in the `.envrc`.
 
 ### pj
 

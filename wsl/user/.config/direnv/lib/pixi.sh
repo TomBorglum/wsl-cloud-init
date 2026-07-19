@@ -35,6 +35,10 @@ EOF
       echo "direnv: created minimal pixi.toml — remember to commit it to git" >&2
     fi
   fi
+  # Re-run this directive whenever the manifest changes, so editing dependencies
+  # re-triggers `pixi install` — no manual `watch_file pixi.toml` in the .envrc.
+  # Idempotent: harmless if the .envrc still lists it explicitly.
+  watch_file pixi.toml
   PATH_add "$HOME/.pixi/bin"
   "$pixi_bin" install --quiet || return 1
   local env_bin
