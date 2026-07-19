@@ -19,7 +19,8 @@ wsl/
 ├── user/                                   # → /home/$TARGET_USER/   (installed owned by the user)
 │   ├── .claude/settings.json                   → ~/.claude/settings.json
 │   ├── .claude/skills/…                        → ~/.claude/skills/
-│   └── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
+│   ├── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
+│   └── .config/pixi/templates/*.toml           → ~/.config/pixi/templates/
 └── system/                                 # → /   (root-owned)
     └── usr/local/
         ├── bin/{code,gh,open,zed}              → /usr/local/bin/
@@ -38,6 +39,7 @@ wsl/
 | `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/08-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/08-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/14-install-direnv-functions.sh` | — |
+| `user/.config/pixi/templates/` | `~/.config/pixi/templates/` | `distros/ubuntu/scripts/16-install-pixi-templates.sh` | — |
 | `system/usr/local/bin/code` | `/usr/local/bin/code` | `distros/ubuntu/scripts/10-install-vs-code-interop.sh` | `INSTALL_VS_CODE_INTEROP` |
 | `system/usr/local/bin/gh` | `/usr/local/bin/gh` | `distros/ubuntu/scripts/07-install-git-config.sh` | `INSTALL_GIT_CONFIG` |
 | `system/usr/local/bin/open` | `/usr/local/bin/open` | `distros/ubuntu/scripts/09-install-open-interop.sh` | — |
