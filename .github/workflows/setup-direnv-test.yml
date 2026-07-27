@@ -19,7 +19,7 @@ jobs:
   activate-sdk:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run setup-direnv against the sdk fixture
         uses: ./actions/setup-direnv
@@ -42,7 +42,7 @@ jobs:
   activate-fnm:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run setup-direnv against the fnm fixture
         uses: ./actions/setup-direnv
@@ -62,7 +62,7 @@ jobs:
   activate-pixi:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run setup-direnv against the pixi fixture
         uses: ./actions/setup-direnv
@@ -83,7 +83,7 @@ jobs:
   activate-sonarqube:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run setup-direnv against the sonarqube fixture
         uses: ./actions/setup-direnv
@@ -103,7 +103,7 @@ jobs:
   missing-envrc:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       # Point at a directory that has no .envrc (.github is never a direnv root).
       - name: Run setup-direnv where there is no .envrc
