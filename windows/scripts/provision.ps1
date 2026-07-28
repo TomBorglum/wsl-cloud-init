@@ -239,9 +239,9 @@ function Read-LogFrom([int]$FirstLine) {
 
 function Format-Duration([double]$Seconds) {
     # Sub-second stages are normal (init and init-local both run in well under a second), so keep
-    # a decimal below a minute or they all report as 0s. Formatted against InvariantCulture so the
-    # separator stays a period: `-f` would render "1,1s" on a machine set to nb-NO or de-DE, which
-    # would not match the periods in the `analyze blame` output printed a few lines further down.
+    # a decimal below a minute or they all report as 0s. Formatted against InvariantCulture so a
+    # duration reads the same whatever the operator's Windows locale is: plain `-f` would render
+    # "1,1s" on a machine set to nb-NO or de-DE.
     if ($Seconds -lt 60) { return $Seconds.ToString('0.0', [cultureinfo]::InvariantCulture) + "s" }
     $span = [TimeSpan]::FromSeconds($Seconds)
     # Floor, not [int]: PowerShell's [int] cast rounds, so 90 seconds would read as "2m30s".
@@ -443,17 +443,6 @@ if ($pendingLines.Count) {
 }
 
 Write-Host ("[3/4] done in {0}" -f (Format-Duration $stopwatch.Elapsed.TotalSeconds))
-
-# Per-module timing, so a slow provision explains itself without anyone opening a second
-# terminal. package_upgrade surfaces here whenever the Store image has drifted far from the
-# archive, which is the usual reason one provision takes markedly longer than the last. All of
-# install.sh collapses into a single modules-final/config-scripts_user entry -- the per-step
-# banners streamed above are the other half of that picture.
-$blame = Invoke-InDistro "cloud-init analyze blame | grep -E '^[[:space:]]+[0-9]' | head -n 5"
-if ($blame.Count) {
-    Write-Host "  slowest modules:"
-    foreach ($line in $blame) { if ($line.Trim()) { Write-Host "    $($line.Trim())" } }
-}
 
 # Check how the run actually ended. cloud-init reports 'error' for an unrecoverable failure and
 # a 'degraded ...' extended status when it finished but hit a recoverable one; neither used to

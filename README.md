@@ -538,7 +538,7 @@ less /var/log/cloud-init.log          # cloud-init's own log
 **Provisioning is slow** — most of the wait is `package_upgrade`, which brings the base image up to
 the current archive. Its cost is a function of how stale the image is: a distro released last week
 upgrades a handful of packages, one released months ago upgrades hundreds. That variance is
-inherent, which is why `provision.ps1` reports where the time actually went when it finishes:
+inherent, which is why `provision.ps1` shows where the time is going while it goes:
 
 ```
 [3/4] Waiting for cloud-init to finish...
@@ -554,9 +554,6 @@ inherent, which is why `provision.ps1` reports where the time actually went when
       install.sh: 16 scripts completed in 122s
   Running 'modules:final'  -> ok (4m05s)
 [3/4] done in 6m02s
-  slowest modules:
-    214.30s (modules-final/config-package_update_upgrade_install)
-     98.10s (modules-final/config-scripts_user)
 ```
 
 Every line follows the same shape: the name appears the moment that piece of work starts, and gains
@@ -566,10 +563,10 @@ its `-> ok (duration)` when it finishes, so whatever is currently running is alw
 whole of `install.sh` — so it breaks its line and streams progress underneath rather than going
 quiet for minutes.
 
-In the summary, `config-package_update_upgrade_install` is the `apt` update and upgrade, and
-`config-scripts_user` is the whole of `install.sh` — `analyze blame` cannot see inside it, which is
-what the per-step timings are for. All of it is kept in `/var/log/cloud-init-output.log`, so you can
-re-read the breakdown at any time, and follow a run live from a second terminal:
+All of it is kept in `/var/log/cloud-init-output.log`, so you can re-read the breakdown at any time,
+follow a run live from a second terminal, or ask cloud-init for its own per-module timing — note
+that `analyze blame` bills the whole of `install.sh` to one `config-scripts_user` entry, which is
+what the per-step lines above are for:
 
 ```bash
 wsl -d dev --user root -- cloud-init analyze blame                    # per-module timing
