@@ -189,9 +189,52 @@ $BenignNoise = "^Failed to get properties: Transport endpoint is not connected$"
 # "Stop" turns a native command's stderr into a terminating NativeCommandError even when it is
 # redirected here (the same trap documented on `git tag --points-at` above). The try/catch
 # covers wsl.exe itself failing before bash is ever reached.
+#
+# Callers that index the result must wrap the call in @(): PowerShell unwraps a single-element
+# array on its way out of a function, so a one-line result arrives as a bare string and `[0]`
+# would index its first *character* rather than the line.
 function Invoke-InDistro([string]$Command) {
     try { return @(wsl -d $InstanceName --user root -- bash -c "{ $Command ; } 2>/dev/null || true") }
     catch { return @() }
+}
+
+$CloudInitLog = "/var/log/cloud-init-output.log"
+
+# Read the log from $FirstLine on, and have the distro report how many lines it actually holds.
+#
+# The obvious version of this -- tail, then advance the offset by however many elements came back
+# -- is wrong, and wrong in a way that silently eats whole lines. PowerShell splits native command
+# output on carriage returns as well as newlines, so `printf 'a\rb\nc\n'` arrives as three
+# elements for two lines. A real provisioning log is full of them: 634 of 1191 lines carry a `\r`,
+# 1023 in total, nearly all from dpkg's "(Reading database ... 5%\r10%\r...)" progress. Counting
+# elements therefore runs the offset past the end of the file and never comes back, which is how
+# entire install steps went missing.
+#
+# So the count comes from `wc -l` instead, and the offset is derived from that and never from the
+# payload. `wc -l` counts only newline-terminated lines, and the `sed` range stops at that count,
+# so a line still being written is left for the next poll rather than displayed half-formed.
+#
+# Deliberately two calls rather than one clever shell one-liner. A `bash -c` sent through wsl.exe
+# does not survive assigning a shell variable and reading it back -- `x=abc; echo $x` comes back
+# empty -- so the count cannot be captured and reused inside the distro. Every other command in
+# this script is variable-free for the same reason. Both halves here interpolate on the PowerShell
+# side, so no `$` ever reaches bash.
+function Read-LogFrom([int]$FirstLine) {
+    $countOut = @(Invoke-InDistro "wc -l < $CloudInitLog")
+    $total = $null
+    if ($countOut.Count) { try { $total = [int]$countOut[0].Trim() } catch { $total = $null } }
+
+    # No usable reading -- instance still booting, or the log not created yet. Report the offset
+    # unchanged so the caller retries the same range rather than advancing past unread lines.
+    if ($null -eq $total) { return @{ Total = $FirstLine - 1; Lines = @() } }
+    if ($total -lt $FirstLine) { return @{ Total = $total; Lines = @() } }
+
+    # Both the command and the call are hoisted out of the hashtable on purpose. Written inline as
+    # `@{ Lines = @(Invoke-InDistro "sed -n $FirstLine,${total}p ...") }` this returned a single
+    # line instead of the whole range; assigning to a variable first returns all of it.
+    $sedCommand = "sed -n " + $FirstLine + "," + $total + "p " + $CloudInitLog
+    $payload = @(Invoke-InDistro $sedCommand)
+    return @{ Total = $total; Lines = $payload }
 }
 
 function Format-Duration([double]$Seconds) {
@@ -237,16 +280,21 @@ function Split-PendingLine {
     if (-not $top.Broken) { Write-Host ""; $top.Broken = $true }
 }
 
-function Open-PendingLine([string]$Label, [int]$Width) {
+function Open-PendingLine([string]$Kind, [string]$Label, [int]$Width) {
     $indent = Get-PendingIndent
     Split-PendingLine
-    $pendingLines.Add(@{ Label = $Label; Indent = $indent; Width = $Width; Broken = $false })
+    $pendingLines.Add(@{ Kind = $Kind; Label = $Label; Indent = $indent; Width = $Width; Broken = $false })
     Write-Host "$indent$Label" -NoNewline
 }
 
-function Complete-PendingLine([double]$Seconds) {
+# $Kind guards which line this completes. Without it a stray marker closes whatever happens to be
+# on top: a `<===` arriving with no step open used to complete the *stage* instead, printing
+# "Running 'modules:final' -> ok (0.0s)" halfway through the run and leaving every later step
+# orphaned at the wrong depth.
+function Complete-PendingLine([string]$Kind, [double]$Seconds) {
     if ($pendingLines.Count -eq 0) { return }
     $top = $pendingLines[$pendingLines.Count - 1]
+    if ($top.Kind -ne $Kind) { return }
     $pendingLines.RemoveAt($pendingLines.Count - 1)
     $duration = Format-Duration $Seconds
     if ($top.Broken) {
@@ -261,16 +309,25 @@ function Complete-PendingLine([double]$Seconds) {
     }
 }
 
-# Give up on anything still open below $Depth without inventing a duration for it -- install.sh
-# dying mid-step never writes its `<===`, and a failed run never writes cloud-init's 'finished'
-# banner. The newline still has to go out or the next line is glued onto the abandoned opener.
-function Reset-PendingLines([int]$Depth = 0) {
-    while ($pendingLines.Count -gt $Depth) {
+# Give up on open lines without inventing a duration for them -- install.sh dying mid-step never
+# writes its `<===`, and a failed run never writes cloud-init's 'finished' banner. The newline
+# still has to go out or the next line is glued onto the abandoned opener.
+#
+# Unwinding is by kind rather than by a depth number: a depth said what to keep only indirectly,
+# and stopped meaning the right thing the moment the stack was one entry off.
+function Reset-PendingLines([string[]]$Kinds) {
+    while ($pendingLines.Count -and $pendingLines[$pendingLines.Count - 1].Kind -in $Kinds) {
         $idx = $pendingLines.Count - 1
         if (-not $pendingLines[$idx].Broken) { Write-Host "" }
         $pendingLines.RemoveAt($idx)
     }
 }
+
+# Abandon any open install.sh step, leaving an open stage alone.
+function Reset-OpenSteps { Reset-PendingLines @('step') }
+
+# Abandon everything, whatever it is.
+function Reset-AllPendingLines { Reset-PendingLines @('stage', 'step') }
 
 $stageUp = 0.0   # uptime from the open stage's banner; steps carry their own duration
 
@@ -280,31 +337,35 @@ function Write-StreamedLines($Lines) {
         # skips the rewriting entirely; reformatting as well would double every line up.
         if ($ShowAllOutput) { Write-Host "  $line"; continue }
 
+        # Splitting on carriage returns (see Read-LogFrom) leaves empty fragments behind. They are
+        # harmless but carry nothing, so drop them before classifying.
+        if (-not $line.Trim()) { continue }
+
         if ($line -match $StageStart) {
             $name = $Matches[1]
             $up   = [double]$Matches[2]
-            Reset-PendingLines 1                                  # abandon a step left open
-            if ($pendingLines.Count) { Complete-PendingLine ($up - $script:stageUp) }
+            Reset-OpenSteps
+            Complete-PendingLine 'stage' ($up - $script:stageUp)
             $script:stageUp = $up
-            Open-PendingLine "Running '$name'" $StageLabelWidth
+            Open-PendingLine 'stage' "Running '$name'" $StageLabelWidth
             continue
         }
 
         if ($line -match $StageFinish) {
-            Reset-PendingLines 1
-            Complete-PendingLine ([double]$Matches[1] - $script:stageUp)
+            Reset-OpenSteps
+            Complete-PendingLine 'stage' ([double]$Matches[1] - $script:stageUp)
             continue
         }
 
         # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== `
         # prefixes are its side of the contract; see wsl/distros/ubuntu/install.sh.
         if ($line -match $StepStart) {
-            Reset-PendingLines 1                                  # a step whose `<===` never came
-            Open-PendingLine $Matches[1] $StepLabelWidth
+            Reset-OpenSteps                                       # a step whose `<===` never came
+            Open-PendingLine 'step' $Matches[1] $StepLabelWidth
             continue
         }
 
-        if ($line -match $StepFinish) { Complete-PendingLine ([double]$Matches[1]); continue }
+        if ($line -match $StepFinish) { Complete-PendingLine 'step' ([double]$Matches[1]); continue }
 
         if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
             $indent = Get-PendingIndent
@@ -320,13 +381,11 @@ $probeFailures = 0
 $status        = $null
 
 while ($true) {
-    # Advance by the raw line count and let the filter decide only what is *printed*: advancing
-    # by the filtered count would re-print or skip lines on the next pass.
-    $lines = Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log"
-    if ($lines.Count) {
-        $nextLine += $lines.Count
-        Write-StreamedLines $lines
-    }
+    # The offset advances by the line count the distro reports, never by how many elements came
+    # back -- see Read-LogFrom. The filter decides only what is *printed*.
+    $chunk = Read-LogFrom $nextLine
+    if ($chunk.Lines.Count) { Write-StreamedLines $chunk.Lines }
+    $nextLine = $chunk.Total + 1
 
     $json   = (Invoke-InDistro "cloud-init status --format=json") -join "`n"
     $parsed = $null
@@ -360,13 +419,13 @@ $stopwatch.Stop()
 
 # Drain whatever was written between the last poll and the run reaching a terminal state. This is
 # also what picks up the closing 'finished at' banner and so closes the last stage.
-Write-StreamedLines (Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log")
+Write-StreamedLines (Read-LogFrom $nextLine).Lines
 
 # A failed run may never write that closing banner, which would leave lines open with unterminated
 # -NoNewline openers for the next Write-Host to run into. Abandon any open step, then close the
 # stage from a live uptime reading -- one extra probe, and only on this path.
 if ($pendingLines.Count) {
-    Reset-PendingLines 1
+    Reset-OpenSteps
 
     $uptime = "$(Invoke-InDistro "cut -d' ' -f1 /proc/uptime" | Select-Object -First 1)".Trim()
     # [double] parses culture-invariantly (unlike [double]::TryParse, which would reject "7.49" on
@@ -376,11 +435,11 @@ if ($pendingLines.Count) {
     if ($uptime) { try { $parsedUptime = [double]$uptime } catch { $parsedUptime = $null } }
 
     if ($null -ne $parsedUptime) {
-        Complete-PendingLine ($parsedUptime - $stageUp)
-    } else {
-        # No usable reading, so drop the duration rather than invent one.
-        Reset-PendingLines 0
+        Complete-PendingLine 'stage' ($parsedUptime - $stageUp)
     }
+    # Whatever is still open here either had no usable reading or was not a stage, so drop it
+    # rather than invent a duration. A stuck step must never be handed a stage-shaped one.
+    Reset-AllPendingLines
 }
 
 Write-Host ("[3/4] done in {0}" -f (Format-Duration $stopwatch.Elapsed.TotalSeconds))
