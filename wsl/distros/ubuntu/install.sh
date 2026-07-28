@@ -66,12 +66,31 @@ fi
 # Run every install script in order. They are independent and self-skip when
 # their installation isn't selected; if one genuinely fails, stop the run and name
 # it rather than pressing on and masking the problem.
-for script in "$SCRIPTS_DIR"/*.sh; do
+#
+# Each step is announced and timed. Under cloud-init this output lands in
+# /var/log/cloud-init-output.log, which is the only way to tell which step a slow or
+# hung provision is sitting on -- `cloud-init analyze blame` collapses this entire loop
+# into a single modules-final/config-scripts_user entry. The `===> ` and `<=== ` markers
+# are also what provision.ps1 filters its live progress stream on, so the two files are
+# coupled: changing these prefixes means changing the regex there too.
+#
+# The glob is collected into an array first so the step count is known up front (and so
+# the count never comes from parsing `ls`).
+scripts=("$SCRIPTS_DIR"/*.sh)
+total=${#scripts[@]}
+i=0
+for script in "${scripts[@]}"; do
+  i=$((i + 1))
+  name="$(basename "$script")"
+  start=$SECONDS
+  printf '===> [%02d/%02d] %s\n' "$i" "$total" "$name"
   if ! bash "$script"; then
-    echo "install.sh: $(basename "$script") failed; aborting" >&2
+    echo "install.sh: $name failed; aborting" >&2
     exit 1
   fi
+  printf '<=== %s ok (%ds)\n' "$name" "$((SECONDS - start))"
 done
+printf 'install.sh: %d scripts completed in %ds\n' "$total" "$SECONDS"
 
 # On-demand opt-in runs leave new PATH entries, env vars, and zsh functions in the
 # user's startup files; the calling shell only picks them up on its next read. We

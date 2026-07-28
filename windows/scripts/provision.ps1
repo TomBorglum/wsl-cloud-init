@@ -6,6 +6,8 @@ param(
   [switch]$InstallGitConfig,
   [switch]$InstallVsCodeInterop,
   [switch]$InstallZedInterop,
+  [switch]$SkipPackageUpgrade,
+  [switch]$ShowAllOutput,
   [switch]$Force
 )
 
@@ -92,6 +94,9 @@ $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
 $InstallZedInteropValue    = if ($InstallZedInterop)    { "true" } else { "false" }
+# Inverted relative to the switch: the flag opts *out*, so the default (switch absent)
+# must render the upgrade on.
+$PackageUpgradeValue       = if ($SkipPackageUpgrade)   { "false" } else { "true" }
 $template = Get-Content "$RepoRoot\wsl\distros\$DistroTemplatePath\cloud-init\user-data.template" -Raw
 
 # String.Replace (literal) rather than -replace (regex), so a value containing
@@ -104,7 +109,8 @@ $template = $template.
     Replace('__INSTALL_CLAUDE_CODE__',     $InstallClaudeCodeValue).
     Replace('__INSTALL_GIT_CONFIG__',      $InstallGitConfigValue).
     Replace('__INSTALL_VS_CODE_INTEROP__', $InstallVsCodeInteropValue).
-    Replace('__INSTALL_ZED_INTEROP__',     $InstallZedInteropValue)
+    Replace('__INSTALL_ZED_INTEROP__',     $InstallZedInteropValue).
+    Replace('__PACKAGE_UPGRADE__',         $PackageUpgradeValue)
 
 $userDataDir = "$RepoRoot\user-data"
 New-Item -ItemType Directory -Force -Path $userDataDir | Out-Null
@@ -131,7 +137,119 @@ wsl --install $DistroInstallName --name $InstanceName --no-launch
 if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
 Write-Host "[3/4] Waiting for cloud-init to finish..."
-wsl -d $InstanceName --user root -- cloud-init status --wait
+
+# `cloud-init status --wait` emits one dot per poll and nothing else: enough to show the run is
+# alive, nothing about where its time goes. Poll instead and stream the lines of
+# /var/log/cloud-init-output.log that carry signal -- cloud-init's stage transitions, apt's
+# upgrade summary, and the per-step banners install.sh writes. Anything resembling an error is
+# printed whatever the filter says, so nothing alarming is ever hidden; -ShowAllOutput prints
+# the log verbatim instead, which is the setting to reach for when a provision is failing.
+#
+# The `===> ` / `<=== ` prefixes come from wsl/distros/ubuntu/install.sh: the two files are
+# coupled and have to change together.
+$InterestingLine = "^===> |^<=== |^install\.sh: |running 'modules:|^\d+ upgraded, |error|failed|Traceback|^E: "
+
+# Both probes below are expected to fail early on -- the log does not exist until cloud-init
+# starts, and an exec can fail outright while the instance is still coming up. The redirect and
+# `|| true` run inside the distro rather than on this side because $ErrorActionPreference =
+# "Stop" turns a native command's stderr into a terminating NativeCommandError even when it is
+# redirected here (the same trap documented on `git tag --points-at` above). The try/catch
+# covers wsl.exe itself failing before bash is ever reached.
+function Invoke-InDistro([string]$Command) {
+    try { return @(wsl -d $InstanceName --user root -- bash -c "{ $Command ; } 2>/dev/null || true") }
+    catch { return @() }
+}
+
+function Write-StreamedLines($Lines) {
+    foreach ($line in $Lines) {
+        if ($ShowAllOutput -or $line -match $InterestingLine) { Write-Host "  $line" }
+    }
+}
+
+$stopwatch     = [Diagnostics.Stopwatch]::StartNew()
+$nextLine      = 1      # 1-indexed line of cloud-init-output.log to resume the tail from
+$probeFailures = 0
+$status        = $null
+
+while ($true) {
+    # Advance by the raw line count and let the filter decide only what is *printed*: advancing
+    # by the filtered count would re-print or skip lines on the next pass.
+    $lines = Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log"
+    if ($lines.Count) {
+        $nextLine += $lines.Count
+        Write-StreamedLines $lines
+    }
+
+    $json   = (Invoke-InDistro "cloud-init status --format=json") -join "`n"
+    $parsed = $null
+    if ($json.Trim()) { try { $parsed = $json | ConvertFrom-Json } catch { $parsed = $null } }
+
+    if ($null -eq $parsed) {
+        # Never let a problem with this loop wedge provisioning: after a run of unreadable
+        # probes, hand back to the blocking wait this replaced.
+        if (++$probeFailures -ge 15) {
+            Write-Host "  (progress polling unavailable; falling back to 'cloud-init status --wait')"
+            wsl -d $InstanceName --user root -- cloud-init status --wait
+            # Normalize the documented exit codes (0 success, 1 unrecoverable, 2 recoverable)
+            # into the shape the JSON probe returns, so the result check below covers this
+            # path too rather than silently skipping it.
+            $waitExit = $LASTEXITCODE
+            $status = [pscustomobject]@{
+                status          = if ($waitExit -eq 1) { 'error' } else { 'done' }
+                extended_status = switch ($waitExit) { 0 { 'done' } 1 { 'error' } default { 'degraded done' } }
+            }
+            break
+        }
+    } else {
+        $probeFailures = 0
+        $status = $parsed
+        if ($status.status -in @('done', 'error', 'disabled')) { break }
+    }
+
+    Start-Sleep -Seconds 2
+}
+$stopwatch.Stop()
+
+# Drain whatever was written between the last poll and the run reaching a terminal state.
+Write-StreamedLines (Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log")
+
+$elapsed = $stopwatch.Elapsed
+Write-Host ("[3/4] done in {0}m{1:00}s" -f [int]$elapsed.TotalMinutes, $elapsed.Seconds)
+
+# Per-module timing, so a slow provision explains itself without anyone opening a second
+# terminal. package_upgrade surfaces here whenever the Store image has drifted far from the
+# archive, which is the usual reason one provision takes markedly longer than the last. All of
+# install.sh collapses into a single modules-final/config-scripts_user entry -- the per-step
+# banners streamed above are the other half of that picture.
+$blame = Invoke-InDistro "cloud-init analyze blame | grep -E '^[[:space:]]+[0-9]' | head -n 5"
+if ($blame.Count) {
+    Write-Host "  slowest modules:"
+    foreach ($line in $blame) { if ($line.Trim()) { Write-Host "    $($line.Trim())" } }
+}
+
+# Check how the run actually ended. cloud-init reports 'error' for an unrecoverable failure and
+# a 'degraded ...' extended status when it finished but hit a recoverable one; neither used to
+# be looked at here, so a failed first boot went on to launch as though it had succeeded.
+# extended_status is not reported by every cloud-init the supported LTS releases ship, so fall
+# back to the plain status when it is absent.
+if ($status) {
+    $extended = if ($status.PSObject.Properties['extended_status']) { $status.extended_status } else { $status.status }
+
+    if ($status.status -eq 'error') {
+        Write-Host ""
+        Write-Host "cloud-init failed (status: $extended). The instance is left registered so it can be"
+        Write-Host "inspected; re-provision with -Force once the cause is fixed."
+        Invoke-InDistro "cloud-init status --long"                  | ForEach-Object { Write-Host "  $_" }
+        Invoke-InDistro "tail -n 40 /var/log/cloud-init-output.log" | ForEach-Object { Write-Host "  $_" }
+        Write-Error "cloud-init failed; not launching $InstanceName"; exit 1
+    }
+
+    if ($extended -ne 'done') {
+        Write-Host "Warning: cloud-init finished with status '$extended'. The instance is usable, but part of"
+        Write-Host "the setup did not complete -- see /var/log/cloud-init-output.log."
+        Invoke-InDistro "cloud-init status --long" | ForEach-Object { Write-Host "  $_" }
+    }
+}
 
 # Terminate so the next launch re-reads /etc/wsl.conf (written by cloud-init this boot).
 # Otherwise the first session keeps the pre-config state: appended Windows PATH and the

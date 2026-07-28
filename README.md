@@ -437,6 +437,13 @@ What you can set when provisioning, and how the instance is derived.
   and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
 - `-InstallZedInterop` (optional) — install the `zed` Windows interop wrapper.
+- `-SkipPackageUpgrade` (optional) — render `package_upgrade: false` into the cloud-init config,
+  skipping the `apt` upgrade of the base image. This is the slowest and most variable step of a
+  provision (see [Troubleshooting](#troubleshooting)), so skipping it makes the re-provision loop
+  much faster while iterating on this repo — at the cost of an instance that sits on whatever
+  patch level the Store image shipped with. Leave it off for anything you intend to keep.
+- `-ShowAllOutput` (optional) — stream `/var/log/cloud-init-output.log` verbatim while waiting,
+  instead of the filtered progress summary. Useful when a provision is failing.
 - `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
 
 `provision.ps1` provisions the commit its own checkout is on, and refuses to run against a dirty
@@ -527,6 +534,31 @@ network blip), re-provision with `-Force`.
 less /var/log/cloud-init-output.log   # install-script output
 less /var/log/cloud-init.log          # cloud-init's own log
 ```
+
+**Provisioning is slow** — most of the wait is `package_upgrade`, which brings the base image up to
+the current archive. Its cost is a function of how stale the image is: a distro released last week
+upgrades a handful of packages, one released months ago upgrades hundreds. That variance is
+inherent, which is why `provision.ps1` reports where the time actually went when it finishes:
+
+```
+[3/4] done in 6m02s
+  slowest modules:
+    214.30s (modules-final/config-package_update_upgrade_install)
+     98.10s (modules-final/config-scripts_user)
+```
+
+`config-package_update_upgrade_install` is the `apt` update and upgrade;
+`config-scripts_user` is the whole of `install.sh`, whose own per-step timings are streamed
+above that summary and kept in `/var/log/cloud-init-output.log`. You can re-read the breakdown at
+any time, and follow a run live from a second terminal:
+
+```bash
+wsl -d dev --user root -- cloud-init analyze blame                    # per-module timing
+wsl -d dev --user root -- tail -f /var/log/cloud-init-output.log      # follow a run in progress
+```
+
+If you are re-provisioning repeatedly while working on this repo, `-SkipPackageUpgrade` removes
+that step entirely.
 
 **WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec
 format error". WSL's `binfmt_misc` interop handler is shared across the VM and another distro can
