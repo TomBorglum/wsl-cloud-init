@@ -67,15 +67,42 @@ fi
 # their installation isn't selected; if one genuinely fails, stop the run and name
 # it rather than pressing on and masking the problem.
 #
-# Each step is announced and timed. Under cloud-init this output lands in
-# /var/log/cloud-init-output.log, which is the only way to tell which step a slow or
-# hung provision is sitting on -- `cloud-init analyze blame` collapses this entire loop
-# into a single modules-final/config-scripts_user entry. The `===> ` and `<=== ` markers are
-# also the contract provision.ps1 parses to pair each step into one progress line, so the two
-# files are coupled: the prefixes and the `ok (N.Ns)` duration format both have to change
-# together with the regexes there. They stay on separate lines here so the log still reads
-# sequentially; provision.ps1 is what joins them for display.
+# Each step is announced and timed, in one of two forms.
 #
+# Under cloud-init this output lands in /var/log/cloud-init-output.log, which is the only
+# way to tell which step a slow or hung provision is sitting on -- `cloud-init analyze blame`
+# collapses this entire loop into a single modules-final/config-scripts_user entry. There the
+# `===> ` and `<=== ` markers are the contract provision.ps1 parses to pair each step into one
+# progress line, so the two files are coupled: the prefixes and the `ok (N.Ns)` duration format
+# both have to change together with the regexes there. They stay on separate lines so the log
+# still reads sequentially; provision.ps1 is what joins them for display.
+#
+# On a terminal there is no provision.ps1 to do that joining, so printing the raw contract would
+# just be noise. Each step gets the rendered equivalent instead -- the same line provisioning
+# shows, emitted once the step has finished. Nothing is piped or reformatted on the way, so a
+# step's own output stays live and untouched above its line.
+#
+# The gate is a TTY check rather than a flag because it needs no plumbing and cannot be wrong:
+# cloud-init's stdout is the log file and is never a terminal.
+if [[ -t 1 ]]; then on_tty=1; else on_tty=0; fi
+
+# Mirrors Format-Duration in windows/scripts/provision.ps1: one decimal below a minute (most
+# steps finish well inside a second), minutes above it, with the minute count floored so 90
+# seconds does not read as "2m30s". Takes microseconds because that is what the loop measures.
+format_duration() {
+  local us=$1 s tenths
+  s=$(( us / 1000000 ))
+  if (( s < 60 )); then
+    # Rounded to tenths as a whole, not by truncating the remainder: PowerShell's ToString('0.0')
+    # rounds, so truncating here would print 1.0s where a provisioning log shows 1.1s. Carrying
+    # through the whole value keeps 1.96s at 2.0s rather than an impossible 1.10s.
+    tenths=$(( (us + 50000) / 100000 ))
+    printf '%d.%ds' "$(( tenths / 10 ))" "$(( tenths % 10 ))"
+  else
+    printf '%dm%02ds' "$(( s / 60 ))" "$(( s % 60 ))"
+  fi
+}
+
 # The glob is collected into an array first so the step count is known up front (and so
 # the count never comes from parsing `ls`).
 scripts=("$SCRIPTS_DIR"/*.sh)
@@ -90,13 +117,23 @@ for script in "${scripts[@]}"; do
   # microseconds -- no float parsing, and correct under a comma-decimal locale. The stripped value
   # is around 1.8e15, comfortably inside bash's 64-bit arithmetic.
   step_start=${EPOCHREALTIME/[.,]/}
-  printf '===> [%02d/%02d] %s\n' "$i" "$total" "$name"
+  (( on_tty )) || printf '===> [%02d/%02d] %s\n' "$i" "$total" "$name"
   if ! bash "$script"; then
     echo "install.sh: $name failed; aborting" >&2
     exit 1
   fi
   step_us=$(( ${EPOCHREALTIME/[.,]/} - step_start ))
-  printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_us / 1000000))" "$(( (step_us % 1000000) / 100000 ))"
+  if (( on_tty )); then
+    # Padded to the same column as provision.ps1's $StepLabelWidth, which fits the longest
+    # label this can produce ('[14/16] 14-install-direnv-functions.sh'). Nothing parses this
+    # line -- the two just need to look alike.
+    label="$(printf '[%02d/%02d] %s' "$i" "$total" "$name")"
+    printf '%-38s -> ok (%s)\n' "$label" "$(format_duration "$step_us")"
+  else
+    # Plain seconds, always: provision.ps1 matches `ok \(([\d.]+)s\)` and applies its own
+    # formatting, so emitting "2m05s" here would stop matching and strand the step line open.
+    printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_us / 1000000))" "$(( (step_us % 1000000) / 100000 ))"
+  fi
 done
 printf 'install.sh: %d scripts completed in %ds\n' "$total" "$SECONDS"
 
