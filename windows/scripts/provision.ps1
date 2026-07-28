@@ -171,8 +171,13 @@ $StageFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
 # install.sh brackets each numbered script with these markers, carrying the step's own measured
 # duration so it does not have to be inferred from the poll interval. Kept as two lines in the log
 # so the file still reads sequentially; paired back into a single line for display.
+#
+# The duration is matched loosely rather than as `[\d.]+`. A stricter pattern once failed on a
+# malformed value, which sent the marker down the generic filter below: it printed verbatim as
+# nested content and left the step's line hanging open. Consuming the marker whatever it carries
+# means the layout survives regardless, and an unreadable duration degrades to 0.0s.
 $StepStart  = "^===> (.+)$"
-$StepFinish = "^<=== \S+ ok \(([\d.]+)s\)$"
+$StepFinish = "^<=== \S+ ok \(([^)]*)s\)$"
 
 # Two lines apt's dpkg triggers emit on every single provision: systemd and dbus are not fully up
 # inside a WSL container while packages are configuring, so postinst scripts probing them fail
@@ -365,7 +370,16 @@ function Write-StreamedLines($Lines) {
             continue
         }
 
-        if ($line -match $StepFinish) { Complete-PendingLine 'step' ([double]$Matches[1]); continue }
+        if ($line -match $StepFinish) {
+            # TryParse rather than the [double] cast used elsewhere here: it answers "is this a
+            # number at all" without throwing. It reads the current culture, which the cast does
+            # not, but that only matters for the fallback decision -- install.sh always writes a
+            # period, and anything unreadable is meant to land on 0 regardless.
+            $seconds = 0.0
+            if (-not [double]::TryParse($Matches[1], [ref]$seconds)) { $seconds = 0.0 }
+            Complete-PendingLine 'step' $seconds
+            continue
+        }
 
         if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
             $indent = Get-PendingIndent

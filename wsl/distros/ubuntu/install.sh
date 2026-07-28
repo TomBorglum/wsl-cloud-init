@@ -101,17 +101,31 @@ if [[ -t 1 ]]; then on_tty=1; else on_tty=0; fi
 STATUS_ALREADY_INSTALLED=3
 STATUS_NOT_SELECTED=4
 
+# Elapsed time comes from /proc/uptime rather than a wall clock. EPOCHREALTIME (and bash's
+# $SECONDS) track CLOCK_REALTIME, which steps: a fresh instance boots with an approximate clock
+# and time sync corrects it once the network and systemd are up, which is exactly what
+# 02-install-docker.sh sets going. That produced durations like "-21.-1s". /proc/uptime is
+# monotonic, is written by the kernel as %lu.%02lu with a literal '.' whatever the locale, and
+# `read` is a builtin so sampling it runs no external command. Centisecond resolution is far
+# finer than the tenth of a second ever displayed.
+uptime_cs() {
+  local up _
+  read -r up _ < /proc/uptime
+  printf '%s' "${up/./}"
+}
+
 # Mirrors Format-Duration in windows/scripts/provision.ps1: one decimal below a minute (most
 # steps finish well inside a second), minutes above it, with the minute count floored so 90
-# seconds does not read as "2m30s". Takes microseconds because that is what the loop measures.
+# seconds does not read as "2m30s". Takes centiseconds, the resolution /proc/uptime offers.
 format_duration() {
-  local us=$1 s tenths
-  s=$(( us / 1000000 ))
+  local cs=$1 s tenths
+  if (( cs < 0 )); then cs=0; fi
+  s=$(( cs / 100 ))
   if (( s < 60 )); then
     # Rounded to tenths as a whole, not by truncating the remainder: PowerShell's ToString('0.0')
     # rounds, so truncating here would print 1.0s where a provisioning log shows 1.1s. Carrying
     # through the whole value keeps 1.96s at 2.0s rather than an impossible 1.10s.
-    tenths=$(( (us + 50000) / 100000 ))
+    tenths=$(( (cs + 5) / 10 ))
     printf '%d.%ds' "$(( tenths / 10 ))" "$(( tenths % 10 ))"
   else
     printf '%dm%02ds' "$(( s / 60 ))" "$(( s % 60 ))"
@@ -123,6 +137,7 @@ format_duration() {
 scripts=("$SCRIPTS_DIR"/*.sh)
 total=${#scripts[@]}
 i=0
+run_start=$(uptime_cs)
 for script in "${scripts[@]}"; do
   i=$((i + 1))
   name="$(basename "$script")"
@@ -132,12 +147,7 @@ for script in "${scripts[@]}"; do
   # line -- the two just need to look alike.
   label="$(printf '[%02d/%02d] %s' "$i" "$total" "$name")"
 
-  # $SECONDS is integer-only and most of these finish well inside a second, so time them from
-  # EPOCHREALTIME (bash 5+, and every supported LTS ships at least 5.1) instead. It renders with
-  # the locale's decimal separator, so the [.,] class strips either one and leaves plain integer
-  # microseconds -- no float parsing, and correct under a comma-decimal locale. The stripped value
-  # is around 1.8e15, comfortably inside bash's 64-bit arithmetic.
-  step_start=${EPOCHREALTIME/[.,]/}
+  step_start=$(uptime_cs)
 
   # `rc=0; cmd || rc=$?` rather than `if ! cmd`, so a status of 3 or 4 is read rather than
   # treated as the failure `set -e` would otherwise make of it.
@@ -151,7 +161,12 @@ for script in "${scripts[@]}"; do
     printf '===> %s\n' "$label"
     bash "$script" || rc=$?
   fi
-  step_us=$(( ${EPOCHREALTIME/[.,]/} - step_start ))
+  # Clamped once here so both renderings below are covered. A monotonic clock makes this
+  # unreachable, which is the point: provision.ps1 matches the `<===` duration with `[\d.]+`,
+  # and that invariant used to be implicit -- until a wall clock stepped backwards and a
+  # negative duration stopped matching, dumping the raw marker into the provisioning output.
+  step_cs=$(( $(uptime_cs) - step_start ))
+  if (( step_cs < 0 )); then step_cs=0; fi
 
   case $rc in
     0)                            status='ok' ;;
@@ -174,16 +189,16 @@ for script in "${scripts[@]}"; do
     # always separates them, however long the name grows.
     pad=$(( 39 - ${#label} ))
     if (( pad < 1 )); then pad=1; fi
-    printf '%*s-> %s (%s)\n' "$pad" '' "$status" "$(format_duration "$step_us")"
+    printf '%*s-> %s (%s)\n' "$pad" '' "$status" "$(format_duration "$step_cs")"
   else
-    # Plain `ok` and plain seconds, whatever the status: provision.ps1 matches
-    # `^<=== \S+ ok \(([\d.]+)s\)$` and formats the duration itself, so anything else here
-    # would stop matching and strand the step's line open mid-provision. The log still carries
-    # the script's own message explaining what it did.
-    printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_us / 1000000))" "$(( (step_us % 1000000) / 100000 ))"
+    # Plain `ok` and plain seconds, whatever the status: provision.ps1 parses this line and
+    # formats the duration itself, so a bare number is what it expects. It now tolerates
+    # anything rather than stranding the step, but writing something else here would still
+    # cost the real timing. The log carries the script's own message explaining what it did.
+    printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_cs / 100))" "$(( (step_cs % 100) / 10 ))"
   fi
 done
-printf 'install.sh: %d scripts completed in %ds\n' "$total" "$SECONDS"
+printf 'install.sh: %d scripts completed in %s\n' "$total" "$(format_duration $(( $(uptime_cs) - run_start )))"
 
 # On-demand opt-in runs leave new PATH entries, env vars, and zsh functions in the
 # user's startup files; the calling shell only picks them up on its next read. We
