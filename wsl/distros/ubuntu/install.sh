@@ -70,9 +70,11 @@ fi
 # Each step is announced and timed. Under cloud-init this output lands in
 # /var/log/cloud-init-output.log, which is the only way to tell which step a slow or
 # hung provision is sitting on -- `cloud-init analyze blame` collapses this entire loop
-# into a single modules-final/config-scripts_user entry. The `===> ` and `<=== ` markers
-# are also what provision.ps1 filters its live progress stream on, so the two files are
-# coupled: changing these prefixes means changing the regex there too.
+# into a single modules-final/config-scripts_user entry. The `===> ` and `<=== ` markers are
+# also the contract provision.ps1 parses to pair each step into one progress line, so the two
+# files are coupled: the prefixes and the `ok (N.Ns)` duration format both have to change
+# together with the regexes there. They stay on separate lines here so the log still reads
+# sequentially; provision.ps1 is what joins them for display.
 #
 # The glob is collected into an array first so the step count is known up front (and so
 # the count never comes from parsing `ls`).
@@ -82,13 +84,19 @@ i=0
 for script in "${scripts[@]}"; do
   i=$((i + 1))
   name="$(basename "$script")"
-  start=$SECONDS
+  # $SECONDS is integer-only and most of these finish well inside a second, so time them from
+  # EPOCHREALTIME (bash 5+, and every supported LTS ships at least 5.1) instead. It renders with
+  # the locale's decimal separator, so the [.,] class strips either one and leaves plain integer
+  # microseconds -- no float parsing, and correct under a comma-decimal locale. The stripped value
+  # is around 1.8e15, comfortably inside bash's 64-bit arithmetic.
+  step_start=${EPOCHREALTIME/[.,]/}
   printf '===> [%02d/%02d] %s\n' "$i" "$total" "$name"
   if ! bash "$script"; then
     echo "install.sh: $name failed; aborting" >&2
     exit 1
   fi
-  printf '<=== %s ok (%ds)\n' "$name" "$((SECONDS - start))"
+  step_us=$(( ${EPOCHREALTIME/[.,]/} - step_start ))
+  printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_us / 1000000))" "$(( (step_us % 1000000) / 100000 ))"
 done
 printf 'install.sh: %d scripts completed in %ds\n' "$total" "$SECONDS"
 

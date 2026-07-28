@@ -168,6 +168,12 @@ $InterestingLine = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Tr
 $StageStart  = "^Cloud-init v\.\s+\S+\s+running\s+'([^']+)'.*?\bUp\s+([\d.]+)\s+seconds"
 $StageFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
 
+# install.sh brackets each numbered script with these markers, carrying the step's own measured
+# duration so it does not have to be inferred from the poll interval. Kept as two lines in the log
+# so the file still reads sequentially; paired back into a single line for display.
+$StepStart  = "^===> (.+)$"
+$StepFinish = "^<=== \S+ ok \(([\d.]+)s\)$"
+
 # Two lines apt's dpkg triggers emit on every single provision: systemd and dbus are not fully up
 # inside a WSL container while packages are configuring, so postinst scripts probing them fail
 # harmlessly (they sit between "Processing triggers for systemd" and "Processing triggers for
@@ -200,62 +206,110 @@ function Format-Duration([double]$Seconds) {
     return ("{0}m{1:00}s" -f [int][Math]::Floor($span.TotalMinutes), $span.Seconds)
 }
 
-# A stage line is written in two tempi: the name appears the moment the stage starts, and the
-# result is appended when it ends, so a stage that is taking a while is visibly in progress rather
-# than absent. modules:final breaks that pattern -- it holds both apt and the whole of install.sh,
-# well over a thousand log lines -- so when a stage emits output its line is terminated, the output
-# streams live and indented beneath it, and the stage is restated when it closes. Waiting until the
-# end to print anything would hide progress during the one stage where the waiting happens.
-$stageName   = $null    # stage currently open, or $null
-$stageUp     = 0.0      # uptime reported by that stage's banner
-$stageBroken = $false   # has streamed output already terminated the opening line?
+# Progress lines are written in two tempi: the label appears the moment the thing it names starts,
+# and "-> ok (duration)" is appended when it finishes, so something slow is visibly in progress
+# rather than simply absent. cloud-init's boot stages and install.sh's numbered steps are the same
+# construct at different depths, so they share one stack.
+#
+# A line cannot always be completed in place. modules:final holds the apt work and the whole of
+# install.sh -- well over a thousand log lines -- so when output arrives the open line is
+# terminated, the output streams live and indented beneath it, and the line is restated when it
+# closes. Waiting until the end to print anything would hide progress during exactly the stage
+# where the waiting happens.
+#
+# Invariant: only the top of the stack can be unbroken, because opening a child always terminates
+# its parent's line first.
+$pendingLines = [System.Collections.Generic.List[hashtable]]::new()
 
-# Column the '-> ok' marker lines up in, wide enough for the longest name cloud-init uses
-# ('modules:config').
+# Columns the '-> ok' marker lines up in. The stage width fits cloud-init's longest name
+# ('modules:config'); the step width fits '[14/16] 14-install-direnv-functions.sh', the longest
+# label install.sh can produce.
 $StageLabelWidth = 24
+$StepLabelWidth  = 38
 
-function Close-Stage([double]$UpNow) {
-    if (-not $script:stageName) { return }
-    $duration = Format-Duration ($UpNow - $script:stageUp)
-    $label    = "Running '$($script:stageName)'"
-    if ($script:stageBroken) {
-        # The opener was terminated by streamed output, so restate the stage rather than leave a
+# Indent follows depth, so a label and the content nested under its parent line up: nothing open
+# gives 2, an open stage gives 6, an open stage plus step gives 10.
+function Get-PendingIndent { return "  " + ("    " * $pendingLines.Count) }
+
+function Split-PendingLine {
+    if ($pendingLines.Count -eq 0) { return }
+    $top = $pendingLines[$pendingLines.Count - 1]
+    if (-not $top.Broken) { Write-Host ""; $top.Broken = $true }
+}
+
+function Open-PendingLine([string]$Label, [int]$Width) {
+    $indent = Get-PendingIndent
+    Split-PendingLine
+    $pendingLines.Add(@{ Label = $Label; Indent = $indent; Width = $Width; Broken = $false })
+    Write-Host "$indent$Label" -NoNewline
+}
+
+function Complete-PendingLine([double]$Seconds) {
+    if ($pendingLines.Count -eq 0) { return }
+    $top = $pendingLines[$pendingLines.Count - 1]
+    $pendingLines.RemoveAt($pendingLines.Count - 1)
+    $duration = Format-Duration $Seconds
+    if ($top.Broken) {
+        # The opener was terminated by streamed output, so restate the label rather than leave a
         # bare "-> ok" dangling underneath a wall of text.
-        Write-Host ("  {0,-$StageLabelWidth} -> ok ({1})" -f $label, $duration)
+        Write-Host ("{0}{1} -> ok ({2})" -f $top.Indent, $top.Label.PadRight($top.Width), $duration)
     } else {
         # Completing the opener in place. The padding is applied here rather than when the label
-        # was written, so a stage that breaks does not leave trailing whitespace on its line.
-        $pad = [Math]::Max(1, $StageLabelWidth + 1 - $label.Length)
+        # was written, so a line that breaks does not leave trailing whitespace behind.
+        $pad = [Math]::Max(1, $top.Width + 1 - $top.Label.Length)
         Write-Host ((" " * $pad) + ("-> ok ({0})" -f $duration))
     }
-    $script:stageName   = $null
-    $script:stageBroken = $false
 }
+
+# Give up on anything still open below $Depth without inventing a duration for it -- install.sh
+# dying mid-step never writes its `<===`, and a failed run never writes cloud-init's 'finished'
+# banner. The newline still has to go out or the next line is glued onto the abandoned opener.
+function Reset-PendingLines([int]$Depth = 0) {
+    while ($pendingLines.Count -gt $Depth) {
+        $idx = $pendingLines.Count - 1
+        if (-not $pendingLines[$idx].Broken) { Write-Host "" }
+        $pendingLines.RemoveAt($idx)
+    }
+}
+
+$stageUp = 0.0   # uptime from the open stage's banner; steps carry their own duration
 
 function Write-StreamedLines($Lines) {
     foreach ($line in $Lines) {
         # -ShowAllOutput is the "show me exactly what the log says" mode, so it prints raw and
-        # skips the banner rewriting entirely; reformatting as well would double every stage up.
+        # skips the rewriting entirely; reformatting as well would double every line up.
         if ($ShowAllOutput) { Write-Host "  $line"; continue }
 
         if ($line -match $StageStart) {
             $name = $Matches[1]
             $up   = [double]$Matches[2]
-            Close-Stage $up
-            $script:stageName = $name
-            $script:stageUp   = $up
-            Write-Host "  Running '$name'" -NoNewline
+            Reset-PendingLines 1                                  # abandon a step left open
+            if ($pendingLines.Count) { Complete-PendingLine ($up - $script:stageUp) }
+            $script:stageUp = $up
+            Open-PendingLine "Running '$name'" $StageLabelWidth
             continue
         }
 
-        if ($line -match $StageFinish) { Close-Stage ([double]$Matches[1]); continue }
+        if ($line -match $StageFinish) {
+            Reset-PendingLines 1
+            Complete-PendingLine ([double]$Matches[1] - $script:stageUp)
+            continue
+        }
+
+        # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== `
+        # prefixes are its side of the contract; see wsl/distros/ubuntu/install.sh.
+        if ($line -match $StepStart) {
+            Reset-PendingLines 1                                  # a step whose `<===` never came
+            Open-PendingLine $Matches[1] $StepLabelWidth
+            continue
+        }
+
+        if ($line -match $StepFinish) { Complete-PendingLine ([double]$Matches[1]); continue }
 
         if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
-            if ($script:stageName -and -not $script:stageBroken) {
-                Write-Host ""
-                $script:stageBroken = $true
-            }
-            Write-Host "      $line"
+            $indent = Get-PendingIndent
+            Split-PendingLine
+            Write-Host "$indent$line"
         }
     }
 }
@@ -308,10 +362,12 @@ $stopwatch.Stop()
 # also what picks up the closing 'finished at' banner and so closes the last stage.
 Write-StreamedLines (Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log")
 
-# A failed run may never write that closing banner, which would leave the last stage open with an
-# unterminated -NoNewline opener for the next Write-Host to run into. Close it from a live uptime
-# reading -- one extra probe, and only on this path.
-if ($stageName) {
+# A failed run may never write that closing banner, which would leave lines open with unterminated
+# -NoNewline openers for the next Write-Host to run into. Abandon any open step, then close the
+# stage from a live uptime reading -- one extra probe, and only on this path.
+if ($pendingLines.Count) {
+    Reset-PendingLines 1
+
     $uptime = "$(Invoke-InDistro "cut -d' ' -f1 /proc/uptime" | Select-Object -First 1)".Trim()
     # [double] parses culture-invariantly (unlike [double]::TryParse, which would reject "7.49" on
     # a comma-decimal machine), but it yields 0 for an empty string instead of throwing -- which
@@ -320,12 +376,10 @@ if ($stageName) {
     if ($uptime) { try { $parsedUptime = [double]$uptime } catch { $parsedUptime = $null } }
 
     if ($null -ne $parsedUptime) {
-        Close-Stage $parsedUptime
+        Complete-PendingLine ($parsedUptime - $stageUp)
     } else {
-        # No usable reading, so drop the duration rather than invent one. The newline still has to
-        # be emitted or the following output lands on the opener's line.
-        Write-Host ""
-        $stageName = $null
+        # No usable reading, so drop the duration rather than invent one.
+        Reset-PendingLines 0
     }
 }
 

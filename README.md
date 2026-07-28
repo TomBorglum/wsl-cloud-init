@@ -547,11 +547,11 @@ inherent, which is why `provision.ps1` reports where the time actually went when
   Running 'modules:config' -> ok (1.1s)
   Running 'modules:final'
       157 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
-      ===> [01/16] 01-install-release-info.sh
-      <=== 01-install-release-info.sh ok (0s)
-      ===> [02/16] 02-install-docker.sh
-      <=== 02-install-docker.sh ok (41s)
       0 upgraded, 61 newly installed, 0 to remove and 0 not upgraded.
+      [01/16] 01-install-release-info.sh     -> ok (0.4s)
+      [02/16] 02-install-docker.sh           -> ok (41.2s)
+      [14/16] 14-install-direnv-functions.sh -> ok (0.3s)
+      install.sh: 16 scripts completed in 122s
   Running 'modules:final'  -> ok (4m05s)
 [3/4] done in 6m02s
   slowest modules:
@@ -559,15 +559,17 @@ inherent, which is why `provision.ps1` reports where the time actually went when
      98.10s (modules-final/config-scripts_user)
 ```
 
-The four `Running '...'` lines are cloud-init's boot stages. Each one appears the moment the stage
-starts and gains its `-> ok` when it ends, so a stage that is taking a while is visibly in
-progress. `modules:final` is where the time goes: it runs the `apt` work and then the whole of
-`install.sh`, so it breaks its line and streams progress underneath.
+Every line follows the same shape: the name appears the moment that piece of work starts, and gains
+its `-> ok (duration)` when it finishes, so whatever is currently running is always visible. The
+`Running '...'` lines are cloud-init's four boot stages; the numbered lines beneath are
+`install.sh`'s steps. `modules:final` is where the time goes — it runs the `apt` work and then the
+whole of `install.sh` — so it breaks its line and streams progress underneath rather than going
+quiet for minutes.
 
 In the summary, `config-package_update_upgrade_install` is the `apt` update and upgrade, and
 `config-scripts_user` is the whole of `install.sh` — `analyze blame` cannot see inside it, which is
-what the per-step `===>` timings are for. All of it is kept in `/var/log/cloud-init-output.log`, so
-you can re-read the breakdown at any time, and follow a run live from a second terminal:
+what the per-step timings are for. All of it is kept in `/var/log/cloud-init-output.log`, so you can
+re-read the breakdown at any time, and follow a run live from a second terminal:
 
 ```bash
 wsl -d dev --user root -- cloud-init analyze blame                    # per-module timing
