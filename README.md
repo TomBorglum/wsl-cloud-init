@@ -541,16 +541,33 @@ upgrades a handful of packages, one released months ago upgrades hundreds. That 
 inherent, which is why `provision.ps1` reports where the time actually went when it finishes:
 
 ```
+[3/4] Waiting for cloud-init to finish...
+  Running 'init-local'     -> ok (0.5s)
+  Running 'init'           -> ok (0.3s)
+  Running 'modules:config' -> ok (1.1s)
+  Running 'modules:final'
+      157 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+      ===> [01/16] 01-install-release-info.sh
+      <=== 01-install-release-info.sh ok (0s)
+      ===> [02/16] 02-install-docker.sh
+      <=== 02-install-docker.sh ok (41s)
+      0 upgraded, 61 newly installed, 0 to remove and 0 not upgraded.
+  Running 'modules:final'  -> ok (4m05s)
 [3/4] done in 6m02s
   slowest modules:
     214.30s (modules-final/config-package_update_upgrade_install)
      98.10s (modules-final/config-scripts_user)
 ```
 
-`config-package_update_upgrade_install` is the `apt` update and upgrade;
-`config-scripts_user` is the whole of `install.sh`, whose own per-step timings are streamed
-above that summary and kept in `/var/log/cloud-init-output.log`. You can re-read the breakdown at
-any time, and follow a run live from a second terminal:
+The four `Running '...'` lines are cloud-init's boot stages. Each one appears the moment the stage
+starts and gains its `-> ok` when it ends, so a stage that is taking a while is visibly in
+progress. `modules:final` is where the time goes: it runs the `apt` work and then the whole of
+`install.sh`, so it breaks its line and streams progress underneath.
+
+In the summary, `config-package_update_upgrade_install` is the `apt` update and upgrade, and
+`config-scripts_user` is the whole of `install.sh` — `analyze blame` cannot see inside it, which is
+what the per-step `===>` timings are for. All of it is kept in `/var/log/cloud-init-output.log`, so
+you can re-read the breakdown at any time, and follow a run live from a second terminal:
 
 ```bash
 wsl -d dev --user root -- cloud-init analyze blame                    # per-module timing

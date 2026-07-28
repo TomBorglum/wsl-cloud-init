@@ -146,8 +146,36 @@ Write-Host "[3/4] Waiting for cloud-init to finish..."
 # the log verbatim instead, which is the setting to reach for when a provision is failing.
 #
 # The `===> ` / `<=== ` prefixes come from wsl/distros/ubuntu/install.sh: the two files are
-# coupled and have to change together.
-$InterestingLine = "^===> |^<=== |^install\.sh: |running 'modules:|^\d+ upgraded, |error|failed|Traceback|^E: "
+# coupled and have to change together. Stage banners are not listed here; they get their own
+# handling below.
+$InterestingLine = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Traceback|^E: "
+
+# cloud-init announces each stage with a banner carrying the package version, a wall-clock
+# timestamp and an uptime, e.g.
+#
+#   Cloud-init v. 26.1-0ubuntu2 running 'modules:config' at Tue, 28 Jul 2026 12:28:38 +0000. Up 8.28 seconds.
+#   Cloud-init v. 26.1-0ubuntu2 finished at Tue, 28 Jul 2026 12:29:39 +0000. Datasource DataSourceWSL.  Up 69.53 seconds
+#
+# Printed as-is that is actively misleading: the only number on it is /proc/uptime, and under WSL2
+# every distro shares one utility VM and one kernel, so it is the VM's uptime and has nothing to do
+# with how long this instance has been provisioning. Start a second instance on a machine that has
+# been up an hour and the first banner claims 3600 seconds.
+#
+# The uptimes are still useful as *differences*, which is what gets reported instead: subtracting
+# consecutive banners gives an exact per-stage duration, free of the 2s poll granularity. The
+# closing 'finished at' line supplies the end of the last stage. Both patterns stay tolerant of
+# spacing -- the finish line uses two spaces before `Up` and drops the trailing period.
+$StageStart  = "^Cloud-init v\.\s+\S+\s+running\s+'([^']+)'.*?\bUp\s+([\d.]+)\s+seconds"
+$StageFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
+
+# Two lines apt's dpkg triggers emit on every single provision: systemd and dbus are not fully up
+# inside a WSL container while packages are configuring, so postinst scripts probing them fail
+# harmlessly (they sit between "Processing triggers for systemd" and "Processing triggers for
+# dbus"). They match the error catch-all above, and printing known-benign errors every time is how
+# people learn to ignore the real ones. Both patterns are anchored end to end so nothing broader
+# is ever suppressed.
+$BenignNoise = "^Failed to get properties: Transport endpoint is not connected$" +
+               "|^Failed to connect to system scope bus via local transport: Connection refused$"
 
 # Both probes below are expected to fail early on -- the log does not exist until cloud-init
 # starts, and an exec can fail outright while the instance is still coming up. The redirect and
@@ -160,9 +188,75 @@ function Invoke-InDistro([string]$Command) {
     catch { return @() }
 }
 
+function Format-Duration([double]$Seconds) {
+    # Sub-second stages are normal (init and init-local both run in well under a second), so keep
+    # a decimal below a minute or they all report as 0s. Formatted against InvariantCulture so the
+    # separator stays a period: `-f` would render "1,1s" on a machine set to nb-NO or de-DE, which
+    # would not match the periods in the `analyze blame` output printed a few lines further down.
+    if ($Seconds -lt 60) { return $Seconds.ToString('0.0', [cultureinfo]::InvariantCulture) + "s" }
+    $span = [TimeSpan]::FromSeconds($Seconds)
+    # Floor, not [int]: PowerShell's [int] cast rounds, so 90 seconds would read as "2m30s".
+    # Minutes can exceed 59, so TotalMinutes rather than the Minutes component.
+    return ("{0}m{1:00}s" -f [int][Math]::Floor($span.TotalMinutes), $span.Seconds)
+}
+
+# A stage line is written in two tempi: the name appears the moment the stage starts, and the
+# result is appended when it ends, so a stage that is taking a while is visibly in progress rather
+# than absent. modules:final breaks that pattern -- it holds both apt and the whole of install.sh,
+# well over a thousand log lines -- so when a stage emits output its line is terminated, the output
+# streams live and indented beneath it, and the stage is restated when it closes. Waiting until the
+# end to print anything would hide progress during the one stage where the waiting happens.
+$stageName   = $null    # stage currently open, or $null
+$stageUp     = 0.0      # uptime reported by that stage's banner
+$stageBroken = $false   # has streamed output already terminated the opening line?
+
+# Column the '-> ok' marker lines up in, wide enough for the longest name cloud-init uses
+# ('modules:config').
+$StageLabelWidth = 24
+
+function Close-Stage([double]$UpNow) {
+    if (-not $script:stageName) { return }
+    $duration = Format-Duration ($UpNow - $script:stageUp)
+    $label    = "Running '$($script:stageName)'"
+    if ($script:stageBroken) {
+        # The opener was terminated by streamed output, so restate the stage rather than leave a
+        # bare "-> ok" dangling underneath a wall of text.
+        Write-Host ("  {0,-$StageLabelWidth} -> ok ({1})" -f $label, $duration)
+    } else {
+        # Completing the opener in place. The padding is applied here rather than when the label
+        # was written, so a stage that breaks does not leave trailing whitespace on its line.
+        $pad = [Math]::Max(1, $StageLabelWidth + 1 - $label.Length)
+        Write-Host ((" " * $pad) + ("-> ok ({0})" -f $duration))
+    }
+    $script:stageName   = $null
+    $script:stageBroken = $false
+}
+
 function Write-StreamedLines($Lines) {
     foreach ($line in $Lines) {
-        if ($ShowAllOutput -or $line -match $InterestingLine) { Write-Host "  $line" }
+        # -ShowAllOutput is the "show me exactly what the log says" mode, so it prints raw and
+        # skips the banner rewriting entirely; reformatting as well would double every stage up.
+        if ($ShowAllOutput) { Write-Host "  $line"; continue }
+
+        if ($line -match $StageStart) {
+            $name = $Matches[1]
+            $up   = [double]$Matches[2]
+            Close-Stage $up
+            $script:stageName = $name
+            $script:stageUp   = $up
+            Write-Host "  Running '$name'" -NoNewline
+            continue
+        }
+
+        if ($line -match $StageFinish) { Close-Stage ([double]$Matches[1]); continue }
+
+        if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
+            if ($script:stageName -and -not $script:stageBroken) {
+                Write-Host ""
+                $script:stageBroken = $true
+            }
+            Write-Host "      $line"
+        }
     }
 }
 
@@ -210,11 +304,32 @@ while ($true) {
 }
 $stopwatch.Stop()
 
-# Drain whatever was written between the last poll and the run reaching a terminal state.
+# Drain whatever was written between the last poll and the run reaching a terminal state. This is
+# also what picks up the closing 'finished at' banner and so closes the last stage.
 Write-StreamedLines (Invoke-InDistro "tail -n +$nextLine /var/log/cloud-init-output.log")
 
-$elapsed = $stopwatch.Elapsed
-Write-Host ("[3/4] done in {0}m{1:00}s" -f [int]$elapsed.TotalMinutes, $elapsed.Seconds)
+# A failed run may never write that closing banner, which would leave the last stage open with an
+# unterminated -NoNewline opener for the next Write-Host to run into. Close it from a live uptime
+# reading -- one extra probe, and only on this path.
+if ($stageName) {
+    $uptime = "$(Invoke-InDistro "cut -d' ' -f1 /proc/uptime" | Select-Object -First 1)".Trim()
+    # [double] parses culture-invariantly (unlike [double]::TryParse, which would reject "7.49" on
+    # a comma-decimal machine), but it yields 0 for an empty string instead of throwing -- which
+    # would report a confident, wrong duration. So require a non-empty reading first.
+    $parsedUptime = $null
+    if ($uptime) { try { $parsedUptime = [double]$uptime } catch { $parsedUptime = $null } }
+
+    if ($null -ne $parsedUptime) {
+        Close-Stage $parsedUptime
+    } else {
+        # No usable reading, so drop the duration rather than invent one. The newline still has to
+        # be emitted or the following output lands on the opener's line.
+        Write-Host ""
+        $stageName = $null
+    }
+}
+
+Write-Host ("[3/4] done in {0}" -f (Format-Duration $stopwatch.Elapsed.TotalSeconds))
 
 # Per-module timing, so a slow provision explains itself without anyone opening a second
 # terminal. package_upgrade surfaces here whenever the Store image has drifted far from the
