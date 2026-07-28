@@ -78,13 +78,28 @@ fi
 # still reads sequentially; provision.ps1 is what joins them for display.
 #
 # On a terminal there is no provision.ps1 to do that joining, so printing the raw contract would
-# just be noise. Each step gets the rendered equivalent instead -- the same line provisioning
-# shows, emitted once the step has finished. Nothing is piped or reformatted on the way, so a
-# step's own output stays live and untouched above its line.
+# just be noise -- and so is a step announcing that it had nothing to do. There each step is
+# reduced to a single status line, with its own output captured rather than shown (and replayed
+# only if it fails). The label is printed before the step runs, so a slow one is visibly in
+# progress; nothing can interrupt that line, because the step's output is being captured.
 #
 # The gate is a TTY check rather than a flag because it needs no plumbing and cannot be wrong:
 # cloud-init's stdout is the log file and is never a terminal.
 if [[ -t 1 ]]; then on_tty=1; else on_tty=0; fi
+
+# Install scripts report what they did through their exit code, since a script that skipped is
+# otherwise indistinguishable from one that installed something:
+#
+#   0  did the work
+#   3  already installed -- the guard at the top found its payload in place
+#   4  not selected -- the INSTALL_* flag for an opt-in feature is not set
+#   *  failed, and the run stops
+#
+# 3 and 4 keep clear of 1 (generic error), 2 (misuse) and the 126+ range the shell reserves.
+# Every numbered script has to honour this; running one by hand can therefore exit non-zero
+# without anything being wrong.
+STATUS_ALREADY_INSTALLED=3
+STATUS_NOT_SELECTED=4
 
 # Mirrors Format-Duration in windows/scripts/provision.ps1: one decimal below a minute (most
 # steps finish well inside a second), minutes above it, with the minute count floored so 90
@@ -111,27 +126,60 @@ i=0
 for script in "${scripts[@]}"; do
   i=$((i + 1))
   name="$(basename "$script")"
+
+  # Sized to the same column as provision.ps1's $StepLabelWidth, which fits the longest label
+  # this can produce ('[14/16] 14-install-direnv-functions.sh'). Nothing parses the terminal
+  # line -- the two just need to look alike.
+  label="$(printf '[%02d/%02d] %s' "$i" "$total" "$name")"
+
   # $SECONDS is integer-only and most of these finish well inside a second, so time them from
   # EPOCHREALTIME (bash 5+, and every supported LTS ships at least 5.1) instead. It renders with
   # the locale's decimal separator, so the [.,] class strips either one and leaves plain integer
   # microseconds -- no float parsing, and correct under a comma-decimal locale. The stripped value
   # is around 1.8e15, comfortably inside bash's 64-bit arithmetic.
   step_start=${EPOCHREALTIME/[.,]/}
-  (( on_tty )) || printf '===> [%02d/%02d] %s\n' "$i" "$total" "$name"
-  if ! bash "$script"; then
-    echo "install.sh: $name failed; aborting" >&2
-    exit 1
+
+  # `rc=0; cmd || rc=$?` rather than `if ! cmd`, so a status of 3 or 4 is read rather than
+  # treated as the failure `set -e` would otherwise make of it.
+  rc=0
+  if (( on_tty )); then
+    # Written unpadded; the padding that lines the '->' column up is added when the status
+    # arrives, so a step that fails here does not leave a trail of spaces behind it.
+    printf '%s' "$label"
+    out="$(bash "$script" 2>&1)" || rc=$?
+  else
+    printf '===> %s\n' "$label"
+    bash "$script" || rc=$?
   fi
   step_us=$(( ${EPOCHREALTIME/[.,]/} - step_start ))
+
+  case $rc in
+    0)                            status='ok' ;;
+    $STATUS_ALREADY_INSTALLED)    status='already installed' ;;
+    $STATUS_NOT_SELECTED)         status='not selected' ;;
+    *)
+      # Nothing was shown while the step ran on a terminal, so put back what it said before
+      # naming it. `out` is only set on that path, hence the ${out:-} guard under `set -u`.
+      if (( on_tty )); then
+        printf '\n'
+        if [[ -n "${out:-}" ]]; then printf '%s\n' "$out"; fi
+      fi
+      echo "install.sh: $name failed; aborting" >&2
+      exit 1
+      ;;
+  esac
+
   if (( on_tty )); then
-    # Padded to the same column as provision.ps1's $StepLabelWidth, which fits the longest
-    # label this can produce ('[14/16] 14-install-direnv-functions.sh'). Nothing parses this
-    # line -- the two just need to look alike.
-    label="$(printf '[%02d/%02d] %s' "$i" "$total" "$name")"
-    printf '%-38s -> ok (%s)\n' "$label" "$(format_duration "$step_us")"
+    # 39 = the 38-wide label column plus the single space before '->'; at least one space
+    # always separates them, however long the name grows.
+    pad=$(( 39 - ${#label} ))
+    if (( pad < 1 )); then pad=1; fi
+    printf '%*s-> %s (%s)\n' "$pad" '' "$status" "$(format_duration "$step_us")"
   else
-    # Plain seconds, always: provision.ps1 matches `ok \(([\d.]+)s\)` and applies its own
-    # formatting, so emitting "2m05s" here would stop matching and strand the step line open.
+    # Plain `ok` and plain seconds, whatever the status: provision.ps1 matches
+    # `^<=== \S+ ok \(([\d.]+)s\)$` and formats the duration itself, so anything else here
+    # would stop matching and strand the step's line open mid-provision. The log still carries
+    # the script's own message explaining what it did.
     printf '<=== %s ok (%d.%ds)\n' "$name" "$((step_us / 1000000))" "$(( (step_us % 1000000) / 100000 ))"
   fi
 done

@@ -5,7 +5,7 @@ set -euo pipefail
 
 if [[ -x "/home/$TARGET_USER/.fnm/fnm" ]]; then
   echo "fnm already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install -o /tmp/fnm-install.sh

@@ -3,7 +3,7 @@ set -euo pipefail
 
 if command -v open >/dev/null 2>&1; then
   echo "open already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 : "${TARGET_USER:?TARGET_USER is required}"

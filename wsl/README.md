@@ -32,6 +32,24 @@ wsl/
                 └── git/*.zsh                       → /usr/local/share/zsh/site-functions/ (flattened)
 ```
 
+## How the install scripts report back
+
+`install.sh` runs `scripts/NN-install-*.sh` in order and reads what each one did from its exit code,
+because a script that skipped is otherwise indistinguishable from one that installed something:
+
+| Code | Meaning | Shown on a terminal as |
+| --- | --- | --- |
+| `0` | did the work | `-> ok (2.4s)` |
+| `3` | already installed — the guard at the top found its payload in place | `-> already installed (0.0s)` |
+| `4` | not selected — the `INSTALL_*` flag for an opt-in feature is not set | `-> not selected (0.0s)` |
+| anything else | failed; the run stops and names the script | — |
+
+New scripts have to honour this. One consequence worth knowing: running a numbered script by hand
+can now exit non-zero without anything being wrong.
+
+Under cloud-init the same run reports through `===> ` / `<=== ` marker lines instead, which
+`provision.ps1` pairs into one progress line per step — see the comments in `install.sh`.
+
 ## Which script installs what
 
 | Source (`wsl/…`) | Destination | Installed by | Gating |

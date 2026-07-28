@@ -5,7 +5,7 @@ source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 if [[ "${INSTALL_ZED_INTEROP:-}" != "true" ]]; then
   echo "INSTALL_ZED_INTEROP not set, skipping Zed interop install"
-  exit 0
+  exit 4  # not selected; see install.sh
 fi
 
 # The wrapper is a real file under wsl/system (sparse-checked-out per

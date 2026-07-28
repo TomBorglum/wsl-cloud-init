@@ -5,7 +5,7 @@ source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 if [[ "${INSTALL_GIT_CONFIG:-}" != "true" ]]; then
   echo "INSTALL_GIT_CONFIG not set, skipping git config"
-  exit 0
+  exit 4  # not selected; see install.sh
 fi
 
 : "${TARGET_USER:?TARGET_USER is required}"
@@ -27,7 +27,7 @@ sudo -u "$TARGET_USER" git config --global fetch.prune true
 
 if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
   echo "git already configured for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 # Resolve the git config from Windows over interop via wsl_interop_git_config (all the

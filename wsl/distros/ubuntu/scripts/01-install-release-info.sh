@@ -13,7 +13,7 @@ set -euo pipefail
 #
 # On a re-run this script does not write: it *verifies* that /opt still sits at the commit
 # the file records, and fails if it does not. That is the "already installed" guard other
-# scripts spell as an early exit 0, inverted -- because a mismatch is not a no-op, it is an
+# scripts spell as an early exit 3, inverted -- because a mismatch is not a no-op, it is an
 # attempt to upgrade a running instance in place.
 #
 # Upgrading in place is not supported. The other install scripts guard on the presence of
@@ -71,3 +71,4 @@ if [[ "$RECORDED_COMMIT" != "$COMMIT" ]]; then
 fi
 
 echo "$RELEASE_FILE is current ($RECORDED_SHORT), skipping"
+exit 3  # already installed; see install.sh

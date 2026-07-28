@@ -3,7 +3,7 @@ set -euo pipefail
 
 if command -v lazydocker >/dev/null 2>&1; then
   echo "lazydocker already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 # Pinned version + known-good checksums (from the release's checksums.txt). Pinning
