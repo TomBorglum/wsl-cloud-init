@@ -438,9 +438,7 @@ What you can set when provisioning, and how the instance is derived.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
 - `-InstallZedInterop` (optional) — install the `zed` Windows interop wrapper.
 - `-SkipPackageUpgrade` (optional) — skip the package upgrade, so the instance keeps the package
-  versions its distro image shipped with. That upgrade is the slowest and most variable part of a
-  provision, so skipping it makes repeated re-provisioning much faster while working on this repo.
-  Leave it off for anything you intend to keep.
+  versions its distro image shipped with.
 - `-ShowAllOutput` (optional) — stream `/var/log/cloud-init-output.log` verbatim while waiting,
   instead of the filtered progress summary. Useful when a provision is failing.
 - `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
