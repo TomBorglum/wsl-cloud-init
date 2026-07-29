@@ -171,10 +171,11 @@ $StageDurationFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+se
 # duration so it does not have to be inferred from the poll interval. Kept as two lines in the log
 # so the file still reads sequentially; paired back into a single line for display.
 #
-# The duration is matched loosely rather than as `[\d.]+`. A stricter pattern once failed on a
-# malformed value, which sent the marker down the generic filter below: it printed verbatim as
-# nested content and left the step's line hanging open. Consuming the marker whatever it carries
-# means the layout survives regardless, and an unreadable duration degrades to 0.0s.
+# The duration is matched as `[^)]*` rather than `[\d.]+` so the marker is consumed whatever it
+# carries. A pattern that only accepted a well-formed number would drop a malformed one through
+# to the generic filter below, which prints it verbatim as nested content and leaves the step's
+# line open with no `-> ok` ever arriving. Matching loosely keeps the layout intact; a duration
+# that will not parse degrades to 0.0s.
 $StepDurationStart  = "^===> (.+)$"
 $StepDurationFinish = "^<=== \S+ ok \(([^)]*)s\)$"
 
@@ -209,13 +210,12 @@ $CloudInitLog = "/var/log/cloud-init-output.log"
 
 # Read the log from $FirstLine on, and have the distro report how many lines it actually holds.
 #
-# The obvious version of this -- tail, then advance the offset by however many elements came back
-# -- is wrong, and wrong in a way that silently eats whole lines. PowerShell splits native command
-# output on carriage returns as well as newlines, so `printf 'a\rb\nc\n'` arrives as three
+# The offset must never be advanced by the number of elements returned. PowerShell splits native
+# command output on carriage returns as well as newlines, so `printf 'a\rb\nc\n'` arrives as three
 # elements for two lines. A real provisioning log is full of them: 634 of 1191 lines carry a `\r`,
 # 1023 in total, nearly all from the package manager's "(Reading database ... 5%\r10%\r...)"
-# progress. Counting elements therefore runs the offset past the end of the file and never comes
-# back, which is how entire install steps went missing.
+# progress. Counting elements would therefore overshoot on almost every poll, running the offset
+# past the end of the file with no way back and skipping whole install steps unread.
 #
 # So the count comes from `wc -l` instead, and the offset is derived from that and never from the
 # payload. `wc -l` counts only newline-terminated lines, and the `sed` range stops at that count,
@@ -237,8 +237,8 @@ function Read-LogFrom([int]$FirstLine) {
     if ($total -lt $FirstLine) { return @{ Total = $total; Lines = @() } }
 
     # Both the command and the call are hoisted out of the hashtable on purpose. Written inline as
-    # `@{ Lines = @(Invoke-InDistro "sed -n $FirstLine,${total}p ...") }` this returned a single
-    # line instead of the whole range; assigning to a variable first returns all of it.
+    # `@{ Lines = @(Invoke-InDistro "sed -n $FirstLine,${total}p ...") }` the hashtable value
+    # collapses to a single line; assigning to a variable first preserves the whole range.
     $sedCommand = "sed -n " + $FirstLine + "," + $total + "p " + $CloudInitLog
     $payload = @(Invoke-InDistro $sedCommand)
     return @{ Total = $total; Lines = $payload }
@@ -251,8 +251,9 @@ function Format-Duration([double]$Seconds) {
     # "1,1s" on a machine set to nb-NO or de-DE.
     if ($Seconds -lt 60) { return $Seconds.ToString('0.0', [cultureinfo]::InvariantCulture) + "s" }
     $span = [TimeSpan]::FromSeconds($Seconds)
-    # Floor, not [int]: PowerShell's [int] cast rounds, so 90 seconds would read as "2m30s".
-    # Minutes can exceed 59, so TotalMinutes rather than the Minutes component.
+    # Floor, not [int]: PowerShell's [int] cast rounds to nearest, which would carry 90 seconds
+    # up to "2m30s" instead of "1m30s". Minutes can exceed 59, so TotalMinutes rather than the
+    # Minutes component.
     return ("{0}m{1:00}s" -f [int][Math]::Floor($span.TotalMinutes), $span.Seconds)
 }
 
@@ -304,10 +305,10 @@ function Open-PendingLine([string]$Kind, [string]$Label, [int]$Width) {
     Show-Line "$indent$Label" -NoNewline
 }
 
-# $Kind guards which line this completes. Without it a stray marker closes whatever happens to be
-# on top: a `<===` arriving with no step open used to complete the *stage* instead, printing
-# "Running 'modules:final' -> ok (0.0s)" halfway through the run and leaving every later step
-# orphaned at the wrong depth.
+# $Kind guards which line this completes, so a marker can only close a line of its own kind.
+# Without it a stray marker would close whatever happens to be on top: a `<===` arriving with no
+# step open would complete the *stage*, printing "Running 'modules:final' -> ok (0.0s)" halfway
+# through the run and leaving every later step orphaned at the wrong depth.
 function Complete-PendingLine([string]$Kind, [double]$Seconds) {
     if ($pendingLines.Count -eq 0) { return }
     $top = $pendingLines[$pendingLines.Count - 1]
@@ -330,8 +331,9 @@ function Complete-PendingLine([string]$Kind, [double]$Seconds) {
 # writes its `<===`, and a failed run never writes cloud-init's 'finished' banner. The newline
 # still has to go out or the next line is glued onto the abandoned opener.
 #
-# Unwinding is by kind rather than by a depth number: a depth said what to keep only indirectly,
-# and stopped meaning the right thing the moment the stack was one entry off.
+# Unwinding is by kind rather than by a depth number. A caller knows which kinds it wants
+# abandoned; it would have to derive a depth from the stack's current size, which names the same
+# entries only while the stack is exactly as deep as the caller assumes.
 function Reset-PendingLines([string[]]$Kinds) {
     while ($pendingLines.Count -and $pendingLines[$pendingLines.Count - 1].Kind -in $Kinds) {
         $idx = $pendingLines.Count - 1
@@ -484,9 +486,9 @@ if ($pendingLines.Count) {
 
 Write-Host ("[3/4] done in {0}" -f (Format-Duration $stopwatch.Elapsed.TotalSeconds))
 
-# Check how the run actually ended. cloud-init reports 'error' for an unrecoverable failure and
-# a 'degraded ...' extended status when it finished but hit a recoverable one; neither used to
-# be looked at here, so a failed first boot went on to launch as though it had succeeded.
+# Check how the run actually ended, so a failed first boot is not launched as though it had
+# succeeded. cloud-init reports 'error' for an unrecoverable failure and a 'degraded ...'
+# extended status when it finished but hit a recoverable one; both have to be inspected.
 # extended_status is not reported by every cloud-init the supported LTS releases ship, so fall
 # back to the plain status when it is absent.
 if ($status) {
