@@ -57,7 +57,7 @@ write_files:
 
       cd ~
 package_update: true
-package_upgrade: true
+package_upgrade: __PACKAGE_UPGRADE__
 packages:
   - git
   - curl

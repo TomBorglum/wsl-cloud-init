@@ -3,7 +3,7 @@ set -euo pipefail
 
 if command -v docker >/dev/null 2>&1; then
   echo "docker already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")

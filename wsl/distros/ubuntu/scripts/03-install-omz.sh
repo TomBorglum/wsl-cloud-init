@@ -5,7 +5,7 @@ set -euo pipefail
 
 if [[ -d "/home/$TARGET_USER/.oh-my-zsh" ]]; then
   echo "oh-my-zsh already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 sudo -u "$TARGET_USER" sh -c "$(curl -fsSL --proto '=https' --tlsv1.2 https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended --keep-zshrc

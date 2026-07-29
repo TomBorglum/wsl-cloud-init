@@ -5,7 +5,7 @@ set -euo pipefail
 
 if [[ -d "/home/$TARGET_USER/.sdkman" ]]; then
   echo "sdkman already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io -o /tmp/sdkman-install.sh

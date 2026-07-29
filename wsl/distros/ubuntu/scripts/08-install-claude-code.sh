@@ -5,14 +5,14 @@ source /usr/local/lib/wsl-cloud-init/wsl-interop.sh
 
 if [[ "${INSTALL_CLAUDE_CODE:-}" != "true" ]]; then
   echo "INSTALL_CLAUDE_CODE not set, skipping claude-code install"
-  exit 0
+  exit 4  # not selected; see install.sh
 fi
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
 if [[ -x "/home/$TARGET_USER/.local/bin/claude" ]]; then
   echo "claude-code already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 # Resolve the Context7 API key from Windows Credential Manager via wsl_interop_credential

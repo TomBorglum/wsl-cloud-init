@@ -33,6 +33,13 @@ The full convention list with annotated examples lives in
      `references/conventions.md`.
    - Whether it installs **system-wide** (as root) or **per-user** (under a user's
      home).
+   - Whether the target directory's runner honours the **exit-code contract**
+     (`0` did the work, `3` already installed, `4` not selected). `wsl-cloud-init`'s
+     `wsl/distros/ubuntu/install.sh` does, and that is the default to assume. A plain
+     `for f in *.sh; do bash "$f"; done` under `set -e` does not — a non-zero guard
+     would abort the rest of the run there, so the guards use `exit 0` instead and
+     the script says so in a comment. See the "Exit-code contract" section of
+     `references/conventions.md`.
 
 2. **Determine the output path and name.** The target **directory is not
    predefined — ask the user for it.** Within that directory, name the file
@@ -53,18 +60,28 @@ The full convention list with annotated examples lives in
      `/home/$TARGET_USER` — where `$TARGET_USER` is a variable the script asserts.
      Installing user tools as root would leave root-owned files in the user's home.
 
-4. **Add an already-installed guard.** Before any install work, check whether the
-   tool is already present and, if so, `echo "<tool> already installed, skipping"`
-   and `exit 0`. This keeps re-runs idempotent and avoids re-piping installers or
-   re-appending to dotfiles. Place the guard **as early as possible** — before the
-   required-env asserts when its detection method needs no required var, and only
-   after the assert for any required var it references. Pick the detection method
-   that matches the install context — system `command -v`, apt `dpkg -s`, or a
-   per-user path/dir test under the user's home. The exact snippets are in
-   `references/conventions.md`. The guard ends with `exit 0`.
+4. **Add the guards.** A script reports what it did through its exit code, so a run
+   that skipped is distinguishable from one that installed something:
 
-5. **Write the script.** Start with `#!/bin/bash` and `set -euo pipefail`. The order
-   of the already-installed guard and the env asserts depends on whether the guard
+   - **Already-installed guard.** Before any install work, check whether the tool is
+     already present and, if so, `echo "<tool> already installed, skipping"` and
+     `exit 3`. This keeps re-runs idempotent and avoids re-piping installers or
+     re-appending to dotfiles. Place it **as early as possible** — before the
+     required-env asserts when its detection method needs no required var, and only
+     after the assert for any required var it references. Pick the detection method
+     that matches the install context — system `command -v`, apt `dpkg -s`, or a
+     per-user path/dir test under the user's home.
+   - **Opt-in flag guard.** If the tool is opt-in, test its `INSTALL_<FEATURE>` flag
+     first and `exit 4` when it is not `true`. This guard reads only an optional var
+     (`"${INSTALL_X:-}"`), so it goes at the very top, ahead of the env asserts.
+
+   Both codes and the exact snippets are in `references/conventions.md`. Use `exit 0`
+   for both only when step 1 established that the runner does not read 3/4.
+
+5. **Write the script.** Start with `#!/bin/bash` and `set -euo pipefail`. An opt-in
+   flag guard, if there is one, always comes first — it reads an optional var and
+   decides whether the script has any business running at all. The order of the
+   already-installed guard and the env asserts then depends on whether that guard
    needs a required var:
    - **Env-independent guard** (system `command -v` / apt `dpkg -s`): guard first,
      then any env asserts (`: "${TARGET_USER:?}"`), then the install body — an
@@ -84,8 +101,10 @@ The full convention list with annotated examples lives in
    unnecessary. See the "File permissions" section of `references/conventions.md`.
 
 6. **Verify.** Run `bash -n` on the new script to catch syntax errors, and confirm
-   its mode is `644`. Check that **every** download `curl` enforces HTTPS with
-   `--proto '=https'` (see the "Download pattern" section of
+   its mode is `644`. Check that each guard exits with the code its case calls for —
+   `3` for already-installed, `4` for not-selected — and that no guard was left on a
+   bare `exit 0` unless the runner requires it. Check that **every** download `curl`
+   enforces HTTPS with `--proto '=https'` (see the "Download pattern" section of
    `references/conventions.md`) — a bare `curl ... https://...` is flagged as a
    vulnerability by static analysis. Note to the user that full runtime verification
    requires the real target environment — these scripts assume their intended
@@ -94,5 +113,5 @@ The full convention list with annotated examples lives in
 ## Reference
 
 - `references/conventions.md` — the full convention list with annotated root and
-  per-user examples, and the self-contained / no-transient-dependency rule. Read it
-  before writing the script.
+  per-user examples, the exit-code contract, and the self-contained /
+  no-transient-dependency rule. Read it before writing the script.

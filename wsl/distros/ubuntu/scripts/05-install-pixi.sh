@@ -5,7 +5,7 @@ set -euo pipefail
 
 if [[ -x "/home/$TARGET_USER/.pixi/bin/pixi" ]]; then
   echo "pixi already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 curl -fsSL --proto '=https' --tlsv1.2 https://pixi.sh/install.sh -o /tmp/pixi-install.sh

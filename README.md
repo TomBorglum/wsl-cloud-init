@@ -437,6 +437,10 @@ What you can set when provisioning, and how the instance is derived.
   and the Git shell helpers.
 - `-InstallVsCodeInterop` (optional) — install the `code` Windows interop wrapper.
 - `-InstallZedInterop` (optional) — install the `zed` Windows interop wrapper.
+- `-SkipPackageUpgrade` (optional) — skip the package upgrade, so the instance keeps the package
+  versions its distro image shipped with.
+- `-ShowAllOutput` (optional) — stream `/var/log/cloud-init-output.log` verbatim while waiting,
+  instead of the filtered progress summary. Useful when a provision is failing.
 - `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
 
 `provision.ps1` provisions the commit its own checkout is on, and refuses to run against a dirty
