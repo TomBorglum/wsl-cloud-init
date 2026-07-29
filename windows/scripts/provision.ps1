@@ -18,7 +18,8 @@ $RepoRoot   = Split-Path $WindowsDir  -Parent    # repo root
 
 # Only pinned LTS distro names are supported. The bare "Ubuntu" name installs whatever
 # Ubuntu the Store currently ships, which the in-distro setup does not support
-# (e.g. Docker has no apt repo for its codename). Add new names here as they are validated.
+# (e.g. Docker has no package repository for its codename). Add new names here as
+# they are validated.
 $SupportedDistros = @('Ubuntu-26.04', 'Ubuntu-24.04', 'Ubuntu-22.04')
 if ($SupportedDistros -notcontains $DistroInstallName) {
   Write-Host @"
@@ -138,17 +139,15 @@ if ($LASTEXITCODE -ne 0) { Write-Error "WSL install failed"; exit 1 }
 
 Write-Host "[3/4] Waiting for cloud-init to finish..."
 
-# `cloud-init status --wait` emits one dot per poll and nothing else: enough to show the run is
-# alive, nothing about where its time goes. Poll instead and stream the lines of
-# /var/log/cloud-init-output.log that carry signal -- cloud-init's stage transitions, apt's
-# upgrade summary, and the per-step banners install.sh writes. Anything resembling an error is
-# printed whatever the filter says, so nothing alarming is ever hidden; -ShowAllOutput prints
-# the log verbatim instead, which is the setting to reach for when a provision is failing.
+# `cloud-init status --wait` emits one dot per poll and nothing else. Poll instead and print the
+# lines of /var/log/cloud-init-output.log that carry progress -- cloud-init's stage transitions,
+# the package upgrade summary and install.sh's per-step banners. Anything resembling an error is
+# printed whatever the filter says, so nothing alarming is ever hidden; -ShowAllOutput prints the
+# log verbatim, which is the setting to reach for when a provision is failing.
 #
 # The `===> ` / `<=== ` prefixes come from wsl/distros/ubuntu/install.sh: the two files are
-# coupled and have to change together. Stage banners are not listed here; they get their own
-# handling below.
-$InterestingLine = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Traceback|^E: "
+# coupled and have to change together.
+$ShowLinePattern = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Traceback|^E: "
 
 # cloud-init announces each stage with a banner carrying the package version, a wall-clock
 # timestamp and an uptime, e.g.
@@ -165,8 +164,8 @@ $InterestingLine = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Tr
 # consecutive banners gives an exact per-stage duration, free of the 2s poll granularity. The
 # closing 'finished at' line supplies the end of the last stage. Both patterns stay tolerant of
 # spacing -- the finish line uses two spaces before `Up` and drops the trailing period.
-$StageStart  = "^Cloud-init v\.\s+\S+\s+running\s+'([^']+)'.*?\bUp\s+([\d.]+)\s+seconds"
-$StageFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
+$StageDurationStart  = "^Cloud-init v\.\s+\S+\s+running\s+'([^']+)'.*?\bUp\s+([\d.]+)\s+seconds"
+$StageDurationFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
 
 # install.sh brackets each numbered script with these markers, carrying the step's own measured
 # duration so it does not have to be inferred from the poll interval. Kept as two lines in the log
@@ -176,17 +175,17 @@ $StageFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
 # malformed value, which sent the marker down the generic filter below: it printed verbatim as
 # nested content and left the step's line hanging open. Consuming the marker whatever it carries
 # means the layout survives regardless, and an unreadable duration degrades to 0.0s.
-$StepStart  = "^===> (.+)$"
-$StepFinish = "^<=== \S+ ok \(([^)]*)s\)$"
+$StepDurationStart  = "^===> (.+)$"
+$StepDurationFinish = "^<=== \S+ ok \(([^)]*)s\)$"
 
-# Two lines apt's dpkg triggers emit on every single provision: systemd and dbus are not fully up
-# inside a WSL container while packages are configuring, so postinst scripts probing them fail
-# harmlessly (they sit between "Processing triggers for systemd" and "Processing triggers for
-# dbus"). They match the error catch-all above, and printing known-benign errors every time is how
-# people learn to ignore the real ones. Both patterns are anchored end to end so nothing broader
-# is ever suppressed.
-$BenignNoise = "^Failed to get properties: Transport endpoint is not connected$" +
-               "|^Failed to connect to system scope bus via local transport: Connection refused$"
+# Two lines the package manager's triggers emit on every single provision: systemd and dbus are
+# not fully up inside a WSL container while packages are configuring, so the post-install scripts
+# probing them fail harmlessly (they sit between "Processing triggers for systemd" and "Processing
+# triggers for dbus"). They match the error catch-all in $ShowLinePattern, and printing
+# known-benign errors every time is how people learn to ignore the real ones. Both patterns are
+# anchored end to end so nothing broader is ever suppressed.
+$HideLinePattern = "^Failed to get properties: Transport endpoint is not connected$" +
+                   "|^Failed to connect to system scope bus via local transport: Connection refused$"
 
 # Both probes below are expected to fail early on -- the log does not exist until cloud-init
 # starts, and an exec can fail outright while the instance is still coming up. The redirect and
@@ -211,9 +210,9 @@ $CloudInitLog = "/var/log/cloud-init-output.log"
 # -- is wrong, and wrong in a way that silently eats whole lines. PowerShell splits native command
 # output on carriage returns as well as newlines, so `printf 'a\rb\nc\n'` arrives as three
 # elements for two lines. A real provisioning log is full of them: 634 of 1191 lines carry a `\r`,
-# 1023 in total, nearly all from dpkg's "(Reading database ... 5%\r10%\r...)" progress. Counting
-# elements therefore runs the offset past the end of the file and never comes back, which is how
-# entire install steps went missing.
+# 1023 in total, nearly all from the package manager's "(Reading database ... 5%\r10%\r...)"
+# progress. Counting elements therefore runs the offset past the end of the file and never comes
+# back, which is how entire install steps went missing.
 #
 # So the count comes from `wc -l` instead, and the offset is derived from that and never from the
 # payload. `wc -l` counts only newline-terminated lines, and the `sed` range stops at that count,
@@ -259,8 +258,8 @@ function Format-Duration([double]$Seconds) {
 # rather than simply absent. cloud-init's boot stages and install.sh's numbered steps are the same
 # construct at different depths, so they share one stack.
 #
-# A line cannot always be completed in place. modules:final holds the apt work and the whole of
-# install.sh -- well over a thousand log lines -- so when output arrives the open line is
+# A line cannot always be completed in place. modules:final holds the package upgrade and the whole
+# of install.sh -- well over a thousand log lines -- so when output arrives the open line is
 # terminated, the output streams live and indented beneath it, and the line is restated when it
 # closes. Waiting until the end to print anything would hide progress during exactly the stage
 # where the waiting happens.
@@ -355,7 +354,7 @@ $stageUp = 0.0   # uptime from the open stage's banner; steps carry their own du
 # read as "handled" and swallow the line. The stack calls it makes all return void, and the display
 # goes to the host, not the pipeline.
 function Update-PendingFromMarker([string]$Line) {
-    if ($Line -match $StageStart) {
+    if ($Line -match $StageDurationStart) {
         $name = $Matches[1]
         $up   = [double]$Matches[2]
         Reset-OpenSteps
@@ -365,7 +364,7 @@ function Update-PendingFromMarker([string]$Line) {
         return $true
     }
 
-    if ($Line -match $StageFinish) {
+    if ($Line -match $StageDurationFinish) {
         Reset-OpenSteps
         Complete-PendingLine 'stage' ([double]$Matches[1] - $script:stageUp)
         return $true
@@ -373,13 +372,13 @@ function Update-PendingFromMarker([string]$Line) {
 
     # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== ` prefixes
     # are its side of the contract; see wsl/distros/ubuntu/install.sh.
-    if ($Line -match $StepStart) {
+    if ($Line -match $StepDurationStart) {
         Reset-OpenSteps                                           # a step whose `<===` never came
         Open-PendingLine 'step' $Matches[1] $StepLabelWidth
         return $true
     }
 
-    if ($Line -match $StepFinish) {
+    if ($Line -match $StepDurationFinish) {
         # TryParse rather than the [double] cast used elsewhere here: it answers "is this a number
         # at all" without throwing. It reads the current culture, which the cast does not, but that
         # only matters for the fallback decision -- install.sh always writes a period, and anything
@@ -405,7 +404,7 @@ function Write-StreamedLines($Lines) {
 
         if (Update-PendingFromMarker $line) { continue }
 
-        if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
+        if ($line -match $ShowLinePattern -and $line -notmatch $HideLinePattern) {
             $indent = Get-PendingIndent
             Split-PendingLine
             Show-Line "$indent$line"

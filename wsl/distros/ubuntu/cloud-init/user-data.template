@@ -56,17 +56,7 @@ write_files:
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
       cd ~
-# Redundant: cloud-init forces the update whenever `packages:` is non-empty or
-# package_upgrade is true, both of which hold here. Stated anyway so the whole apt
-# strategy reads from one place.
 package_update: true
-# The only step in a provision with unbounded duration: it upgrades whatever the Store
-# image ships to whatever the archive currently has, so the work scales with how stale
-# that image is -- a handful of packages just after an image release, several hundred a
-# few months later. Kept on by default (cloud-init's own hardening guidance, and a dev
-# box should not sit on the image's original patch level); rendered false by
-# `provision.ps1 -SkipPackageUpgrade` for fast re-provisioning while iterating on this
-# repo.
 package_upgrade: __PACKAGE_UPGRADE__
 packages:
   - git
