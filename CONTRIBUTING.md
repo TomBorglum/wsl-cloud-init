@@ -134,11 +134,6 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 ## The release flow
 
 1. Open a PR with a Conventional Commit **title** and let the SonarCloud check pass.
-   The quality gate fails on **any** new issue the analysis reports, whatever its
-   severity — the check is required on `main`, so a PR with open issues cannot be
-   merged. An issue that is genuinely wrong is not merged past but dismissed at the
-   source: mark it **Accepted** or **False positive** in SonarCloud and it stops
-   counting against the gate.
 2. Merge it. release-please opens or updates the **chore(main): release X.Y.Z** PR.
 3. Merge that release PR — the version is tagged and the GitHub Release is
    published automatically. No manual tagging.
