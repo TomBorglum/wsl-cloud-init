@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.3.0...v1.4.0) (2026-07-29)
+
+
+### Features
+
+* stream cloud-init progress and add -SkipPackageUpgrade ([#72](https://github.com/TomBorglum/wsl-cloud-init/issues/72)) ([b8582c0](https://github.com/TomBorglum/wsl-cloud-init/commit/b8582c0ab1996d4786c27137cf91077a05099b83))
+
 ## [1.3.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.2.0...v1.3.0) (2026-07-19)
 
 
