@@ -41,12 +41,11 @@ source "$INTEROP_DIR/wsl-interop.sh"
 # it explicitly.
 export TARGET_USER="${TARGET_USER:-${SUDO_USER:-$(id -un)}}"
 
-# POWERSHELL is always needed: the open/gh wrappers consume it at runtime. Interop
-# and Windows PowerShell are always present under WSL, so it is derived below for
-# every run.
-
-# Resolve the WSL path to Windows powershell.exe. wsl_interop_powershell_path
-# bootstraps and self-reports it over interop; install.sh stays pure bash.
+# Resolve the WSL path to Windows powershell.exe. Derived unconditionally on every
+# run: the open/gh wrappers consume POWERSHELL at runtime, and both interop and
+# Windows PowerShell are always present under WSL, so there is nothing to gate on.
+# wsl_interop_powershell_path bootstraps and self-reports it over interop, keeping
+# install.sh pure bash.
 POWERSHELL="$(wsl_interop_powershell_path)" || exit 1
 export POWERSHELL
 
