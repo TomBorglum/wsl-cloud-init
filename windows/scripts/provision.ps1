@@ -346,6 +346,53 @@ function Reset-AllPendingLines { Reset-PendingLines @('stage', 'step') }
 
 $stageUp = 0.0   # uptime from the open stage's banner; steps carry their own duration
 
+# The lines that drive the pending-line stack rather than being content for it: cloud-init's stage
+# banners and install.sh's step markers. They are handled here, apart from the filtering, so
+# neither half has to be read with the other in mind. Returns $true when the line was a marker and
+# has been rendered as one, which tells the caller not to fall through to the generic filter.
+#
+# Nothing but that boolean may leave this function: an accidental value on the pipeline would be
+# read as "handled" and swallow the line. The stack calls it makes all return void, and the display
+# goes to the host, not the pipeline.
+function Update-PendingFromMarker([string]$Line) {
+    if ($Line -match $StageStart) {
+        $name = $Matches[1]
+        $up   = [double]$Matches[2]
+        Reset-OpenSteps
+        Complete-PendingLine 'stage' ($up - $script:stageUp)
+        $script:stageUp = $up
+        Open-PendingLine 'stage' "Running '$name'" $StageLabelWidth
+        return $true
+    }
+
+    if ($Line -match $StageFinish) {
+        Reset-OpenSteps
+        Complete-PendingLine 'stage' ([double]$Matches[1] - $script:stageUp)
+        return $true
+    }
+
+    # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== ` prefixes
+    # are its side of the contract; see wsl/distros/ubuntu/install.sh.
+    if ($Line -match $StepStart) {
+        Reset-OpenSteps                                           # a step whose `<===` never came
+        Open-PendingLine 'step' $Matches[1] $StepLabelWidth
+        return $true
+    }
+
+    if ($Line -match $StepFinish) {
+        # TryParse rather than the [double] cast used elsewhere here: it answers "is this a number
+        # at all" without throwing. It reads the current culture, which the cast does not, but that
+        # only matters for the fallback decision -- install.sh always writes a period, and anything
+        # unreadable is meant to land on 0 regardless.
+        $seconds = 0.0
+        if (-not [double]::TryParse($Matches[1], [ref]$seconds)) { $seconds = 0.0 }
+        Complete-PendingLine 'step' $seconds
+        return $true
+    }
+
+    return $false
+}
+
 function Write-StreamedLines($Lines) {
     foreach ($line in $Lines) {
         # -ShowAllOutput is the "show me exactly what the log says" mode, so it prints raw and
@@ -356,40 +403,7 @@ function Write-StreamedLines($Lines) {
         # harmless but carry nothing, so drop them before classifying.
         if (-not $line.Trim()) { continue }
 
-        if ($line -match $StageStart) {
-            $name = $Matches[1]
-            $up   = [double]$Matches[2]
-            Reset-OpenSteps
-            Complete-PendingLine 'stage' ($up - $script:stageUp)
-            $script:stageUp = $up
-            Open-PendingLine 'stage' "Running '$name'" $StageLabelWidth
-            continue
-        }
-
-        if ($line -match $StageFinish) {
-            Reset-OpenSteps
-            Complete-PendingLine 'stage' ([double]$Matches[1] - $script:stageUp)
-            continue
-        }
-
-        # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== `
-        # prefixes are its side of the contract; see wsl/distros/ubuntu/install.sh.
-        if ($line -match $StepStart) {
-            Reset-OpenSteps                                       # a step whose `<===` never came
-            Open-PendingLine 'step' $Matches[1] $StepLabelWidth
-            continue
-        }
-
-        if ($line -match $StepFinish) {
-            # TryParse rather than the [double] cast used elsewhere here: it answers "is this a
-            # number at all" without throwing. It reads the current culture, which the cast does
-            # not, but that only matters for the fallback decision -- install.sh always writes a
-            # period, and anything unreadable is meant to land on 0 regardless.
-            $seconds = 0.0
-            if (-not [double]::TryParse($Matches[1], [ref]$seconds)) { $seconds = 0.0 }
-            Complete-PendingLine 'step' $seconds
-            continue
-        }
+        if (Update-PendingFromMarker $line) { continue }
 
         if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
             $indent = Get-PendingIndent
