@@ -279,17 +279,27 @@ $StepLabelWidth  = 38
 # gives 2, an open stage gives 6, an open stage plus step gives 10.
 function Get-PendingIndent { return "  " + ("    " * $pendingLines.Count) }
 
+# Every line the display below emits goes out through here. Write-Host is the right cmdlet for it
+# -- this is a progress display, not data for a pipeline, and half of it is written without a
+# newline so the '-> ok' can land on the same line later, which Write-Output cannot do. The
+# convention that comes with Write-Host is that the function calling it carries the 'Show' verb;
+# one Show- prefixed helper satisfies that without renaming Split-/Complete-/Reset-PendingLine
+# after what they print rather than the stack bookkeeping they actually do.
+function Show-Line([string]$Text = '', [switch]$NoNewline) {
+    Write-Host $Text -NoNewline:$NoNewline
+}
+
 function Split-PendingLine {
     if ($pendingLines.Count -eq 0) { return }
     $top = $pendingLines[$pendingLines.Count - 1]
-    if (-not $top.Broken) { Write-Host ""; $top.Broken = $true }
+    if (-not $top.Broken) { Show-Line; $top.Broken = $true }
 }
 
 function Open-PendingLine([string]$Kind, [string]$Label, [int]$Width) {
     $indent = Get-PendingIndent
     Split-PendingLine
     $pendingLines.Add(@{ Kind = $Kind; Label = $Label; Indent = $indent; Width = $Width; Broken = $false })
-    Write-Host "$indent$Label" -NoNewline
+    Show-Line "$indent$Label" -NoNewline
 }
 
 # $Kind guards which line this completes. Without it a stray marker closes whatever happens to be
@@ -305,12 +315,12 @@ function Complete-PendingLine([string]$Kind, [double]$Seconds) {
     if ($top.Broken) {
         # The opener was terminated by streamed output, so restate the label rather than leave a
         # bare "-> ok" dangling underneath a wall of text.
-        Write-Host ("{0}{1} -> ok ({2})" -f $top.Indent, $top.Label.PadRight($top.Width), $duration)
+        Show-Line ("{0}{1} -> ok ({2})" -f $top.Indent, $top.Label.PadRight($top.Width), $duration)
     } else {
         # Completing the opener in place. The padding is applied here rather than when the label
         # was written, so a line that breaks does not leave trailing whitespace behind.
         $pad = [Math]::Max(1, $top.Width + 1 - $top.Label.Length)
-        Write-Host ((" " * $pad) + ("-> ok ({0})" -f $duration))
+        Show-Line ((" " * $pad) + ("-> ok ({0})" -f $duration))
     }
 }
 
@@ -323,7 +333,7 @@ function Complete-PendingLine([string]$Kind, [double]$Seconds) {
 function Reset-PendingLines([string[]]$Kinds) {
     while ($pendingLines.Count -and $pendingLines[$pendingLines.Count - 1].Kind -in $Kinds) {
         $idx = $pendingLines.Count - 1
-        if (-not $pendingLines[$idx].Broken) { Write-Host "" }
+        if (-not $pendingLines[$idx].Broken) { Show-Line }
         $pendingLines.RemoveAt($idx)
     }
 }
@@ -340,7 +350,7 @@ function Write-StreamedLines($Lines) {
     foreach ($line in $Lines) {
         # -ShowAllOutput is the "show me exactly what the log says" mode, so it prints raw and
         # skips the rewriting entirely; reformatting as well would double every line up.
-        if ($ShowAllOutput) { Write-Host "  $line"; continue }
+        if ($ShowAllOutput) { Show-Line "  $line"; continue }
 
         # Splitting on carriage returns (see Read-LogFrom) leaves empty fragments behind. They are
         # harmless but carry nothing, so drop them before classifying.
@@ -384,7 +394,7 @@ function Write-StreamedLines($Lines) {
         if ($line -match $InterestingLine -and $line -notmatch $BenignNoise) {
             $indent = Get-PendingIndent
             Split-PendingLine
-            Write-Host "$indent$line"
+            Show-Line "$indent$line"
         }
     }
 }
