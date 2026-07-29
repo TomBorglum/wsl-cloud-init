@@ -181,9 +181,12 @@ $StepDurationFinish = "^<=== \S+ ok \(([^)]*)s\)$"
 # Two lines the package manager's triggers emit on every single provision: systemd and dbus are
 # not fully up inside a WSL container while packages are configuring, so the post-install scripts
 # probing them fail harmlessly (they sit between "Processing triggers for systemd" and "Processing
-# triggers for dbus"). They match the error catch-all in $ShowLinePattern, and printing
-# known-benign errors every time is how people learn to ignore the real ones. Both patterns are
-# anchored end to end so nothing broader is ever suppressed.
+# triggers for dbus").
+#
+# Not redundant with $ShowLinePattern: both lines begin with "Failed", so both match its unanchored
+# `failed` alternative -- -match is case-insensitive -- and would print on every single provision
+# without this. Printing known-benign errors every time is how people learn to ignore the real
+# ones. Both patterns are anchored end to end so nothing broader is ever suppressed.
 $HideLinePattern = "^Failed to get properties: Transport endpoint is not connected$" +
                    "|^Failed to connect to system scope bus via local transport: Connection refused$"
 

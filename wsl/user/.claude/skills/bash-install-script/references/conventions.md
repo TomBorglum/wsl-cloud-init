@@ -65,6 +65,32 @@ Under `set -u`:
 
 Assert whatever variables your script actually needs — there is no fixed list.
 
+## Exit-code contract
+
+A script reports **what it did** through its exit code. Without this a script that
+skipped is indistinguishable from one that installed something, and a runner can only
+say "ok" for both:
+
+| Code | Meaning | Shown by the runner as |
+| --- | --- | --- |
+| `0` | did the work | `-> ok (2.4s)` |
+| `3` | already installed — the guard found its payload in place | `-> already installed (0.0s)` |
+| `4` | not selected — the `INSTALL_*` flag for an opt-in feature is not set | `-> not selected (0.0s)` |
+| anything else | failed; the run stops and names the script | — |
+
+`3` and `4` keep clear of `1` (generic error), `2` (misuse), and the `126+` range the
+shell reserves for "not executable" / "not found" / signals.
+
+One consequence worth stating in the script's own output: running a numbered script by
+hand can now exit non-zero without anything being wrong.
+
+**This assumes a runner that reads those codes.** `wsl-cloud-init`'s
+`wsl/distros/ubuntu/install.sh` does — it captures each status with
+`rc=0; bash "$script" || rc=$?` and maps `3`/`4` rather than letting `set -e` make a
+failure of them. A plain `for f in *.sh; do bash "$f"; done` under `set -e` does not:
+there a non-zero guard aborts the rest of the run. When the target directory's runner
+is of that second kind, use `exit 0` for both guards instead and note why in a comment.
+
 ## Already-installed guard (idempotency)
 
 Scripts may be re-run (re-provisioning, or by hand). Before doing any install work,
@@ -82,12 +108,11 @@ The bail-out itself is the same in either case:
 
 ```bash
 echo "<tool> already installed, skipping"
-exit 0
+exit 3  # already installed; see install.sh
 ```
 
-Use `exit 0`, not a non-zero code, so a re-run is a clean no-op and avoids re-piping
-installers or re-appending to dotfiles. (If the script is one of several run in a
-`for script ... bash "$script"` loop, a non-zero exit would also abort the rest.)
+The `echo` still matters even though the code carries the status: it is what the log
+holds when the run is not on a terminal, and it names which payload was found.
 
 Pick the detection method that matches how the tool was installed. The first two are
 env-independent (place them before the asserts); the third reads `$TARGET_USER`
@@ -97,7 +122,7 @@ env-independent (place them before the asserts); the third reads `$TARGET_USER`
 # System tool on PATH (binary in /usr/local/bin, /usr/bin, ...) — env-independent, goes first.
 if command -v <tool> >/dev/null 2>&1; then
   echo "<tool> already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 ```
 
@@ -105,7 +130,7 @@ fi
 # apt package — env-independent, goes first.
 if dpkg -s <pkg> >/dev/null 2>&1; then
   echo "<pkg> already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 ```
 
@@ -116,13 +141,49 @@ fi
 # : "${TARGET_USER:?}" assert.
 if [[ -x "/home/$TARGET_USER/.local/bin/<tool>" ]]; then
   echo "<tool> already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 ```
 
 For per-user installs a path or directory test (`-x <binary>`, `-d <install-dir>`)
 is more robust than `sudo -u "$TARGET_USER" command -v <tool>`, since it doesn't
 depend on the user's login PATH being set up.
+
+## Opt-in flag guard (not selected)
+
+A tool that is only installed on request is gated on an `INSTALL_<FEATURE>` flag. That
+guard goes at the **very top** — ahead of the env asserts and the already-installed
+guard — because a script that was not selected has no business demanding an
+environment or probing the filesystem at all:
+
+```bash
+if [[ "${INSTALL_<FEATURE>:-}" != "true" ]]; then
+  echo "INSTALL_<FEATURE> not set, skipping <tool> install"
+  exit 4  # not selected; see install.sh
+fi
+```
+
+Note the `:-` default: the flag is an **optional** var, so under `set -u` it must be
+referenced with one or reading it aborts the script when it is unset. Test for the
+literal `"true"` rather than for non-emptiness, so a stray `false` or `0` does not read
+as opting in.
+
+A script can carry both guards. The flag guard decides *whether* to run; the
+already-installed guard decides whether there is anything left to do:
+
+```bash
+if [[ "${INSTALL_CLAUDE_CODE:-}" != "true" ]]; then
+  echo "INSTALL_CLAUDE_CODE not set, skipping claude-code install"
+  exit 4  # not selected; see install.sh
+fi
+
+: "${TARGET_USER:?TARGET_USER is required}"
+
+if [[ -x "/home/$TARGET_USER/.local/bin/claude" ]]; then
+  echo "claude-code already installed for $TARGET_USER, skipping"
+  exit 3  # already installed; see install.sh
+fi
+```
 
 ## Execution context
 
@@ -223,7 +284,7 @@ set -euo pipefail
 
 if [[ -x "/home/$TARGET_USER/.tool/bin/tool" ]]; then
   echo "tool already installed for $TARGET_USER, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 curl -fsSL --proto '=https' --tlsv1.2 https://example.sh/install.sh -o /tmp/tool-install.sh
@@ -242,7 +303,7 @@ set -euo pipefail
 
 if command -v docker >/dev/null 2>&1; then
   echo "docker already installed, skipping"
-  exit 0
+  exit 3  # already installed; see install.sh
 fi
 
 CODENAME=$(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
