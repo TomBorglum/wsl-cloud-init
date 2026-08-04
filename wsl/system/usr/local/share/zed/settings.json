@@ -20,14 +20,5 @@
     "mode": "system",
     "light": "One Light",
     "dark": "One Dark"
-  },
-  "lsp": {
-    "basedpyright": {
-      "settings": {
-        "basedpyright.analysis": {
-          "typeCheckingMode": "recommended"
-        }
-      }
-    }
   }
 }
