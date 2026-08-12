@@ -6,20 +6,23 @@
 # single file whose name is the cache-name and whose content is the cache string.
 #
 # The two access patterns are asymmetric on purpose:
-#   * writes happen at provisioning time (typically as root, into a target user's
-#     home), so the owner is passed explicitly and its home is resolved from that
-#     owner via getent passwd;
-#   * reads happen at call time as the user themselves, so the owner is the
-#     invoking user (id -un).
-# XDG_CACHE_HOME is intentionally not consulted; homes come from getent passwd.
+#   * writes name their owner explicitly, so a caller running as root can write into a
+#     target user's home ("$TARGET_USER") during provisioning; the owner's home is
+#     resolved from that name via getent passwd, never from $HOME (root's is /root).
+#     Current callers all write as the user themselves and pass "$(id -un)";
+#   * reads take no owner — they are always the invoking user (id -un), because they
+#     happen at call time from the editor wrappers and shell completion, where no
+#     provisioning variable such as $TARGET_USER exists.
+# XDG_CACHE_HOME is intentionally not consulted; homes come from getent passwd, so a
+# root-on-behalf-of-user write and a later user read compute the same path.
 #
 # It is installed as a durable runtime bundle at /usr/local/lib/wsl-cloud-init/.
 # Callers own `set -euo pipefail`; this file deliberately does not.
 #
 #   source /usr/local/lib/wsl-cloud-init/wsl-cache.sh
-#   wsl_cache_set "$TARGET_USER" powershell-path interop "$path"
-#   path="$(wsl_cache_get powershell-path interop)"
-#   age="$(wsl_cache_age powershell-path interop)"  # seconds since write, or miss
+#   wsl_cache_set "$(id -un)" zed wsl-interop "$path"
+#   path="$(wsl_cache_get zed wsl-interop)"
+#   age="$(wsl_cache_age zed wsl-interop)"  # seconds since write, or miss
 
 # ---------------------------------------------------------------------------
 # Private plumbing (leading underscore): not part of the public API.
