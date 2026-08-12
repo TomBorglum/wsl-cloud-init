@@ -10,8 +10,8 @@
 # keep direnv's interactive load/unload clean, which CI does not do. It also does NOT
 # scaffold a pixi.toml — CI activates a workspace the repo already commits, so a
 # missing manifest is a hard error, not a convenience to paper over. pixi has no
-# canonical <TOOL>_HOME convention, so this exports only bin dirs to $GITHUB_PATH (no
-# $GITHUB_ENV).
+# canonical <TOOL>_HOME convention, so the bin dirs on $GITHUB_PATH are the whole of what
+# this exposes - there is no <TOOL>_HOME for the action to forward.
 use_pixi() {
   # Install pixi under an explicit home rather than relying on the installer's
   # default: PIXI_HOME pins the location (binary at $PIXI_HOME/bin/pixi), and this

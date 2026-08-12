@@ -166,12 +166,22 @@ a developer uses locally, so a runtime version is declared **once** (`use sdk ja
 21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
 shared `.envrc` is the single source of truth that prevents version drift.
 
-**Not everything needs a directive.** After evaluating the `.envrc`, the action copies the
-resulting environment into `$GITHUB_ENV`, so anything set through **stock** direnv —
-`export FOO=bar`, `dotenv`, `dotenv_if_exists` — reaches later workflow steps with no
-`use_*` function existing for it. Two names are held back: `DIRENV_*`, which is direnv's
-own bookkeeping and means nothing to a step that is not running direnv, and `PATH`, which
-belongs to the `$GITHUB_PATH` the directives below append to.
+**A directive's job is to leave the environment correct; the action forwards it.** After
+evaluating the `.envrc`, the action copies the resulting environment into `$GITHUB_ENV`
+wholesale, so a directive only ever `export`s — it never writes there itself. Two
+consequences:
+
+- **Not everything needs a directive.** Anything set through **stock** direnv —
+  `export FOO=bar`, `dotenv`, `dotenv_if_exists` — reaches later workflow steps with no
+  `use_*` function existing for it.
+- **A directive must fix what it dirties.** `use_sdk` sources `sdkman-init.sh`, which sets
+  `<CANDIDATE>_HOME` to the floating `candidates/<c>/current` symlink; the directive then
+  `export`s the declared version over it. Routing the right value to `$GITHUB_ENV` while
+  leaving the wrong one in the environment would ship the symlink to later steps.
+
+Two names are held back from the copy: `DIRENV_*`, which is direnv's own bookkeeping and
+means nothing to a step that is not running direnv, and `PATH`, which belongs to the
+`$GITHUB_PATH` the directives below append to.
 
 The directive **implementations** are deliberately kept as two separate copies:
 `actions/setup-direnv/lib/` for CI, `wsl/user/.config/direnv/lib/` for the terminal. Do not
@@ -180,7 +190,7 @@ unify them. They differ at nearly every step:
 | | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
-| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |
+| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` (cross-step file) + `export <CANDIDATE>_HOME`, which the action forwards |
 | failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |

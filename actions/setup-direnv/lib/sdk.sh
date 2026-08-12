@@ -42,9 +42,16 @@ use_sdk() {
   fi
 
   # Expose the runtime to subsequent workflow steps: the bin on $GITHUB_PATH, plus
-  # SDKMAN's <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …) on $GITHUB_ENV. The name is
-  # derived from the candidate (SDKMAN's convention), not hardcoded.
+  # SDKMAN's <CANDIDATE>_HOME (JAVA_HOME, MAVEN_HOME, …). The name is derived from the
+  # candidate (SDKMAN's convention), not hardcoded.
+  #
+  # export, not an echo to $GITHUB_ENV: sourcing sdkman-init.sh above already put
+  # <CANDIDATE>_HOME in this environment, pointing at the floating candidates/<c>/current
+  # symlink, and this overwrites it with the version the .envrc asked for. The action
+  # forwards the environment wholesale afterwards, so writing the pinned path to
+  # $GITHUB_ENV separately would leave the two disagreeing here and let the symlink reach
+  # a later step.
   echo "$candidate_dir/bin" >> "$GITHUB_PATH"
-  echo "${candidate^^}_HOME=$candidate_dir" >> "$GITHUB_ENV"
+  export "${candidate^^}_HOME=$candidate_dir"
   return 0
 }

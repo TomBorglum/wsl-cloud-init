@@ -7,8 +7,8 @@
 #
 # Deliberately simpler than the interactive terminal directive: arg checks and PATH_add
 # exist to keep direnv's interactive load/unload clean, which CI does not do. Node has no
-# canonical <TOOL>_HOME convention, so this exports only the bin dir to $GITHUB_PATH (no
-# $GITHUB_ENV).
+# canonical <TOOL>_HOME convention, so the bin dir on $GITHUB_PATH is the whole of what
+# this exposes - there is no <TOOL>_HOME for the action to forward.
 use_fnm() {
   # $1 is the trusted tool token ('node'); fnm is Node-only, so ignore it and take
   # the version. CI trusts the committed .envrc — no arg validation.

@@ -61,31 +61,21 @@ runs:
         key: setup-direnv-toolchains-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
 
     # Activate the .envrc: install the CI direnv directives, fail if there is no
-    # .envrc, then evaluate it. Evaluating it runs each use_* directive, which
-    # installs the declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for
-    # later steps.
+    # .envrc, then evaluate it. Evaluating it runs each use_* directive, which installs
+    # the declared runtime and puts it on $GITHUB_PATH for later steps.
     #
-    # Then carry across everything the use_* directives do NOT forward. A directive
-    # writes to $GITHUB_PATH/$GITHUB_ENV itself, but the stock directives - export,
-    # dotenv, dotenv_if_exists - only put names in the environment direnv builds, which
-    # dies with this step. Without the second command an .envrc holding a plain
-    # `export FOO=bar` activates here and is gone by the next step, which contradicts
-    # what this action says it does.
+    # Then hand the whole resulting environment downstream. A directive leaves the
+    # environment correct and the copy below forwards it, so nothing needs to know
+    # about $GITHUB_ENV - and stock direnv (export, dotenv, dotenv_if_exists) travels
+    # just as far, where before it died with this step because `direnv exec` runs in a
+    # subshell.
     #
     # Three things are held back. DIRENV_* is direnv's own bookkeeping (the diff it
     # uses to reverse a load) and is meaningless to a step that is not running direnv.
-    # PATH belongs to $GITHUB_PATH, which the directives above already append to;
-    # writing a whole PATH here would pin later steps to this step's copy and undo
-    # anything a subsequent action adds. A null value means direnv is UNsetting the
-    # name, which $GITHUB_ENV cannot express.
-    #
-    # And any name a directive already published wins over direnv's copy of it.
-    # $GITHUB_ENV is append-only and last-wins, so without that, a blanket copy would
-    # silently overwrite what a directive deliberately chose. use_sdk is the case that
-    # proves it: it publishes the PINNED candidate path (.../java/21.0.2-tem), while
-    # the sdkman-init.sh it sources exports JAVA_HOME as the floating .../java/current
-    # symlink - copying that over the top reintroduces exactly the version drift a
-    # shared .envrc exists to prevent.
+    # A null value means direnv is UNsetting the name, which $GITHUB_ENV cannot
+    # express. PATH belongs to $GITHUB_PATH, which the directives append to: setting a
+    # whole PATH through $GITHUB_ENV is discouraged by GitHub and would freeze later
+    # steps to this step's copy, undoing anything a subsequent action adds.
     #
     # The heredoc form, with a random delimiter, is what makes a value containing a
     # newline or an '=' safe - and what stops a crafted value forging entries of its
@@ -101,28 +91,15 @@ runs:
         fi
         install -d "$HOME/.config/direnv/lib"
         install -m 644 "$GITHUB_ACTION_PATH"/lib/*.sh "$HOME/.config/direnv/lib/"
-
-        # Mark where $GITHUB_ENV ends, so the directives' own writes can be read back
-        # off the tail below.
-        : >> "$GITHUB_ENV"
-        env_bytes=$(wc -c < "$GITHUB_ENV")
-
         direnv allow
         direnv exec . true
 
-        # The names the directives just published. They write plain key=value lines,
-        # so the tail holds no heredocs to confuse this.
-        claimed=$(tail -c "+$((env_bytes + 1))" "$GITHUB_ENV" \
-          | grep -oP '^[A-Za-z_][A-Za-z0-9_]*(?==|<<)' | sort -u || true)
-
         delimiter="SETUP_DIRENV_EOF_$(openssl rand -hex 16)"
         direnv export json \
-          | jq -r --arg d "$delimiter" --arg claimed "$claimed" '
-              ($claimed | split("\n") | map(select(length > 0))) as $skip
-              | to_entries[]
+          | jq -r --arg d "$delimiter" '
+              to_entries[]
               | select(.value != null)
               | select(.key | test("^(DIRENV_|PATH$)") | not)
-              | select(.key as $k | $skip | index($k) == null)
               | "\(.key)<<\($d)\n\(.value)\n\($d)"
             ' \
           >> "$GITHUB_ENV"
