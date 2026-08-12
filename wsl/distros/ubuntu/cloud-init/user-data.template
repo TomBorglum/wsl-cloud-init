@@ -55,7 +55,10 @@ write_files:
 
       eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
 
-      cd ~
+      # WSL starts a shell in the Windows directory it was launched from, which lands
+      # under /mnt. Move to $HOME in that case only, so a shell deliberately started in
+      # a Linux directory (a Zed terminal or task, `wsl --cd ...`) stays where it was put.
+      [[ $PWD != /mnt/* ]] || cd ~
 package_update: true
 package_upgrade: __PACKAGE_UPGRADE__
 packages:
