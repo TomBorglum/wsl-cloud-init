@@ -166,6 +166,13 @@ a developer uses locally, so a runtime version is declared **once** (`use sdk ja
 21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
 shared `.envrc` is the single source of truth that prevents version drift.
 
+**Not everything needs a directive.** After evaluating the `.envrc`, the action copies the
+resulting environment into `$GITHUB_ENV`, so anything set through **stock** direnv —
+`export FOO=bar`, `dotenv`, `dotenv_if_exists` — reaches later workflow steps with no
+`use_*` function existing for it. Two names are held back: `DIRENV_*`, which is direnv's
+own bookkeeping and means nothing to a step that is not running direnv, and `PATH`, which
+belongs to the `$GITHUB_PATH` the directives below append to.
+
 The directive **implementations** are deliberately kept as two separate copies:
 `actions/setup-direnv/lib/` for CI, `wsl/user/.config/direnv/lib/` for the terminal. Do not
 unify them. They differ at nearly every step:

@@ -2,8 +2,9 @@ name: setup-direnv test
 
 # Exercises the setup-direnv composite action end to end: that it installs a
 # runtime declared in an .envrc and exposes it to *subsequent* steps (proving the
-# $GITHUB_PATH / $GITHUB_ENV export, not just a transient direnv shell), and that
-# it fails when there is no .envrc to act on.
+# $GITHUB_PATH / $GITHUB_ENV export, not just a transient direnv shell), that a
+# name set by a stock directive travels just as far as one set by a use_*
+# directive, and that it fails when there is no .envrc to act on.
 
 on:
   pull_request:
@@ -99,6 +100,34 @@ jobs:
           echo "SONARQUBE_TOKEN=${SONARQUBE_TOKEN:-<unset>}  SONARQUBE_ORG=${SONARQUBE_ORG:-<unset>}"
           test -z "${SONARQUBE_TOKEN:-}"
           test -z "${SONARQUBE_ORG:-}"
+
+  activate-dotenv:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run setup-direnv against the dotenv fixture
+        uses: ./actions/setup-direnv
+        with:
+          working-directory: actions/setup-direnv/test/fixture-dotenv
+
+      - name: Assert the stock directives propagated to later steps
+        run: |
+          set -euo pipefail
+          # The only fixture with no use_* directive: it uses stock `export` and
+          # `dotenv_if_exists`, which put names in direnv's environment and write to
+          # neither $GITHUB_PATH nor $GITHUB_ENV themselves. Reading them here, in a
+          # later step, is the whole point - nothing but the action's own export can
+          # have carried them.
+          echo "PLAIN=${SETUP_DIRENV_PLAIN:-<unset>}  DOTENV=${SETUP_DIRENV_DOTENV:-<unset>}"
+          test "${SETUP_DIRENV_PLAIN:-}"  = "from-envrc"
+          test "${SETUP_DIRENV_DOTENV:-}" = "from-dotenv"
+          # A value carrying an '=' and a space arrives intact, which is what the
+          # heredoc delimiter buys over a plain "key=value" append.
+          test "${SETUP_DIRENV_TRICKY:-}" = "a=b c"
+          # direnv's own bookkeeping is not job state, and must not have been carried.
+          test -z "${DIRENV_DIFF:-}"
+          test -z "${DIRENV_FILE:-}"
 
   missing-envrc:
     runs-on: ubuntu-latest

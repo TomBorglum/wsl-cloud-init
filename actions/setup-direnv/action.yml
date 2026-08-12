@@ -1,7 +1,8 @@
 name: setup-direnv
 description: >-
-  Install direnv and activate the language runtimes declared in a repository's
-  .envrc, exporting them to $GITHUB_PATH / $GITHUB_ENV for later workflow steps.
+  Install direnv and evaluate a repository's .envrc, exporting the language
+  runtimes it declares and every variable it sets to $GITHUB_PATH / $GITHUB_ENV
+  for later workflow steps.
 
 inputs:
   working-directory:
@@ -63,6 +64,24 @@ runs:
     # .envrc, then evaluate it. Evaluating it runs each use_* directive, which
     # installs the declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for
     # later steps.
+    #
+    # Then carry across everything the use_* directives do NOT forward. A directive
+    # writes to $GITHUB_PATH/$GITHUB_ENV itself, but the stock directives - export,
+    # dotenv, dotenv_if_exists - only put names in the environment direnv builds, which
+    # dies with this step. Without the second command an .envrc holding a plain
+    # `export FOO=bar` activates here and is gone by the next step, which contradicts
+    # what this action says it does.
+    #
+    # Two names are filtered out. DIRENV_* is direnv's own bookkeeping (the diff it
+    # uses to reverse a load) and is meaningless to a step that is not running direnv.
+    # PATH belongs to $GITHUB_PATH, which the directives above already append to;
+    # writing a whole PATH here would pin later steps to this step's copy and undo
+    # anything a subsequent action adds. A null value means direnv is UNsetting the
+    # name, which $GITHUB_ENV cannot express, so those are dropped too.
+    #
+    # The heredoc form, with a random delimiter, is what makes a value containing a
+    # newline or an '=' safe - and what stops a crafted value forging entries of its
+    # own.
     - name: Activate .envrc
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -76,3 +95,13 @@ runs:
         install -m 644 "$GITHUB_ACTION_PATH"/lib/*.sh "$HOME/.config/direnv/lib/"
         direnv allow
         direnv exec . true
+
+        delimiter="SETUP_DIRENV_EOF_$(openssl rand -hex 16)"
+        direnv export json \
+          | jq -r --arg d "$delimiter" '
+              to_entries[]
+              | select(.value != null)
+              | select(.key | test("^(DIRENV_|PATH$)") | not)
+              | "\(.key)<<\($d)\n\(.value)\n\($d)"
+            ' \
+          >> "$GITHUB_ENV"
