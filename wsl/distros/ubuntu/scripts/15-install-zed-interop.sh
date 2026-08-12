@@ -16,6 +16,15 @@ fi
 # Zed config is a separate opt-in gated below.
 install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/zed /usr/local/bin/zed
 
+# Zed's Windows app runs a remote server inside this instance and remembers its PID across WSL
+# restarts, even though PIDs do not survive one — which makes it kill whatever inherited that PID
+# on the next boot, or hang on "Starting proxy" when that process is root's. The tmpfiles rule
+# clears the state at boot, when none of it can still be valid; the rule itself carries the full
+# explanation. Installed with interop rather than gated separately: both are "this instance is
+# used with Zed", and the rule is inert on an instance where Zed never runs.
+install -D -m 644 /opt/wsl-cloud-init/wsl/system/etc/tmpfiles.d/zed-server-state.conf \
+  /etc/tmpfiles.d/zed-server-state.conf
+
 # Seeding the Windows Zed config is deliberately opt-in on top of interop: putting `zed`
 # on PATH should not overwrite the user's settings.json/keymap.json. Only proceed when the
 # WSL-only INSTALL_ZED_CONFIG flag is set (no provision-time switch feeds it).
