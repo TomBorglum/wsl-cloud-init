@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.0...v1.4.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* export stock direnv variables to $GITHUB_ENV ([#76](https://github.com/TomBorglum/wsl-cloud-init/issues/76)) ([421fcfc](https://github.com/TomBorglum/wsl-cloud-init/commit/421fcfccf9e6cdbf12697b7f8f6710fc198209ff))
+
 ## [1.4.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.3.0...v1.4.0) (2026-07-29)
 
 
