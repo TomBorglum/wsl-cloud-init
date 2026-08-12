@@ -166,6 +166,24 @@ a developer uses locally, so a runtime version is declared **once** (`use sdk ja
 21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
 shared `.envrc` is the single source of truth that prevents version drift.
 
+**A directive's job is to leave the environment correct; the action forwards it.** After
+evaluating the `.envrc`, the action copies the resulting environment into `$GITHUB_ENV`
+wholesale, so no directive writes there itself. Two consequences:
+
+- **Not everything needs a directive.** Anything set through **stock** direnv —
+  `export FOO=bar`, `dotenv`, `dotenv_if_exists` — reaches later workflow steps with no
+  `use_*` function existing for it.
+- **A directive can drive its tool the way the tool documents.** `use_sdk` runs
+  `sdk install` then `sdk use`, and `sdk use` is what sets `<CANDIDATE>_HOME` — no
+  hand-derived path, no second copy of the value routed to `$GITHUB_ENV` around an
+  environment still holding the floating `candidates/<c>/current` symlink. What a
+  directive must not do is leave the environment saying one thing while publishing
+  another.
+
+Two names are held back from the copy: `DIRENV_*`, which is direnv's own bookkeeping and
+means nothing to a step that is not running direnv, and `PATH`, which belongs to the
+`$GITHUB_PATH` the directives below append to.
+
 The directive **implementations** are deliberately kept as two separate copies:
 `actions/setup-direnv/lib/` for CI, `wsl/user/.config/direnv/lib/` for the terminal. Do not
 unify them. They differ at nearly every step:
@@ -173,7 +191,7 @@ unify them. They differ at nearly every step:
 | | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
 | --- | --- | --- |
 | SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
-| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` (in-shell; direnv reverts on leave) | `$GITHUB_PATH` + `<CANDIDATE>_HOME` via `$GITHUB_ENV` (cross-step files) |
+| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` — a plain `export` so direnv can restore the old value on leave, which `sdk use` would not allow | `$GITHUB_PATH` (cross-step file) + `sdk use`, whose `<CANDIDATE>_HOME` the action forwards; nothing is ever left to restore |
 | failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |

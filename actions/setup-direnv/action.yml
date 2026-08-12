@@ -1,7 +1,8 @@
 name: setup-direnv
 description: >-
-  Install direnv and activate the language runtimes declared in a repository's
-  .envrc, exporting them to $GITHUB_PATH / $GITHUB_ENV for later workflow steps.
+  Install direnv and evaluate a repository's .envrc, exporting the language
+  runtimes it declares and every variable it sets to $GITHUB_PATH / $GITHUB_ENV
+  for later workflow steps.
 
 inputs:
   working-directory:
@@ -60,9 +61,25 @@ runs:
         key: setup-direnv-toolchains-${{ runner.os }}-${{ hashFiles(format('{0}/.envrc', inputs.working-directory)) }}
 
     # Activate the .envrc: install the CI direnv directives, fail if there is no
-    # .envrc, then evaluate it. Evaluating it runs each use_* directive, which
-    # installs the declared runtime and appends it to $GITHUB_PATH / $GITHUB_ENV for
-    # later steps.
+    # .envrc, then evaluate it. Evaluating it runs each use_* directive, which installs
+    # the declared runtime and puts it on $GITHUB_PATH for later steps.
+    #
+    # Then hand the whole resulting environment downstream. A directive leaves the
+    # environment correct and the copy below forwards it, so nothing needs to know
+    # about $GITHUB_ENV - and stock direnv (export, dotenv, dotenv_if_exists) travels
+    # just as far, where before it died with this step because `direnv exec` runs in a
+    # subshell.
+    #
+    # Three things are held back. DIRENV_* is direnv's own bookkeeping (the diff it
+    # uses to reverse a load) and is meaningless to a step that is not running direnv.
+    # A null value means direnv is UNsetting the name, which $GITHUB_ENV cannot
+    # express. PATH belongs to $GITHUB_PATH, which the directives append to: setting a
+    # whole PATH through $GITHUB_ENV is discouraged by GitHub and would freeze later
+    # steps to this step's copy, undoing anything a subsequent action adds.
+    #
+    # The heredoc form, with a random delimiter, is what makes a value containing a
+    # newline or an '=' safe - and what stops a crafted value forging entries of its
+    # own.
     - name: Activate .envrc
       shell: bash
       working-directory: ${{ inputs.working-directory }}
@@ -76,3 +93,13 @@ runs:
         install -m 644 "$GITHUB_ACTION_PATH"/lib/*.sh "$HOME/.config/direnv/lib/"
         direnv allow
         direnv exec . true
+
+        delimiter="SETUP_DIRENV_EOF_$(openssl rand -hex 16)"
+        direnv export json \
+          | jq -r --arg d "$delimiter" '
+              to_entries[]
+              | select(.value != null)
+              | select(.key | test("^(DIRENV_|PATH$)") | not)
+              | "\(.key)<<\($d)\n\(.value)\n\($d)"
+            ' \
+          >> "$GITHUB_ENV"
