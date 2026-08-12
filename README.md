@@ -224,7 +224,9 @@ Windows `PATH`.
 No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed` command
 is on your Windows `PATH`.
 
-This installs only the `zed` interop wrapper; it does **not** touch your Windows Zed config.
+This installs the `zed` interop wrapper, plus a boot-time cleanup of the state Zed's remote server
+leaves behind in the instance (see [Troubleshooting](#troubleshooting)). It does **not** touch your
+Windows Zed config.
 
 Seeding a default config is a separate, WSL-only opt-in via `INSTALL_ZED_CONFIG` (there is no
 provision-time switch for it — see [Enabling on a running instance](#enabling-on-a-running-instance)).
@@ -535,6 +537,15 @@ less /var/log/cloud-init.log          # cloud-init's own log
 **WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec
 format error". WSL's `binfmt_misc` interop handler is shared across the VM and another distro can
 flush it. A systemd timer re-registers it every 10 seconds, so wait a moment and try again.
+
+**Zed hangs on "Starting proxy"** — Zed runs a remote server inside the instance and remembers its
+PID, but PIDs do not survive a WSL restart. On the next boot that PID belongs to something else, and
+Zed either kills it (silently, if you own it) or fails to and gives up (if root owns it, which is
+what leaves the window stuck on "Starting proxy"). `-InstallZedInterop` installs a `systemd-tmpfiles`
+rule that clears the state at boot, before anything can read it. Instances provisioned before that
+existed need it installed once — re-run the install (see [Enabling on a running
+instance](#enabling-on-a-running-instance)) with `INSTALL_ZED_INTEROP=true`, or clear the state by
+hand with `rm -rf ~/.local/share/zed/server_state`.
 
 **The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other
 instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`.
