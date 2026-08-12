@@ -12,6 +12,9 @@
     "metrics": false,
     "anthropic_retention": false
   },
+  "jupyter": {
+    "enabled": false
+  },
   "base_keymap": "JetBrains",
   "icon_theme": "Zed (Default)",
   "ui_font_size": 16,
