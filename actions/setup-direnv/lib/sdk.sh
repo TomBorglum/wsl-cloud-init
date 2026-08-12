@@ -15,17 +15,16 @@ use_sdk() {
   local candidate=$1
   local version=$2
 
-  # Standard SDKMAN install; guard only to skip re-downloading on a warm rerun.
-  # --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no plaintext
-  # redirects), matching how the runtime is installed at provision time.
-  if [[ ! -d "$HOME/.sdkman" ]]; then
-    curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io | bash
-  fi
-  # Once per .envrc evaluation, not once per candidate: sdkman-init.sh resets every
-  # <CANDIDATE>_HOME to its candidates/<c>/current symlink, so a second `use sdk` line
-  # re-sourcing it would undo what the first one selected. The guard is the `sdk`
-  # function it defines.
+  # SDKMAN, once per .envrc evaluation rather than once per candidate: sdkman-init.sh
+  # resets every <CANDIDATE>_HOME to its candidates/<c>/current symlink, so a second
+  # `use sdk` line re-sourcing it would undo what the first one selected. The `sdk`
+  # function it defines is the guard, and installing is only the precondition for
+  # sourcing - a defined `sdk` already implies an installed SDKMAN - so both sit behind
+  # the one test. --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no
+  # plaintext redirects), matching how the runtime is installed at provision time.
   if ! command -v sdk >/dev/null 2>&1; then
+    [[ -d "$HOME/.sdkman" ]] ||
+      curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io | bash
     source "$HOME/.sdkman/bin/sdkman-init.sh"
   fi
 
