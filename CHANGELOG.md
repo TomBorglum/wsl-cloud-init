@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.2](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.1...v1.4.2) (2026-08-12)
+
+
+### Bug Fixes
+
+* clear Zed's stale remote-server state at boot ([#79](https://github.com/TomBorglum/wsl-cloud-init/issues/79)) ([8e1998f](https://github.com/TomBorglum/wsl-cloud-init/commit/8e1998f632c8b3ca5bb9a36a3975dcf693c6a98b))
+* only cd to $HOME when the shell starts on a Windows mount ([#80](https://github.com/TomBorglum/wsl-cloud-init/issues/80)) ([38dff07](https://github.com/TomBorglum/wsl-cloud-init/commit/38dff074e633306bfc239739fa06081f149c562a))
+
 ## [1.4.1](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.0...v1.4.1) (2026-08-12)
 
 
