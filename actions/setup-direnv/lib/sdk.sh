@@ -19,7 +19,13 @@ use_sdk() {
   if [[ ! -d "$HOME/.sdkman" ]]; then
     curl -fsSL --proto '=https' --tlsv1.2 https://get.sdkman.io | bash
   fi
-  source "$HOME/.sdkman/bin/sdkman-init.sh"
+  # Once per .envrc evaluation, not once per candidate: sdkman-init.sh sets every
+  # <CANDIDATE>_HOME to its candidates/<c>/current symlink, so a second `use sdk` line
+  # re-sourcing it would undo the pinned value the first one exported below. The guard
+  # is the `sdk` function it defines.
+  if ! command -v sdk >/dev/null 2>&1; then
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+  fi
 
   # `sdk home` is the canonical resolver: it prints the candidate's install dir and
   # exits non-zero when it isn't installed. Use it both as the idempotency gate
