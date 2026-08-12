@@ -126,9 +126,16 @@ jobs:
           echo "PLAIN=${SETUP_DIRENV_PLAIN:-<unset>}  DOTENV=${SETUP_DIRENV_DOTENV:-<unset>}"
           test "${SETUP_DIRENV_PLAIN:-}"  = "from-envrc"
           test "${SETUP_DIRENV_DOTENV:-}" = "from-dotenv"
-          # A value carrying an '=' and a space arrives intact, which is what the
-          # heredoc delimiter buys over a plain "key=value" append.
           test "${SETUP_DIRENV_TRICKY:-}" = "a=b c"
+
+          # What the heredoc delimiter is for, and the only assertion here that a plain
+          # "key=value" append would fail. The value spans three lines and its middle
+          # line is itself shaped like an assignment, so writing it unquoted would end
+          # SETUP_DIRENV_MULTI after "first line" and hand the runner the next line as a
+          # variable of its own.
+          printf 'MULTI=[%s]\n' "${SETUP_DIRENV_MULTI:-<unset>}"
+          test "${SETUP_DIRENV_MULTI:-}" = $'first line\nSETUP_DIRENV_FORGED=nope\nlast line'
+          test -z "${SETUP_DIRENV_FORGED:-}"
           # direnv's own bookkeeping is not job state, and must not have been carried.
           test -z "${DIRENV_DIFF:-}"
           test -z "${DIRENV_FILE:-}"
