@@ -32,6 +32,11 @@ jobs:
           set -euo pipefail
           # Each SDKMAN candidate exposes its bin on PATH and its <CANDIDATE>_HOME on
           # $GITHUB_ENV (SDKMAN's convention), pinned to the version the .envrc declares.
+          #
+          # These two values also pin the action's precedence rule. sdkman-init.sh
+          # exports JAVA_HOME as the floating .../current symlink, so if the action's
+          # environment copy stopped yielding to what a directive published, these
+          # would read .../java/current and drift off the declared version.
           echo "JAVA_HOME=${JAVA_HOME:-<unset>}  MAVEN_HOME=${MAVEN_HOME:-<unset>}"
           test "${JAVA_HOME:-}"  = "$HOME/.sdkman/candidates/java/21.0.2-tem"
           test "${MAVEN_HOME:-}" = "$HOME/.sdkman/candidates/maven/3.9.9"
