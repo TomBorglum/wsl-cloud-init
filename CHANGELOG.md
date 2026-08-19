@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.3](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.2...v1.4.3) (2026-08-19)
+
+
+### Bug Fixes
+
+* read cloud-init's recorded result when the WSL OOBE disables it ([#84](https://github.com/TomBorglum/wsl-cloud-init/issues/84)) ([d81551c](https://github.com/TomBorglum/wsl-cloud-init/commit/d81551ccf0e8f65e51eefee24302fbbc0063046e))
+* verify the docker daemon is running before the next install script ([#83](https://github.com/TomBorglum/wsl-cloud-init/issues/83)) ([f90d66b](https://github.com/TomBorglum/wsl-cloud-init/commit/f90d66b40dc744003cab77bad0376ebd713480e3))
+
 ## [1.4.2](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.1...v1.4.2) (2026-08-12)
 
 
