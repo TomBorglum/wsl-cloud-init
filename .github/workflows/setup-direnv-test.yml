@@ -140,6 +140,31 @@ jobs:
           test -z "${DIRENV_DIFF:-}"
           test -z "${DIRENV_FILE:-}"
 
+  # The only arm64 job, and the only thing that exercises install-direnv.sh's aarch64
+  # branch - its pinned checksum would otherwise never be verified by anything, on the
+  # bump PR least of all. It reuses the dotenv fixture deliberately: proving the install
+  # and the export is the point here, and no use_* directive means no toolchain download
+  # to go flaky on a less-used runner image.
+  install-arm64:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run setup-direnv against the dotenv fixture
+        uses: ./actions/setup-direnv
+        with:
+          working-directory: actions/setup-direnv/test/fixture-dotenv
+
+      - name: Assert the arm64 direnv installed and exported
+        run: |
+          set -euo pipefail
+          # Pinned, so assert the version: on the apt path this was whatever the runner
+          # image happened to carry, and a silent drift back to that is what this catches.
+          direnv version | grep -qx "$(grep -oP '^VERSION=\K.*' actions/setup-direnv/install-direnv.sh)"
+          command -v direnv | grep -qx /usr/local/bin/direnv
+          test "${SETUP_DIRENV_PLAIN:-}"  = "from-envrc"
+          test "${SETUP_DIRENV_DOTENV:-}" = "from-dotenv"
+
   missing-envrc:
     runs-on: ubuntu-latest
     steps:

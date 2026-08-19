@@ -19,20 +19,16 @@ inputs:
 runs:
   using: composite
   steps:
-    # Install direnv from the runner's apt repos. direnv publishes no vendor
-    # checksum file, so there is nothing to pin against; the version floats with
-    # the runner image, which is acceptable here. Idempotent: skip if direnv is
-    # already on PATH (e.g. a warm rerun).
+    # Install direnv from its GitHub release rather than the runner's apt repos, so the
+    # version is pinned here instead of floating with the runner image (which can differ
+    # between ubuntu-latest and its arm variant, and change under a green run). direnv
+    # publishes no vendor checksum file, so the script carries sums we recorded
+    # ourselves; update-direnv.yml refreshes both them and the version by PR.
+    #
+    # Run through `bash` because the script is mode 644, like every other script here.
     - name: Install direnv
       shell: bash
-      run: |
-        set -euo pipefail
-        if command -v direnv >/dev/null 2>&1; then
-          echo "direnv already installed: $(direnv version)"
-          exit 0
-        fi
-        sudo apt-get update
-        sudo apt-get install -y direnv
+      run: bash "$GITHUB_ACTION_PATH/install-direnv.sh"
 
     # Restore the toolchain dirs before activation, keyed on the .envrc so a change
     # to a declared version invalidates the cache. One entry, directive-agnostic: the
