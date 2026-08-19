@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.4](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.3...v1.4.4) (2026-08-19)
+
+
+### Bug Fixes
+
+* stop offering `open` as a pj project completion ([#86](https://github.com/TomBorglum/wsl-cloud-init/issues/86)) ([1d5a6ea](https://github.com/TomBorglum/wsl-cloud-init/commit/1d5a6ea1c6a10151e04e5c3971c2163ee1db701f))
+
 ## [1.4.3](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.2...v1.4.3) (2026-08-19)
 
 
