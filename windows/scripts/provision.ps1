@@ -206,6 +206,51 @@ function Invoke-InDistro([string]$Command) {
     catch { return @() }
 }
 
+# Read the outcome cloud-init *recorded*, rather than the one `cloud-init status` reports now.
+#
+# Ubuntu's WSL image ends provisioning by touching /etc/cloud/cloud-init.disabled --
+# /usr/lib/wsl/wait-for-cloud-init, sourced from the OOBE command /usr/lib/wsl/wsl-setup -- so
+# cloud-init does not run again on every `wsl.exe -d <name>`, each of which is a fresh boot.
+# That script waits on `cloud-init status --wait` and touches the marker the moment cloud-init
+# finishes, well inside the 2s poll interval of the loop below, so a run that just succeeded is
+# usually first observed *after* the marker exists.
+#
+# From then on `cloud-init status` short-circuits on the marker and answers 'disabled' whatever
+# the run did, masking a failure exactly as thoroughly as a success -- which is why the marker
+# can never simply be read as "fine". status.json is untouched by any of it: it holds the
+# per-stage errors cloud-init itself wrote, and is the only trustworthy source once the marker
+# is there.
+#
+# Returns 'error', 'degraded done' or 'done', the vocabulary cloud-init's own extended_status
+# uses, or $null when the file cannot be read or parsed -- leaving the caller on its existing
+# path rather than inventing a success out of a missing file.
+function Get-RecordedCloudInitStatus {
+    $json = (Invoke-InDistro "cat /var/lib/cloud/data/status.json") -join "`n"
+    if (-not $json.Trim()) { return $null }
+    try { $parsed = $json | ConvertFrom-Json } catch { return $null }
+    if ($null -eq $parsed -or -not $parsed.PSObject.Properties['v1']) { return $null }
+
+    # v1 holds the four stage objects alongside plain values ('datasource', 'stage'), so the
+    # stages are picked out by shape -- carrying an 'errors' property -- rather than by a
+    # hardcoded list of names that a future cloud-init could add to.
+    $degraded = $false
+    foreach ($property in $parsed.v1.PSObject.Properties) {
+        $stage = $property.Value
+        if ($null -eq $stage -or -not $stage.PSObject.Properties['errors']) { continue }
+
+        # Filtered into a fresh array rather than measured directly: an empty JSON array can
+        # arrive as $null, and @($null).Count is 1, which would read as an error.
+        if (@($stage.errors | Where-Object { $null -ne $_ }).Count) { return 'error' }
+
+        # recoverable_errors is a JSON object, so its emptiness is a property count.
+        if ($stage.PSObject.Properties['recoverable_errors'] -and $null -ne $stage.recoverable_errors -and
+            @($stage.recoverable_errors.PSObject.Properties).Count) { $degraded = $true }
+    }
+
+    if ($degraded) { return 'degraded done' }
+    return 'done'
+}
+
 $CloudInitLog = "/var/log/cloud-init-output.log"
 
 # Read the log from $FirstLine on, and have the distro report how many lines it actually holds.
@@ -493,8 +538,25 @@ Write-Host ("[3/4] done in {0}" -f (Format-Duration $stopwatch.Elapsed.TotalSeco
 # back to the plain status when it is absent.
 if ($status) {
     $extended = if ($status.PSObject.Properties['extended_status']) { $status.extended_status } else { $status.status }
+    $reported = $status.status
 
-    if ($status.status -eq 'error') {
+    # Once the WSL OOBE has dropped its marker file, both of the values above read 'disabled'
+    # however the run went (see Get-RecordedCloudInitStatus), so the checks below would warn on
+    # a clean provision and stay silent on a broken one. Substitute what cloud-init recorded.
+    # boot_status_code is guarded the same way extended_status is: not every cloud-init the
+    # supported LTS releases ship reports it. An unreadable status.json leaves both values as
+    # they were, so the warning still fires rather than a missing file passing for success.
+    if ($status.PSObject.Properties['boot_status_code'] -and $status.boot_status_code -eq 'disabled-by-marker-file') {
+        $recorded = Get-RecordedCloudInitStatus
+        if ($recorded) {
+            # cloud-init pairs 'degraded done' with a plain status of 'done'; only an outright
+            # failure raises the status itself to 'error'.
+            $reported = if ($recorded -eq 'error') { 'error' } else { 'done' }
+            $extended = $recorded
+        }
+    }
+
+    if ($reported -eq 'error') {
         Write-Host ""
         Write-Host "cloud-init failed (status: $extended). The instance is left registered so it can be"
         Write-Host "inspected; re-provision with -Force once the cause is fixed."
