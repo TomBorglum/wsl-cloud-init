@@ -331,3 +331,10 @@ Notes worth reusing:
   trick only if a package tries to start a daemon during install.
 - Write daemon config with a heredoc to a file under `/etc`, then `systemctl enable`
   and `systemctl start`.
+- `systemctl start` returning only means systemd considers the unit started. When later
+  steps (or the very next script in the run) depend on that daemon actually working, poll
+  `systemctl show <unit> -p ActiveState -p SubState` until it reports `active`/`running`,
+  bounded by a poll count rather than a wall clock, and fail with the last observed state
+  and a `journalctl` tail if it never gets there. For a daemon with a client socket, follow
+  that with a cheap client call (`docker info`) so the script returns only once the socket
+  is answering.
