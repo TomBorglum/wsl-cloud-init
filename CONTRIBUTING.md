@@ -62,6 +62,12 @@ why the lazydocker auto-update workflow uses `deps:` (bumping a shipped tool cut
 a patch release) while Dependabot's GitHub Actions bumps use `ci:` (they never
 reach a provisioned environment).
 
+The direnv auto-update workflow is the same mechanism landing on the other side of
+that line: it bumps the direnv pinned in `actions/setup-direnv/install-direnv.sh`,
+which only ever runs on a CI runner, so its PR is `ci:` and cuts no release. (The
+direnv a *user* gets is an apt package in `user-data.template` — a different
+install path, and a change there would be `deps:`.)
+
 ## Breaking changes
 
 A breaking change forces a **major** bump (2.0.0). Mark it either with a `!`
