@@ -203,28 +203,28 @@ and just operate under `$HOME`.
 
 ## Non-interactive execution
 
-An install script must never wait for input. It runs unattended (cloud-init, CI), and on a
-terminal a runner that captures a step's output hides the prompt, so the run looks hung
-rather than stuck on a question — worse if the waiting program switched the terminal to raw
-mode, which takes `Ctrl-C` with it and leaves the terminal apparently locked up.
+An install script must never wait for input. It runs unattended (cloud-init, CI), and a runner
+that captures a step's output hides the prompt on top of that, so the run looks hung rather
+than stuck on a question — worse if the waiting program switched the terminal to raw mode,
+which takes `Ctrl-C` with it and leaves the terminal apparently locked up.
 
-Your own script is easy to keep quiet; the risk is the **third-party installers and CLIs** it
-invokes, which decide whether they are interactive by looking at stdin. Give each one an
-unattended flag where it has one, and detach stdin regardless:
+**Detaching stdin is the runner's job, not the script's.** `wsl-cloud-init`'s `install.sh`
+runs every step with `</dev/null`, once, for all of them; a script repeating that per command
+adds nothing, and would have to be repeated in every script to mean anything. Assume stdin is
+already unusable, and never read from it.
+
+What is the script's job is the **third-party installers and CLIs** it invokes: detached stdin
+stops them prompting, but not every unattended behaviour is stdin-driven. Pass the unattended
+flag where one exists:
 
 ```bash
-# a flag where the installer offers one (this one would otherwise exec a shell at the end)
+# without --unattended this installer execs a shell and runs chsh at the end, neither of
+# which stdin redirection prevents
 sudo -u "$TARGET_USER" sh -c "$(curl -fsSL --proto '=https' --tlsv1.2 <url>)" "" --unattended
-
-# and/or stdin on /dev/null, which is what makes a program report "not a tty" and behave
-sudo -u "$TARGET_USER" bash /tmp/<installer>.sh </dev/null
-sudo -u "$TARGET_USER" <tool> <subcommand> </dev/null
 ```
 
-`</dev/null` is belt and braces: `wsl-cloud-init`'s `install.sh` already runs every step with
-stdin detached, so this is what holds when the script is run on its own. Prefer it to a
-timeout — a hung step and a slow download are indistinguishable from the outside, and a
-download is allowed to take minutes.
+Prefer both to a timeout — a hung step and a slow download are indistinguishable from the
+outside, and a download is allowed to take minutes.
 
 ## Download pattern
 

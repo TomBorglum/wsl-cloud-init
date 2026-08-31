@@ -22,26 +22,15 @@ fi
 CONTEXT7_API_KEY="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 : "${CONTEXT7_API_KEY:?CONTEXT7_API_KEY is required}"
 
-# Both third-party commands below (the installer, and the claude CLI itself) run with stdin
-# on /dev/null. Each decides whether it is interactive by looking at stdin, and each would
-# otherwise inherit the terminal of whoever ran the opt-in by hand:
-#
-#   sudo INSTALL_CLAUDE_CODE=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
-#
-# A prompt or TUI raised there hangs the run with nothing on screen -- install.sh captures a
-# step's output on a terminal, so the prompt is invisible -- and raw mode takes Ctrl-C with it,
-# so the terminal looks locked up. install.sh detaches stdin for every step; repeating it here
-# keeps that true when this script is run on its own. Same reasoning as the `--unattended` the
-# oh-my-zsh installer is given in 03-install-omz.sh.
 curl -fsSL --proto '=https' --tlsv1.2 https://claude.ai/install.sh -o /tmp/claude-install.sh
-sudo -u "$TARGET_USER" bash /tmp/claude-install.sh </dev/null
+sudo -u "$TARGET_USER" bash /tmp/claude-install.sh
 rm -f /tmp/claude-install.sh
 
 sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << 'EOF'
 export PATH="$HOME/.local/bin:$PATH"
 EOF
 
-sudo -u "$TARGET_USER" /home/"$TARGET_USER"/.local/bin/claude mcp add context7 https://mcp.context7.com/mcp --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY" </dev/null
+sudo -u "$TARGET_USER" /home/"$TARGET_USER"/.local/bin/claude mcp add context7 https://mcp.context7.com/mcp --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
 
 # Claude settings and skills (per-user), sourced from the sparse checkout declared in
 # user-data.template; cp -r for skills since that is a directory tree, not flat files
