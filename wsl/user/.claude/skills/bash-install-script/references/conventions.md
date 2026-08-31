@@ -201,6 +201,31 @@ sudo -u "$TARGET_USER" <command>
 If the whole script is intended to run as a normal user, skip the `sudo -u` wrapper
 and just operate under `$HOME`.
 
+## Non-interactive execution
+
+An install script must never wait for input. It runs unattended (cloud-init, CI), and a runner
+that captures a step's output hides the prompt on top of that, so the run looks hung rather
+than stuck on a question — worse if the waiting program switched the terminal to raw mode,
+which takes `Ctrl-C` with it and leaves the terminal apparently locked up.
+
+**Detaching stdin is the runner's job, not the script's.** `wsl-cloud-init`'s `install.sh`
+runs every step with `</dev/null`, once, for all of them; a script repeating that per command
+adds nothing, and would have to be repeated in every script to mean anything. Assume stdin is
+already unusable, and never read from it.
+
+What is the script's job is the **third-party installers and CLIs** it invokes: detached stdin
+stops them prompting, but not every unattended behaviour is stdin-driven. Pass the unattended
+flag where one exists:
+
+```bash
+# without --unattended this installer execs a shell and runs chsh at the end, neither of
+# which stdin redirection prevents
+sudo -u "$TARGET_USER" sh -c "$(curl -fsSL --proto '=https' --tlsv1.2 <url>)" "" --unattended
+```
+
+Prefer both to a timeout — a hung step and a slow download are indistinguishable from the
+outside, and a download is allowed to take minutes.
+
 ## Download pattern
 
 Fetch to `/tmp`, run, then clean up:
