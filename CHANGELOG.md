@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.5](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.4...v1.4.5) (2026-08-31)
+
+
+### Bug Fixes
+
+* stop an opt-in install run hanging on an invisible prompt ([#90](https://github.com/TomBorglum/wsl-cloud-init/issues/90)) ([c30b658](https://github.com/TomBorglum/wsl-cloud-init/commit/c30b658bd281ed0c8d1b4b491ddb49df88aefad8))
+
 ## [1.4.4](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.3...v1.4.4) (2026-08-19)
 
 
