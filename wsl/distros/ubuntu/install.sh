@@ -158,6 +158,15 @@ for script in "${scripts[@]}"; do
 
   step_start=$(uptime_cs)
 
+  # Every step runs with stdin on /dev/null. The steps are non-interactive by contract --
+  # cloud-init runs them with no terminal at all -- but on a terminal they would otherwise
+  # inherit it, and a step that read from it would hang with nothing on screen: its output is
+  # being captured, so the prompt it is waiting on is invisible, and a step that puts the
+  # terminal into raw mode (any TUI installer or CLI that decides it is interactive because
+  # stdin is a tty) also swallows Ctrl-C, leaving the terminal apparently locked up. Detaching
+  # stdin turns that silent hang into an immediate, visible failure, which the handler below
+  # replays. Applied on both branches so the two behave identically.
+  #
   # `rc=0; cmd || rc=$?` rather than `if ! cmd`, so a status of 3 or 4 is read rather than
   # treated as the failure `set -e` would otherwise make of it.
   rc=0
@@ -165,10 +174,10 @@ for script in "${scripts[@]}"; do
     # Written unpadded; the padding that lines the '->' column up is added when the status
     # arrives, so a step that fails here does not leave a trail of spaces behind it.
     printf '%s' "$label"
-    out="$(bash "$script" 2>&1)" || rc=$?
+    out="$(bash "$script" 2>&1 </dev/null)" || rc=$?
   else
     printf '===> %s\n' "$label"
-    bash "$script" || rc=$?
+    bash "$script" </dev/null || rc=$?
   fi
   # The `<===` line must carry a non-negative duration: provision.ps1 matches it with `[\d.]+`,
   # which no negative value satisfies. uptime_cs is monotonic, so the subtraction cannot go

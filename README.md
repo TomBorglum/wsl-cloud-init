@@ -534,6 +534,17 @@ less /var/log/cloud-init-output.log   # install-script output
 less /var/log/cloud-init.log          # cloud-init's own log
 ```
 
+**An opt-in re-run hangs with the terminal unresponsive** — on a terminal `install.sh` prints the
+step it is on and captures that step's output, replaying it only if the step fails. A step that
+asked a question would therefore sit waiting on a prompt you cannot see, and one that put the
+terminal into raw mode would take `Ctrl-C` with it, leaving the terminal apparently locked up.
+Every step now runs with its stdin detached, so a step that wants input fails immediately and
+its output is shown instead of hanging. To recover a session already stuck like that, kill the
+run from another shell (or `wsl --terminate <instance>` from Windows) and run `reset` to restore
+the terminal. Instances provisioned before this fix still carry the old scripts — [in-place
+upgrades are not supported](#in-place-upgrades-are-not-supported), so re-provision with `-Force`
+to pick it up.
+
 **WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec
 format error". WSL's `binfmt_misc` interop handler is shared across the VM and another distro can
 flush it. A systemd timer re-registers it every 10 seconds, so wait a moment and try again.
