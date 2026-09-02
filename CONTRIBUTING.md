@@ -86,25 +86,29 @@ BREAKING CHANGE: 22.04 is no longer provisioned; use 24.04 or newer.
 ## Squash merges
 
 Pull requests are **squash-merged**, so the whole branch collapses into a single
-commit on `main` whose subject is taken from the **PR title** — the individual
-commit messages on the branch are discarded. Therefore:
+commit on `main` whose subject is taken from the **PR title** and whose body is
+the branch's own commit messages. Therefore:
 
 > **The PR title must be a valid Conventional Commit.**
 
 A PR titled `Update docker script` (no type) is invisible to release-please and
 will neither appear in the changelog nor bump the version. Title it
-`fix: ...` / `feat: ...` instead.
+`fix: ...` / `feat: ...` instead. That holds however many commits the branch
+carries, because `squash_merge_commit_title` is `PR_TITLE`. GitHub's default,
+`COMMIT_OR_PR_TITLE`, takes the subject from the *commit* when a branch has
+exactly one — so a single sloppy commit subject would quietly cut no release.
 
 The one thing release-please still reads from a squash commit's body is a
-`BREAKING CHANGE:` footer, so put that in the PR description when it applies.
-
-### Multiple changelog entries from one branch
+`BREAKING CHANGE:` footer. That body is the branch's own commit messages
+(`squash_merge_commit_message` is `COMMIT_MESSAGES`), **not** the PR
+description, so put the footer in a commit on the branch. A footer written only
+in the PR description never reaches `main` and is never parsed.
 
 A squash-merged PR yields exactly one changelog entry: its title. So prefer
-**focused PRs** — one logical change, one type. If you genuinely need a single
-branch to produce several separate entries (e.g. several `feat:` lines), merge
-that PR with a **merge commit** instead of a squash, so each Conventional Commit
-on the branch is preserved and parsed individually.
+**focused PRs** — one logical change, one type. A branch that would produce
+several separate entries is two PRs: the `main-protection` ruleset requires
+linear history and allows only squash and rebase, so the merge commit that would
+have preserved each Conventional Commit individually cannot land.
 
 ## Version selection
 
