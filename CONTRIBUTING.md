@@ -210,7 +210,7 @@ unify them. They differ at nearly every step:
 pixi is the odd one out in those first two rows, deliberately. It is the first terminal directive to
 install its own tool rather than rely on provisioning having done it — the first step toward
 directives that stand alone, so that an `.envrc` can eventually pull in the ones it needs on an
-instance this repo never provisioned. `use_fnm` and `use_sdk` still depend on `06-install-fnm.sh`
+instance this repo never provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh`
 and `04-install-sdkman.sh`.
 
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`

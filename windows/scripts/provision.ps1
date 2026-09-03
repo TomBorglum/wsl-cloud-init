@@ -318,7 +318,7 @@ function Format-Duration([double]$Seconds) {
 $pendingLines = [System.Collections.Generic.List[hashtable]]::new()
 
 # Columns the '-> ok' marker lines up in. The stage width fits cloud-init's longest name
-# ('modules:config'); the step width fits '[13/15] 14-install-direnv-functions.sh', the longest
+# ('modules:config'); the step width fits '[13/15] 13-install-direnv-functions.sh', the longest
 # label install.sh can produce.
 $StageLabelWidth = 24
 $StepLabelWidth  = 38

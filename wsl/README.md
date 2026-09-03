@@ -54,17 +54,17 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 
 | Source (`wsl/…`) | Destination | Installed by | Gating |
 | --- | --- | --- | --- |
-| `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/08-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
-| `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/08-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
-| `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/14-install-direnv-functions.sh` | — |
-| `user/.config/pixi/templates/` | `~/.config/pixi/templates/` | `distros/ubuntu/scripts/16-install-pixi-templates.sh` | — |
-| `system/usr/local/bin/code` | `/usr/local/bin/code` | `distros/ubuntu/scripts/10-install-vs-code-interop.sh` | `INSTALL_VS_CODE_INTEROP` |
-| `system/usr/local/bin/gh` | `/usr/local/bin/gh` | `distros/ubuntu/scripts/07-install-git-config.sh` | `INSTALL_GIT_CONFIG` |
-| `system/usr/local/bin/open` | `/usr/local/bin/open` | `distros/ubuntu/scripts/09-install-open-interop.sh` | — |
-| `system/usr/local/bin/zed` | `/usr/local/bin/zed` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
-| `system/usr/local/share/zed/*.json` | Windows `%APPDATA%\Zed\` | `distros/ubuntu/scripts/15-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` + `INSTALL_ZED_CONFIG` |
+| `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
+| `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
+| `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/13-install-direnv-functions.sh` | — |
+| `user/.config/pixi/templates/` | `~/.config/pixi/templates/` | `distros/ubuntu/scripts/15-install-pixi-templates.sh` | — |
+| `system/usr/local/bin/code` | `/usr/local/bin/code` | `distros/ubuntu/scripts/09-install-vs-code-interop.sh` | `INSTALL_VS_CODE_INTEROP` |
+| `system/usr/local/bin/gh` | `/usr/local/bin/gh` | `distros/ubuntu/scripts/06-install-git-config.sh` | `INSTALL_GIT_CONFIG` |
+| `system/usr/local/bin/open` | `/usr/local/bin/open` | `distros/ubuntu/scripts/08-install-open-interop.sh` | — |
+| `system/usr/local/bin/zed` | `/usr/local/bin/zed` | `distros/ubuntu/scripts/14-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` |
+| `system/usr/local/share/zed/*.json` | Windows `%APPDATA%\Zed\` | `distros/ubuntu/scripts/14-install-zed-interop.sh` | `INSTALL_ZED_INTEROP` + `INSTALL_ZED_CONFIG` |
 | `system/usr/local/lib/wsl-cloud-init/` | `/usr/local/lib/wsl-cloud-init/` | `distros/ubuntu/install.sh` (bootstrap) | — |
-| `system/usr/local/share/zsh/site-functions/` | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/13-install-zsh-functions.sh` | — (`git/` needs `INSTALL_GIT_CONFIG`) |
+| `system/usr/local/share/zsh/site-functions/` | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/12-install-zsh-functions.sh` | — (`git/` needs `INSTALL_GIT_CONFIG`) |
 
 `wsl-interop.sh` is installed by `install.sh` directly rather than by a numbered script: `install.sh`
 sources it to derive the path to `powershell.exe` before any script runs, and the `gh` wrapper
@@ -74,7 +74,7 @@ re-sources it at runtime, so neither can depend on the `/opt` checkout still bei
 
 **`git/` is flattened.** The `git/` subfolder under `system/usr/local/share/zsh/site-functions/` is a
 source-side grouping, not a real destination subdirectory. It holds the helpers installed only when
-`INSTALL_GIT_CONFIG=true`, and `13-install-zsh-functions.sh` copies them into the parent directory —
+`INSTALL_GIT_CONFIG=true`, and `12-install-zsh-functions.sh` copies them into the parent directory —
 so `git/rebase-branch.zsh` lands at `/usr/local/share/zsh/site-functions/rebase-branch.zsh`.
 
 **`/usr/local/lib/wsl-cloud-init/` also receives files from `windows/`.** Alongside `wsl-interop.sh`,
@@ -83,6 +83,6 @@ shell helper with the PowerShell it dot-sources.
 
 **`share/zed/*.json` is also seeded onto Windows.** These Zed config assets install to
 the mirror path `/usr/local/share/zed/` like any other system file, but
-`15-install-zed-interop.sh` additionally copies them into the Windows Zed config directory
+`14-install-zed-interop.sh` additionally copies them into the Windows Zed config directory
 (`%APPDATA%\Zed`, resolved over interop), backing up any existing file to `<name>.bak` first. This is
 the only place a provisioning step writes into the Windows filesystem rather than just reading from it.
