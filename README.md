@@ -298,6 +298,10 @@ then approve it with `direnv allow`. direnv activates these on entry and removes
 installs the requested versions automatically on first use. Versions must be fully qualified — an
 exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
 
+`use pixi` goes one step further and installs **pixi itself** if it isn't there yet, so the first
+`direnv allow` in a pixi project pauses while it downloads (direnv will note that it is taking a
+while — that is expected). Later projects reuse the same install.
+
 #### pixi project templates
 
 pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name**. When a

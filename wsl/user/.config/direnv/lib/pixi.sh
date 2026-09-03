@@ -1,9 +1,29 @@
 #!/bin/bash
 use_pixi() {
-  local pixi_bin="$HOME/.pixi/bin/pixi"
+  # pixi installs itself on first use rather than at provision time, so this
+  # directive does not depend on the instance having been provisioned with it.
+  # PIXI_HOME pins the location (binary at $PIXI_HOME/bin/pixi) and drives the
+  # guard and PATH below; the value stays ~/.pixi, which is also pixi's own default.
+  local pixi_home="$HOME/.pixi"
+  local pixi_bin="$pixi_home/bin/pixi"
   if [[ ! -x "$pixi_bin" ]]; then
-    echo "Error: pixi is not installed" >&2
-    return 1
+    # Say so before the download: it is the one moment `direnv allow` visibly
+    # stalls, and direnv's own warn_timeout (5s) fires during it.
+    echo "direnv: pixi is not installed — installing it now" >&2
+    # The same fetch as the CI directive in actions/setup-direnv/lib/pixi.sh.
+    # --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no plaintext
+    # redirects); PIXI_NO_PATH_UPDATE=1 stops the installer editing shell rc files,
+    # since this directive owns PATH via PATH_add below.
+    curl -fsSL --proto '=https' --tlsv1.2 https://pixi.sh/install.sh \
+      | PIXI_HOME="$pixi_home" PIXI_NO_PATH_UPDATE=1 bash || return 1
+    # The installer's exit code is the only other signal, so confirm what it
+    # actually produced. Guarding on the binary rather than the directory (which is
+    # what the CI copy tests) also means a half-finished install retries here
+    # instead of wedging every later load.
+    if [[ ! -x "$pixi_bin" ]]; then
+      echo "use_pixi: pixi install did not produce $pixi_bin" >&2
+      return 1
+    fi
   fi
   if [[ ! -f pixi.toml ]]; then
     local project_name template tpl_dir tpl_file
@@ -15,7 +35,7 @@ use_pixi() {
     if [[ -n "$template" ]]; then
       # A named template that doesn't exist is a typo to surface, not something to
       # paper over with a minimal manifest: error out before creating pixi.toml or
-      # installing, mirroring the pixi-not-installed guard above.
+      # installing, mirroring the install guard above.
       tpl_file="$tpl_dir/$template.toml"
       if [[ ! -f "$tpl_file" ]]; then
         echo "use_pixi: no '$template' template found in $tpl_dir" >&2
@@ -39,7 +59,7 @@ EOF
   # re-triggers `pixi install` — no manual `watch_file pixi.toml` in the .envrc.
   # Idempotent: harmless if the .envrc still lists it explicitly.
   watch_file pixi.toml
-  PATH_add "$HOME/.pixi/bin"
+  PATH_add "$pixi_home/bin"
   "$pixi_bin" install --quiet || return 1
   local env_bin
   env_bin="$(pwd)/.pixi/envs/default/bin"

@@ -152,7 +152,7 @@ for script in "${scripts[@]}"; do
   name="$(basename "$script")"
 
   # Sized to the same column as provision.ps1's $StepLabelWidth, which fits the longest label
-  # this can produce ('[14/16] 14-install-direnv-functions.sh'). Nothing parses the terminal
+  # this can produce ('[13/15] 14-install-direnv-functions.sh'). Nothing parses the terminal
   # line -- the two just need to look alike.
   label="$(printf '[%02d/%02d] %s' "$i" "$total" "$name")"
 

@@ -200,11 +200,18 @@ unify them. They differ at nearly every step:
 
 | | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
 | --- | --- | --- |
-| SDKMAN/fnm/pixi present? | assumed (the installer scripts provision it) | must install it |
+| SDKMAN/fnm present? | assumed (`04`/`06` provision them) | must install it |
+| pixi present? | installs it if missing | must install it |
 | expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` — a plain `export` so direnv can restore the old value on leave, which `sdk use` would not allow | `$GITHUB_PATH` (cross-step file) + `sdk use`, whose `<CANDIDATE>_HOME` the action forwards; nothing is ever left to restore |
 | failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
 | success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
 | arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
+
+pixi is the odd one out in those first two rows, deliberately. It is the first terminal directive to
+install its own tool rather than rely on provisioning having done it — the first step toward
+directives that stand alone, so that an `.envrc` can eventually pull in the ones it needs on an
+instance this repo never provisioned. `use_fnm` and `use_sdk` still depend on `06-install-fnm.sh`
+and `04-install-sdkman.sh`.
 
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
