@@ -53,8 +53,6 @@ write_files:
       # plugin functions/completions (e.g. _pj), and the later definition wins.
       for f in /usr/local/share/zsh/site-functions/*.zsh(N); do source "$f"; done
 
-      eval "$($HOME/.pixi/bin/pixi completion --shell zsh)"
-
       # WSL starts a shell in the Windows directory it was launched from, which lands
       # under /mnt. Move to $HOME in that case only, so a shell deliberately started in
       # a Linux directory (a Zed terminal or task, `wsl --cd ...`) stays where it was put.

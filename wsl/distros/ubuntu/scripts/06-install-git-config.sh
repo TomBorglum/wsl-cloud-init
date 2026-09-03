@@ -39,6 +39,11 @@ while IFS= read -r line; do
     GIT_CREDENTIAL_MANAGER=*) GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
     GIT_NAME=*)               GIT_NAME="${line#*=}" ;;
     GIT_EMAIL=*)              GIT_EMAIL="${line#*=}" ;;
+    # wsl_interop_git_config emits exactly these three keys, so anything else is not a
+    # value to assign -- a blank line, or output that leaked onto stdout. Dropping it
+    # here costs nothing: a key that genuinely failed to arrive is caught by the
+    # assertions below, which is where a missing value is meant to surface.
+    *)                        ;;
   esac
 done < <(wsl_interop_git_config)
 
