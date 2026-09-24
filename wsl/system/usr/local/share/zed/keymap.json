@@ -1,12 +1,5 @@
 [
   {
-    "context": "ProjectPanel",
-    "bindings": {
-      "enter": "project_panel::OpenPermanent",
-      "space": "project_panel::OpenPermanent"
-    }
-  },
-  {
     "context": "Editor",
     "bindings": {
       "ctrl-alt-shift-d": "editor::DiffClipboardWithSelection"
