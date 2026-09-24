@@ -4,6 +4,9 @@
       "milliseconds": 1000
     }
   },
+  "preview_tabs": {
+    "enable_preview_from_project_panel": false
+  },
   "project_panel": {
     "dock": "left"
   },
