@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.5.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.5...v1.5.0) (2026-09-24)
+
+
+### Features
+
+* install pixi from the `use pixi` directive, not at provision time ([#93](https://github.com/TomBorglum/wsl-cloud-init/issues/93)) ([0bd7cc9](https://github.com/TomBorglum/wsl-cloud-init/commit/0bd7cc929b39c461f4a12e068be22d7ee5aca028))
+* open Zed files permanently and diff the clipboard ([#97](https://github.com/TomBorglum/wsl-cloud-init/issues/97)) ([a8d3302](https://github.com/TomBorglum/wsl-cloud-init/commit/a8d3302b4168534f879682e03f10b219364f4037))
+
 ## [1.4.5](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.4...v1.4.5) (2026-08-31)
 
 
