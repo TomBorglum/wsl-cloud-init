@@ -324,6 +324,65 @@ consulted on first scaffold.
 `use pixi` also watches `pixi.toml` for you, so editing dependencies re-runs `pixi install` on the
 next `cd` into the project — you don't need a separate `watch_file pixi.toml` line in the `.envrc`.
 
+### Claude Code cloud sessions
+
+The same `.envrc` also drives [Claude Code cloud sessions](https://code.claude.com/docs/en/claude-code-on-the-web) — the
+ephemeral VMs behind the phone and desktop apps, `claude --cloud`, and routines. Those start from a
+fresh clone with none of this instance's tooling, so [`cloud/bootstrap.sh`](cloud/bootstrap.sh)
+installs direnv, pixi and these same directives into the container before Claude starts working.
+
+Paste this into the **Setup script** field of your cloud environment at
+[claude.ai/code](https://claude.ai/code) (the environment selector above the message box). It is
+the only piece that cannot live in a repository, which is why it is three lines that delegate:
+
+```bash
+#!/bin/bash
+curl -fsSL --proto '=https' --tlsv1.2 \
+  https://raw.githubusercontent.com/TomBorglum/wsl-cloud-init/main/cloud/bootstrap.sh | bash
+```
+
+Leave the environment on the default **Trusted** network access — the bootstrap deliberately takes
+direnv from apt and pixi from conda-forge, both already allowlisted, rather than from `pixi.sh` or a
+GitHub release asset, which a cloud session's proxy blocks.
+
+A repository then needs one file to consume it, which is the documented way to get direnv's
+environment onto the `PATH` of Claude's Bash tool:
+
+```json
+// .claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [
+        { "type": "command",
+          "command": "command -v cloud-bootstrap-refresh >/dev/null 2>&1 && cloud-bootstrap-refresh || true" },
+        { "type": "command",
+          "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true" }
+      ] }
+    ],
+    "CwdChanged": [
+      { "hooks": [
+        { "type": "command",
+          "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true" }
+      ] }
+    ]
+  }
+}
+```
+
+Both commands are guarded on the tool existing, so the file is inert on a workstation: there
+`direnv export` emits nothing, because direnv has already loaded the environment the shell that
+launched `claude` passed in. `cloud-bootstrap-refresh` exists only in a cloud session, where the
+bootstrap installed it — that is what scopes the first entry without a `CLAUDE_CODE_REMOTE` check.
+It re-runs the bootstrap when this repository has moved, which a cloud environment otherwise would
+not notice: it snapshots the container after the first run and replays that snapshot for up to a
+week, skipping the setup script entirely.
+
+No `direnv allow` is needed in a cloud session. The bootstrap writes a `direnv.toml` whitelisting
+the clone roots, so a fresh checkout is trusted the moment it lands. That is a deliberate trade
+made only there, where Claude already has an unrestricted shell on a disposable single-tenant VM —
+a workstation gets no `direnv.toml` and keeps direnv's content-hash approval.
+
 ### pj
 
 Jump straight into a checked-out project under `~/projects` without typing the full path — supports
