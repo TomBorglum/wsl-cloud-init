@@ -29,6 +29,11 @@ jobs:
     # Anthropic-hosted cloud sessions run today, and root is the context setup scripts get.
     container:
       image: ubuntu:24.04
+    # A bare image has none of the runner image's shell detection, and Actions falls
+    # back to `sh -e`, where `set -o pipefail` is not a thing. Every step here is bash.
+    defaults:
+      run:
+        shell: bash
     steps:
       - name: Install the checkout action's own prerequisites
         run: |
