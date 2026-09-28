@@ -16,6 +16,9 @@
 # incomplete - there you can at least ask Claude what went wrong. So every failure is
 # recorded and reported, and the exit status is always 0.
 set -uo pipefail
+# Without this an empty cloud/scripts/ leaves the glob as a literal path, which the
+# loop below then reports as a script that failed with status 127.
+shopt -s nullglob
 
 REF="${CLOUD_BOOTSTRAP_REF:-main}"
 # codeload serves a public repo's tarball without touching the GitHub API or a release
@@ -79,7 +82,12 @@ STATUS_ALREADY_INSTALLED=3
 STATUS_NOT_SELECTED=4
 
 failed=0
-for script in "$REPO"/cloud/scripts/*.sh; do
+scripts=("$REPO"/cloud/scripts/*.sh)
+if (( ${#scripts[@]} == 0 )); then
+  fail "no install scripts found in $REPO/cloud/scripts"
+  exit 0
+fi
+for script in "${scripts[@]}"; do
   name="$(basename "$script")"
   rc=0
   bash "$script" </dev/null || rc=$?

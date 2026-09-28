@@ -56,7 +56,12 @@ rm -f "\$tmp"
 [[ -n "\$current" && "\$current" != "\$installed" ]] || exit 0
 
 echo "cloud-bootstrap-refresh: wsl-cloud-init/\$REF has moved, re-running the bootstrap" >&2
-curl -fsSL --proto '=https' --tlsv1.2 --max-time 60 "\$BOOTSTRAP" 2>/dev/null | bash || true
+# CLOUD_BOOTSTRAP_REF is passed through, not left to default: \$BOOTSTRAP already
+# points at this ref, but the script re-reads the variable to pick the tarball, and
+# without it a non-default ref would fetch bootstrap.sh from one place and its
+# scripts from another.
+curl -fsSL --proto '=https' --tlsv1.2 --max-time 60 "\$BOOTSTRAP" 2>/dev/null \\
+  | CLOUD_BOOTSTRAP_REF="\$REF" bash || true
 exit 0
 OUTER_EOF
 
