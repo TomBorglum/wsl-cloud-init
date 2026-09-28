@@ -52,6 +52,10 @@ jobs:
           mkdir -p /opt
           cp -a "$GITHUB_WORKSPACE" /opt/wsl-cloud-init
           echo "CLOUD_HOME=$HOME" >> "$GITHUB_ENV"
+          # The fixture lives in the checkout, under /__w/..., which none of the
+          # default roots covers - a cloud session clones somewhere else entirely.
+          # Exercising the override is also what proves it works.
+          echo "CLOUD_DIRENV_PREFIXES=$HOME:$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
       - name: Run the install scripts
         run: |

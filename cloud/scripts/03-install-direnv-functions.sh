@@ -57,12 +57,22 @@ fi
 # where Claude already has an unrestricted Bash tool on a disposable single-tenant VM
 # holding the user's own repository. `direnv allow` there is friction, not a boundary.
 #
-# The roots are broad on purpose, since the path a session clones into is not documented
-# and a prefix that misses it silently yields an unloaded .envrc and no error.
+# The roots are broad on purpose, and overridable with CLOUD_DIRENV_PREFIXES (a
+# colon-separated list), because the path a cloud session clones into is not documented.
+# A prefix that misses it produces no error at all - just an .envrc that never loads and
+# a PATH with nothing on it - so this is the one value worth being able to correct
+# without editing the script.
+PREFIXES="${CLOUD_DIRENV_PREFIXES:-$CLOUD_HOME:/workspace:/repo:/src}"
+prefix_toml=""
+while IFS= read -r p; do
+  [[ -n "$p" ]] || continue
+  prefix_toml+="${prefix_toml:+, }\"$p\""
+done <<< "${PREFIXES//:/$'\n'}"
+
 install -d "$CLOUD_HOME/.config/direnv"
 cat > "$CLOUD_HOME/.config/direnv/direnv.toml" <<EOF
 [whitelist]
-prefix = [ "$CLOUD_HOME", "/workspace", "/repo", "/src" ]
+prefix = [ $prefix_toml ]
 
 [global]
 # use_pixi runs \`pixi install\` inside the .envrc, which on a cold cache takes far longer
@@ -75,3 +85,5 @@ EOF
 
 echo "installed direnv directives to $LIB_DST"
 ls -1 "$LIB_DST"
+
+echo "direnv whitelist prefixes: $PREFIXES"
