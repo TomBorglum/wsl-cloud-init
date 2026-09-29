@@ -292,6 +292,7 @@ use fnm node 22.14.0     # Node via fnm
 use pixi                 # pixi environment from pixi.toml (minimal one created if missing)
 use pixi python          # ...or scaffold pixi.toml from the "python" project template
 use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
+use claude_env           # let Claude Code load this .envrc too (see below)
 ```
 
 then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
@@ -323,6 +324,82 @@ consulted on first scaffold.
 
 `use pixi` also watches `pixi.toml` for you, so editing dependencies re-runs `pixi install` on the
 next `cd` into the project — you don't need a separate `watch_file pixi.toml` line in the `.envrc`.
+
+### Claude Code cloud sessions
+
+The same `.envrc` also drives [Claude Code cloud sessions](https://code.claude.com/docs/en/claude-code-on-the-web) — the
+ephemeral VMs behind the phone and desktop apps, `claude --cloud`, and routines. Those start from a
+fresh clone with none of this instance's tooling, so [`cloud/bootstrap.sh`](cloud/bootstrap.sh)
+installs direnv, pixi and these same directives into the container before Claude starts working.
+
+Paste this into the **Setup script** field of your cloud environment at
+[claude.ai/code](https://claude.ai/code) (the environment selector above the message box). It is
+the only piece that cannot live in a repository, which is why it is three lines that delegate:
+
+```bash
+#!/bin/bash
+curl -fsSL --proto '=https' --tlsv1.2 \
+  https://raw.githubusercontent.com/TomBorglum/wsl-cloud-init/main/cloud/bootstrap.sh | bash
+```
+
+Leave the environment on the default **Trusted** network access — the bootstrap deliberately takes
+direnv from apt and pixi from conda-forge, both already allowlisted, rather than from `pixi.sh` or a
+GitHub release asset, which a cloud session's proxy blocks.
+
+A repository then needs one committed file to consume it — `.claude/settings.json`, whose hooks are
+the documented way to get direnv's environment onto the `PATH` of Claude's Bash tool. You don't
+write it by hand: add `use claude_env` to the project's `.envrc` and direnv writes it on the next
+load, the same way `use pixi` scaffolds a `pixi.toml`.
+
+```bash
+echo 'use claude_env' >> .envrc && direnv allow
+```
+
+It lands at the **repository root**, because that is the only place Claude Code reads it from — so
+an `.envrc` in a monorepo subdirectory still writes to the root. If the repository already has a
+`.claude/settings.json`, the directive merges in only the hook entries that are missing and leaves
+every other key alone; once they are there it is a no-op, so it never dirties a working tree twice.
+Commit the result: only a committed copy reaches a cloud session. This is what it produces.
+
+```json
+// .claude/settings.json
+{
+  "hooks": {
+    "SessionStart": [
+      { "hooks": [
+        { "type": "command",
+          "command": "command -v cloud-bootstrap-refresh >/dev/null 2>&1 && cloud-bootstrap-refresh || true" },
+        { "type": "command",
+          "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true" }
+      ] }
+    ],
+    "CwdChanged": [
+      { "hooks": [
+        { "type": "command",
+          "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true" }
+      ] }
+    ]
+  }
+}
+```
+
+Both commands are guarded on the tool existing, so the file is inert on a workstation: there
+`direnv export` emits nothing, because direnv has already loaded the environment the shell that
+launched `claude` passed in. `cloud-bootstrap-refresh` exists only in a cloud session, where the
+bootstrap installed it — that is what scopes the first entry without a `CLAUDE_CODE_REMOTE` check.
+It re-runs the bootstrap when this repository has moved, which a cloud environment otherwise would
+not notice: it snapshots the container after the first run and replays that snapshot for up to a
+week, skipping the setup script entirely.
+
+`use claude_env` itself never writes inside a cloud session — it only reports, on stderr, when the
+clone is missing the file, since Claude Code reads the hooks before direnv has run and a write
+there could not take effect until the next session. On CI the directive is a deliberate no-op, so a
+committed `use claude_env` evaluates cleanly on a runner without touching the checkout.
+
+No `direnv allow` is needed in a cloud session. The bootstrap writes a `direnv.toml` whitelisting
+the clone roots, so a fresh checkout is trusted the moment it lands. That is a deliberate trade
+made only there, where Claude already has an unrestricted shell on a disposable single-tenant VM —
+a workstation gets no `direnv.toml` and keeps direnv's content-hash approval.
 
 ### pj
 

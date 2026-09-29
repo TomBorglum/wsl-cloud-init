@@ -105,6 +105,30 @@ jobs:
           test -z "${SONARQUBE_TOKEN:-}"
           test -z "${SONARQUBE_ORG:-}"
 
+  activate-claude-env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Run setup-direnv against the claude-env fixture
+        uses: ./actions/setup-direnv
+        with:
+          working-directory: actions/setup-direnv/test/fixture-claude-env
+
+      - name: Assert the no-op directive wrote nothing and exported nothing
+        run: |
+          set -euo pipefail
+          # use claude_env is a deliberate CI no-op: the action must succeed on the
+          # committed .envrc (proving the directive is defined, so evaluation does not
+          # error), and unlike its terminal copy it must not write into the checkout -
+          # a .claude/settings.json appearing here would dirty the tree for later steps.
+          git status --porcelain --untracked-files=all > /tmp/claude-env-status
+          if [[ -s /tmp/claude-env-status ]]; then
+            echo "use claude_env modified the checkout:" >&2
+            cat /tmp/claude-env-status >&2
+            exit 1
+          fi
+
   activate-dotenv:
     runs-on: ubuntu-latest
     steps:

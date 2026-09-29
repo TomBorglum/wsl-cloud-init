@@ -1,0 +1,182 @@
+name: cloud-bootstrap test
+
+# Exercises cloud/scripts/* the way a Claude Code cloud session runs them: as root, on a
+# clean Ubuntu image, with nothing preinstalled. This is what makes pointing the setup
+# script at `main` defensible - main-protection requires this check, so a merge cannot
+# reach a cloud session without it having passed.
+#
+# Three things are asserted, in order of what would actually break a session:
+#   1. a fresh run installs direnv, pixi, the directives and the refresh command
+#   2. a repeat run is a no-op, since the environment snapshot replays a provisioned VM
+#   3. an .envrc that was never `direnv allow`ed still loads and exports its PATH
+#   4. use_claude_env consumes the committed settings.json and never writes one
+
+on:
+  pull_request:
+    paths:
+      - 'cloud/**'
+      - 'wsl/user/.config/direnv/lib/**'
+      - '.github/workflows/cloud-bootstrap-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    # A container rather than the runner itself: the runner image already carries much of
+    # this, which would let a script that installs nothing still pass. Ubuntu 24.04 is what
+    # Anthropic-hosted cloud sessions run today, and root is the context setup scripts get.
+    container:
+      image: ubuntu:24.04
+    # A bare image has none of the runner image's shell detection, and Actions falls
+    # back to `sh -e`, where `set -o pipefail` is not a thing. Every step here is bash.
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Install the checkout action's own prerequisites
+        run: |
+          set -euo pipefail
+          apt-get update -qq
+          apt-get install -y -qq curl ca-certificates git
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The scripts read CLOUD_HOME and are normally run by cloud/bootstrap.sh from
+      # /opt/wsl-cloud-init. bootstrap.sh's own job is fetching that checkout from
+      # codeload, which is not what this job is testing, so stand the checkout in for it.
+      - name: Stage the checkout where the scripts expect it
+        run: |
+          set -euo pipefail
+          mkdir -p /opt
+          cp -a "$GITHUB_WORKSPACE" /opt/wsl-cloud-init
+          echo "CLOUD_HOME=$HOME" >> "$GITHUB_ENV"
+          # The fixture lives in the checkout, under /__w/..., which none of the
+          # default roots covers - a cloud session clones somewhere else entirely.
+          # Exercising the override is also what proves it works.
+          echo "CLOUD_DIRENV_PREFIXES=$HOME:$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+
+      - name: Reproduce the hosted image's blocked third-party apt sources
+        run: |
+          set -euo pipefail
+          # An Anthropic-hosted VM ships PPAs (deadsnakes, ondrej/php) whose hosts the
+          # Trusted allowlist does not cover, so they answer 403 and `apt-get update`
+          # exits 100 even though archive.ubuntu.com refreshed fine. Under set -e that
+          # aborted 01 and 02 before either installed anything. A clean ubuntu:24.04 has
+          # no such sources, which is exactly why this reached a real session first.
+          echo 'deb https://ppa.example.invalid/blocked/ubuntu noble main' \
+            > /etc/apt/sources.list.d/blocked-fixture.list
+
+      - name: Run the install scripts
+        run: |
+          set -euo pipefail
+          for script in /opt/wsl-cloud-init/cloud/scripts/*.sh; do
+            echo "===> $(basename "$script")"
+            bash "$script"
+          done
+
+      - name: Assert everything landed
+        run: |
+          set -euo pipefail
+          command -v direnv
+          direnv version
+          # pixi at the exact path use_pixi guards on. Anywhere else and the directive
+          # would try to install its own from pixi.sh, which a cloud session cannot reach.
+          test -x "$HOME/.pixi/bin/pixi"
+          "$HOME/.pixi/bin/pixi" --version
+          command -v pixi | grep -qx /usr/local/bin/pixi
+          # Every directive, flat - direnv globs its lib directory non-recursively, so a
+          # file left in a claude/ subdirectory would silently not be defined.
+          for f in fnm.sh pixi.sh sdk.sh sonarqube.sh; do
+            test -f "$HOME/.config/direnv/lib/$f"
+          done
+          test -f "$HOME/.config/pixi/templates/python.toml"
+          grep -q '^\[whitelist\]' "$HOME/.config/direnv/direnv.toml"
+          test -x /usr/local/bin/cloud-bootstrap-refresh
+
+      - name: Assert a repeat run is a no-op
+        run: |
+          set -euo pipefail
+          # A provisioned VM is replayed from a filesystem snapshot, so the common case is
+          # a rerun against an environment that already has everything. 3 is the
+          # exit-code contract's "already installed"; 0 is a config sync that always runs.
+          expect_01=3; expect_02=3
+          rc=0; bash /opt/wsl-cloud-init/cloud/scripts/01-install-direnv.sh >/dev/null || rc=$?
+          test "$rc" = "$expect_01" || { echo "01 expected $expect_01, got $rc" >&2; exit 1; }
+          rc=0; bash /opt/wsl-cloud-init/cloud/scripts/02-install-pixi.sh >/dev/null || rc=$?
+          test "$rc" = "$expect_02" || { echo "02 expected $expect_02, got $rc" >&2; exit 1; }
+          bash /opt/wsl-cloud-init/cloud/scripts/03-install-direnv-functions.sh >/dev/null
+          bash /opt/wsl-cloud-init/cloud/scripts/04-install-cloud-bootstrap-refresh.sh >/dev/null
+
+      - name: Assert a never-allowed .envrc loads and exports its PATH
+        working-directory: cloud/test/fixture-cloud
+        run: |
+          set -euo pipefail
+          # The whole point of the whitelist. `direnv allow` is never run anywhere in this
+          # job, so a session that relied on it would export nothing here.
+          direnv status | grep -q 'Found RC allowed true'
+
+          # A cloud session consumes .claude/settings.json; use_claude_env must never
+          # write it here. Anything written would be too late for the running session
+          # (Claude Code read the hooks before direnv ran) and would land in the diff.
+          settings_before="$(sha256sum .claude/settings.json)"
+
+          eval "$(direnv export bash)"
+
+          test "$settings_before" = "$(sha256sum .claude/settings.json)"
+
+          # Both entries use_pixi adds: the workspace env, and pixi's own bin.
+          echo "$PATH" | tr ':' '\n' | grep -qx "$PWD/.pixi/envs/default/bin"
+          echo "$PATH" | tr ':' '\n' | grep -qx "$HOME/.pixi/bin"
+          command -v ruff | grep -q "/cloud/test/fixture-cloud/.pixi/envs/default/bin/"
+          ruff --version
+
+          # use_sonarqube_mcp is optional by design: a container can never reach Windows
+          # Credential Manager, and the directive must warn and return 0 rather than take
+          # the whole .envrc down with it. Nothing may be exported.
+          test -z "${SONARQUBE_TOKEN:-}"
+          test -z "${SONARQUBE_ORG:-}"
+
+      - name: Assert a clone missing the settings file is reported, not repaired
+        run: |
+          set -euo pipefail
+          # The one case where a cloud session can tell you why its PATH is bare. It has
+          # to warn and still load, never write: writing cannot help this session and
+          # would put an untracked file in the PR. $HOME is a whitelisted prefix, so the
+          # copy loads without `direnv allow` exactly as the checkout does.
+          repo="$HOME/fixture-no-settings"
+          mkdir -p "$repo"
+          cp /opt/wsl-cloud-init/cloud/test/fixture-cloud/.envrc \
+             /opt/wsl-cloud-init/cloud/test/fixture-cloud/pixi.toml "$repo/"
+          cd "$repo"
+          direnv export bash >/dev/null 2>"$repo/stderr.log" || true
+          grep -q 'use_claude_env: no .*settings.json in this clone' "$repo/stderr.log"
+          test ! -e "$repo/.claude"
+          # The rest of the .envrc still loaded despite the warning.
+          eval "$(direnv export bash 2>/dev/null)"
+          echo "$PATH" | tr ':' '\n' | grep -qx "$repo/.pixi/envs/default/bin"
+
+      - name: Assert the default whitelist covers a real session's clone root
+        run: |
+          set -euo pipefail
+          # The topology an Anthropic-hosted session actually has, which no earlier step
+          # reproduced: running as root with HOME=/root, repository cloned to
+          # /home/user/<repo>. Neither $CLOUD_HOME nor /workspace covers that, and the
+          # failure is silent - direnv declines to load an .envrc it was not told to
+          # trust, so the session gets a bare PATH and no error.
+          #
+          # Re-run 03 with the override removed, so what is tested is the shipped default
+          # rather than the value the earlier steps set to reach the checkout under /__w.
+          unset CLOUD_DIRENV_PREFIXES
+          CLOUD_HOME="$HOME" bash /opt/wsl-cloud-init/cloud/scripts/03-install-direnv-functions.sh >/dev/null
+          grep -q '"/home"' "$HOME/.config/direnv/direnv.toml"
+
+          repo=/home/user/cloud-test
+          mkdir -p "$repo"
+          printf 'export CLOUD_TEST_CANARY=alive\n' > "$repo/.envrc"
+          cd "$repo"
+          direnv status | grep -q 'Found RC allowed true'
+          eval "$(direnv export bash)"
+          test "${CLOUD_TEST_CANARY:-}" = alive

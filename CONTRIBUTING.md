@@ -230,8 +230,15 @@ local↔CI drift by:
 ### Two directive conventions
 
 **A directive may scaffold a project file** on first activation. `use_pixi` writes a starter
-`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`. Each prints a reminder to commit it —
-those generated files are part of the repository, so commit them.
+`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`; `use_claude_env` writes a
+`.claude/settings.json`. Each prints a reminder to commit it — those generated files are part of
+the repository, so commit them.
+
+`use_claude_env` is the one that writes into a file it does not own, since a repository's
+`.claude/settings.json` usually already exists and holds permissions and `env` of its own. It
+therefore merges with `jq` rather than creating, adding only the hook entries whose `command` is
+absent, and rewrites nothing when they are all present — a directive that reformatted a tracked
+file on every `cd` would leave every consuming repository permanently dirty.
 
 **An optional directive must not break the `.envrc`.** The failure-signal row above (`return
 1`) is for *runtime* directives, where a missing Node/JVM is a genuine failure worth surfacing.

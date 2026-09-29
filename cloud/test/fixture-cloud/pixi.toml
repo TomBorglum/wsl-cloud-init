@@ -1,0 +1,9 @@
+[workspace]
+name = "fixture-cloud"
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+# Small and pinned: the assertion is that the workspace env lands on PATH, not that any
+# particular package works, so the cheapest dependency that produces a binary will do.
+[dependencies]
+ruff = "==0.15.21"
