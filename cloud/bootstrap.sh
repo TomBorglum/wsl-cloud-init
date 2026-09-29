@@ -41,6 +41,9 @@ rm -f "$STATE/failed"
 fail() {
   echo "cloud-bootstrap: $*" >&2
   echo "$*" >> "$STATE/failed"
+  # Recording a failure is not itself one: without this the append's status is the
+  # function's, so an unwritable $STATE would make `fail ...` look like the failing command.
+  return 0
 }
 
 tmp="$(mktemp -d)"
