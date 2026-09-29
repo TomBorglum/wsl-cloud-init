@@ -41,6 +41,9 @@ SHA256=691c4f465b27b9ed0aeee0849c5a1f8b234f1ef02d4c7d7572855bcca84d3e10
 # installed. The install below is the real gate: it fails loudly if the package genuinely
 # is not available.
 export DEBIAN_FRONTEND=noninteractive
+# Said before apt runs, not after: apt prints its 403s as `E:` lines followed by "is no
+# longer signed", which reads as a hard failure in a log someone is scanning for one.
+echo "cloud-bootstrap: apt-get update may report 403s for the third-party PPAs this image ships (deadsnakes, ondrej/php); they are not on the Trusted allowlist and nothing here needs them" >&2
 apt-get update -qq || echo "apt-get update reported errors (blocked third-party sources); continuing" >&2
 apt-get install -y -qq unzip zstd
 
