@@ -8,5 +8,5 @@
   "disableClaudeAiConnectors": true,
   "spinnerTipsEnabled": false,
   "effortLevel": "high",
-  "model": "opus"
+  "model": "claude-opus-5"
 }
