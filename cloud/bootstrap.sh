@@ -74,22 +74,17 @@ mv "$src" "$REPO"
 
 # The install scripts read these. CLOUD_HOME is where the per-user payload lands.
 #
-# Deliberately NOT $HOME. A setup script runs as root, but the session does not: on an
-# Anthropic-hosted VM it runs as a regular account with the repository cloned under its
-# home (observed: /home/user/<repo>). Taking root's $HOME would put the directives,
-# direnv.toml and pixi where the session never looks, and every symptom of that is
-# silent - direnv finds no directives and no whitelist, so the .envrc simply never loads
-# and the session gets a bare PATH with nothing to explain it.
+# $HOME is right, and this is now observed rather than assumed: a session on an
+# Anthropic-hosted VM runs as root with HOME=/root, the same account the setup script
+# runs as, and direnv there reports DIRENV_CONFIG=/root/.config/direnv. Do not try to be
+# cleverer by resolving a "real" user from the passwd database - the image carries an
+# unrelated uid-1000 account (ubuntu) that nothing runs as, and installing to its home
+# puts the whole payload where the session never looks.
 #
-# So resolve the first regular account from the passwd database. uid >= 1000 is what
-# separates it from root and the system accounts, and < 65534 drops "nobody". $HOME
-# remains the fallback for an image that has no such account, and an explicit CLOUD_HOME
-# still wins over both.
-if [[ -z "${CLOUD_HOME:-}" ]]; then
-  CLOUD_HOME="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 { print $6; exit }')"
-  [[ -n "$CLOUD_HOME" ]] || CLOUD_HOME="$HOME"
-fi
-export CLOUD_HOME
+# The repository is cloned to /home/user/<repo>, which is not this account's home and has
+# nothing to do with CLOUD_HOME; that path matters only to the direnv whitelist, which
+# 03-install-direnv-functions.sh covers.
+export CLOUD_HOME="${CLOUD_HOME:-$HOME}"
 export CLOUD_BOOTSTRAP_REF="$REF"
 echo "cloud-bootstrap: installing the per-user payload to CLOUD_HOME=$CLOUD_HOME"
 

@@ -82,14 +82,6 @@ jobs:
           set -euo pipefail
           command -v direnv
           direnv version
-          # A setup script runs as root; the session does not. bootstrap.sh therefore
-          # resolves CLOUD_HOME from the passwd database rather than $HOME, and getting
-          # that wrong is invisible - the payload lands where the session never looks.
-          # This job sets CLOUD_HOME explicitly, so assert the expression separately.
-          derived="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 { print $6; exit }')"
-          echo "derived CLOUD_HOME would be: ${derived:-<none>}"
-          test -n "$derived"
-          test "$derived" != /root
           # pixi at the exact path use_pixi guards on. Anywhere else and the directive
           # would try to install its own from pixi.sh, which a cloud session cannot reach.
           test -x "$HOME/.pixi/bin/pixi"
@@ -165,3 +157,26 @@ jobs:
           # The rest of the .envrc still loaded despite the warning.
           eval "$(direnv export bash 2>/dev/null)"
           echo "$PATH" | tr ':' '\n' | grep -qx "$repo/.pixi/envs/default/bin"
+
+      - name: Assert the default whitelist covers a real session's clone root
+        run: |
+          set -euo pipefail
+          # The topology an Anthropic-hosted session actually has, which no earlier step
+          # reproduced: running as root with HOME=/root, repository cloned to
+          # /home/user/<repo>. Neither $CLOUD_HOME nor /workspace covers that, and the
+          # failure is silent - direnv declines to load an .envrc it was not told to
+          # trust, so the session gets a bare PATH and no error.
+          #
+          # Re-run 03 with the override removed, so what is tested is the shipped default
+          # rather than the value the earlier steps set to reach the checkout under /__w.
+          unset CLOUD_DIRENV_PREFIXES
+          CLOUD_HOME="$HOME" bash /opt/wsl-cloud-init/cloud/scripts/03-install-direnv-functions.sh >/dev/null
+          grep -q '"/home"' "$HOME/.config/direnv/direnv.toml"
+
+          repo=/home/user/cloud-test
+          mkdir -p "$repo"
+          printf 'export CLOUD_TEST_CANARY=alive\n' > "$repo/.envrc"
+          cd "$repo"
+          direnv status | grep -q 'Found RC allowed true'
+          eval "$(direnv export bash)"
+          test "${CLOUD_TEST_CANARY:-}" = alive

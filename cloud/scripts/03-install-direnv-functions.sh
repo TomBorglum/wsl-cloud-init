@@ -67,12 +67,17 @@ fi
 # where Claude already has an unrestricted Bash tool on a disposable single-tenant VM
 # holding the user's own repository. `direnv allow` there is friction, not a boundary.
 #
-# The roots are broad on purpose, and overridable with CLOUD_DIRENV_PREFIXES (a
-# colon-separated list), because the path a cloud session clones into is not documented.
-# A prefix that misses it produces no error at all - just an .envrc that never loads and
-# a PATH with nothing on it - so this is the one value worth being able to correct
-# without editing the script.
-PREFIXES="${CLOUD_DIRENV_PREFIXES:-$CLOUD_HOME:/workspace:/repo:/src}"
+# /home is the one that matters, and it is there because a real session proved it: an
+# Anthropic-hosted VM clones to /home/user/<repo> while running as root with HOME=/root,
+# so $CLOUD_HOME does not cover the checkout and nothing else in this list did either.
+# The whole prefix is /home rather than /home/user, so a different account name - or a
+# second clone beside it - needs no change here.
+#
+# A prefix that misses the clone root produces no error at all: direnv declines to load
+# an .envrc it has not been told to trust, and the session gets a bare PATH with nothing
+# to explain it. That is why the list stays broad and stays overridable with
+# CLOUD_DIRENV_PREFIXES (a colon-separated list).
+PREFIXES="${CLOUD_DIRENV_PREFIXES:-$CLOUD_HOME:/home:/workspace:/repo:/src}"
 prefix_toml=""
 while IFS= read -r p; do
   [[ -n "$p" ]] || continue
