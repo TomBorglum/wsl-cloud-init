@@ -9,6 +9,7 @@ name: cloud-bootstrap test
 #   1. a fresh run installs direnv, pixi, the directives and the refresh command
 #   2. a repeat run is a no-op, since the environment snapshot replays a provisioned VM
 #   3. an .envrc that was never `direnv allow`ed still loads and exports its PATH
+#   4. use_claude_env consumes the committed settings.json and never writes one
 
 on:
   pull_request:
@@ -106,7 +107,14 @@ jobs:
           # job, so a session that relied on it would export nothing here.
           direnv status | grep -q 'Found RC allowed true'
 
+          # A cloud session consumes .claude/settings.json; use_claude_env must never
+          # write it here. Anything written would be too late for the running session
+          # (Claude Code read the hooks before direnv ran) and would land in the diff.
+          settings_before="$(sha256sum .claude/settings.json)"
+
           eval "$(direnv export bash)"
+
+          test "$settings_before" = "$(sha256sum .claude/settings.json)"
 
           # Both entries use_pixi adds: the workspace env, and pixi's own bin.
           echo "$PATH" | tr ':' '\n' | grep -qx "$PWD/.pixi/envs/default/bin"
@@ -119,3 +127,22 @@ jobs:
           # the whole .envrc down with it. Nothing may be exported.
           test -z "${SONARQUBE_TOKEN:-}"
           test -z "${SONARQUBE_ORG:-}"
+
+      - name: Assert a clone missing the settings file is reported, not repaired
+        run: |
+          set -euo pipefail
+          # The one case where a cloud session can tell you why its PATH is bare. It has
+          # to warn and still load, never write: writing cannot help this session and
+          # would put an untracked file in the PR. $HOME is a whitelisted prefix, so the
+          # copy loads without `direnv allow` exactly as the checkout does.
+          repo="$HOME/fixture-no-settings"
+          mkdir -p "$repo"
+          cp /opt/wsl-cloud-init/cloud/test/fixture-cloud/.envrc \
+             /opt/wsl-cloud-init/cloud/test/fixture-cloud/pixi.toml "$repo/"
+          cd "$repo"
+          direnv export bash >/dev/null 2>"$repo/stderr.log" || true
+          grep -q 'use_claude_env: no .*settings.json in this clone' "$repo/stderr.log"
+          test ! -e "$repo/.claude"
+          # The rest of the .envrc still loaded despite the warning.
+          eval "$(direnv export bash 2>/dev/null)"
+          echo "$PATH" | tr ':' '\n' | grep -qx "$repo/.pixi/envs/default/bin"

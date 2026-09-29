@@ -292,6 +292,7 @@ use fnm node 22.14.0     # Node via fnm
 use pixi                 # pixi environment from pixi.toml (minimal one created if missing)
 use pixi python          # ...or scaffold pixi.toml from the "python" project template
 use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
+use claude_env           # let Claude Code load this .envrc too (see below)
 ```
 
 then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
@@ -345,8 +346,20 @@ Leave the environment on the default **Trusted** network access — the bootstra
 direnv from apt and pixi from conda-forge, both already allowlisted, rather than from `pixi.sh` or a
 GitHub release asset, which a cloud session's proxy blocks.
 
-A repository then needs one file to consume it, which is the documented way to get direnv's
-environment onto the `PATH` of Claude's Bash tool:
+A repository then needs one committed file to consume it — `.claude/settings.json`, whose hooks are
+the documented way to get direnv's environment onto the `PATH` of Claude's Bash tool. You don't
+write it by hand: add `use claude_env` to the project's `.envrc` and direnv writes it on the next
+load, the same way `use pixi` scaffolds a `pixi.toml`.
+
+```bash
+echo 'use claude_env' >> .envrc && direnv allow
+```
+
+It lands at the **repository root**, because that is the only place Claude Code reads it from — so
+an `.envrc` in a monorepo subdirectory still writes to the root. If the repository already has a
+`.claude/settings.json`, the directive merges in only the hook entries that are missing and leaves
+every other key alone; once they are there it is a no-op, so it never dirties a working tree twice.
+Commit the result: only a committed copy reaches a cloud session. This is what it produces.
 
 ```json
 // .claude/settings.json
@@ -377,6 +390,11 @@ bootstrap installed it — that is what scopes the first entry without a `CLAUDE
 It re-runs the bootstrap when this repository has moved, which a cloud environment otherwise would
 not notice: it snapshots the container after the first run and replays that snapshot for up to a
 week, skipping the setup script entirely.
+
+`use claude_env` itself never writes inside a cloud session — it only reports, on stderr, when the
+clone is missing the file, since Claude Code reads the hooks before direnv has run and a write
+there could not take effect until the next session. On CI the directive is a deliberate no-op, so a
+committed `use claude_env` evaluates cleanly on a runner without touching the checkout.
 
 No `direnv allow` is needed in a cloud session. The bootstrap writes a `direnv.toml` whitelisting
 the clone roots, so a fresh checkout is trusted the moment it lands. That is a deliberate trade

@@ -1,0 +1,133 @@
+name: claude-env directive test
+
+# use_claude_env is the first terminal directive whose whole purpose is to write a file
+# into the repository it runs in, so it is the first that can damage one. Nothing else in
+# CI exercises the terminal copy of a directive; this does, the way a workstation runs it:
+# real direnv, real jq, real git repositories.
+#
+# Five things are asserted, in order of what would hurt most:
+#   1. a fresh repository gets the template verbatim
+#   2. a second load changes nothing at all (this runs on every cd)
+#   3. an existing settings.json keeps its own keys and its own hooks
+#   4. an unparseable settings.json is left exactly as it was
+#   5. the file lands at the repository root, not beside a nested .envrc
+
+on:
+  pull_request:
+    paths:
+      - 'wsl/user/.config/direnv/lib/claude/**'
+      - 'wsl/user/.config/claude/templates/**'
+      - '.github/workflows/claude-env-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold-and-merge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # What 13-install-direnv-functions.sh and 16-install-claude-templates.sh do on a
+      # provisioned instance, minus the sudo -u: the directives flat in ~/.config/direnv/lib
+      # (direnv globs that directory non-recursively) and the template beside them.
+      - name: Install direnv, the terminal directives and the template
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq direnv
+          install -d ~/.config/direnv/lib ~/.config/claude/templates
+          install -m 644 wsl/user/.config/direnv/lib/*.sh       ~/.config/direnv/lib/
+          install -m 644 wsl/user/.config/direnv/lib/claude/*.sh ~/.config/direnv/lib/
+          install -m 644 wsl/user/.config/claude/templates/*.json ~/.config/claude/templates/
+          # The directive must never take the cloud branch here.
+          test ! -e /usr/local/bin/cloud-bootstrap-refresh
+
+      - name: A fresh repository gets the template verbatim, and a reload changes nothing
+        run: |
+          set -euo pipefail
+          tpl=~/.config/claude/templates/settings.json
+          repo="$(mktemp -d)"
+          git -C "$repo" init -q
+          printf 'use claude_env\n' > "$repo/.envrc"
+          cd "$repo"
+          direnv allow
+          direnv exec . true
+
+          test -f .claude/settings.json
+          # Byte-identical, not merely equivalent: a fresh file is a copy, so the
+          # template's formatting is what a repository ends up committing.
+          cmp "$tpl" .claude/settings.json
+
+          # The second load is the common case - this runs on every cd - and it must not
+          # rewrite a tracked file, or every repository would sit permanently dirty.
+          before="$(sha256sum .claude/settings.json)"
+          direnv exec . true
+          test "$before" = "$(sha256sum .claude/settings.json)"
+
+      - name: An existing settings.json keeps its own keys and its own hooks
+        run: |
+          set -euo pipefail
+          repo="$(mktemp -d)"
+          git -C "$repo" init -q
+          printf 'use claude_env\n' > "$repo/.envrc"
+          mkdir -p "$repo/.claude"
+          cat > "$repo/.claude/settings.json" <<'JSON'
+          {
+            "permissions": { "allow": ["Bash(pixi run:*)"] },
+            "hooks": {
+              "SessionStart": [
+                { "matcher": "startup",
+                  "hooks": [ { "type": "command", "command": "echo mine" } ] }
+              ]
+            }
+          }
+          JSON
+          cd "$repo"
+          direnv allow
+          direnv exec . true
+
+          jq -e '.permissions.allow == ["Bash(pixi run:*)"]'          .claude/settings.json >/dev/null
+          # The repository's own hook survives, in place, with its matcher intact.
+          jq -e '.hooks.SessionStart[0].matcher == "startup"'         .claude/settings.json >/dev/null
+          jq -e '.hooks.SessionStart[0].hooks[0].command == "echo mine"' .claude/settings.json >/dev/null
+          # Ours are appended: two SessionStart entries plus the one already there.
+          jq -e '.hooks.SessionStart | length == 3'                   .claude/settings.json >/dev/null
+          jq -e '.hooks.CwdChanged  | length == 1'                    .claude/settings.json >/dev/null
+          jq -e '[.. | .command? // empty] | map(select(test("CLAUDE_ENV_FILE"))) | length == 2' \
+            .claude/settings.json >/dev/null
+
+          # And merging is idempotent too, not just creation.
+          before="$(sha256sum .claude/settings.json)"
+          direnv exec . true
+          test "$before" = "$(sha256sum .claude/settings.json)"
+
+      - name: An unparseable settings.json is left exactly as it was
+        run: |
+          set -euo pipefail
+          repo="$(mktemp -d)"
+          git -C "$repo" init -q
+          printf 'use claude_env\n' > "$repo/.envrc"
+          mkdir -p "$repo/.claude"
+          printf 'this is not json {\n' > "$repo/.claude/settings.json"
+          cd "$repo"
+          direnv allow
+          # Must not fail the load: the .envrc still has to export everything else.
+          direnv exec . true
+          test "$(cat .claude/settings.json)" = 'this is not json {'
+
+      - name: The file lands at the repository root, not beside a nested .envrc
+        run: |
+          set -euo pipefail
+          repo="$(mktemp -d)"
+          git -C "$repo" init -q
+          mkdir -p "$repo/services/api"
+          printf 'use claude_env\n' > "$repo/services/api/.envrc"
+          cd "$repo/services/api"
+          direnv allow
+          direnv exec . true
+
+          # The root is the only place Claude Code reads it from.
+          test -f "$repo/.claude/settings.json"
+          test ! -e "$repo/services/api/.claude"

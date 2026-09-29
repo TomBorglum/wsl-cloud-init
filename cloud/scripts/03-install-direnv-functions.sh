@@ -46,6 +46,16 @@ if [[ ${#templates[@]} -gt 0 ]]; then
   install -m 644 "${templates[@]}" "$TPL_DST/"
 fi
 
+# ~/.config/claude/templates is deliberately NOT installed here, though its WSL
+# counterpart 16-install-claude-templates.sh does install it. use_claude_env consumes a
+# cloud session's .claude/settings.json and never writes one - the hooks are read before
+# direnv runs, so a file written here could not take effect until the next session, and
+# would show up as an untracked change in the session's diff. The directive itself is
+# installed by the claude/ glob above, which is what a committed `use claude_env` needs
+# in order to evaluate; without the template it can only warn, which is the intended
+# behaviour on the one path that reaches it (a bootstrap where 04 failed and left no
+# cloud-bootstrap-refresh for the directive to detect).
+
 # direnv's own configuration. Written only here, for cloud sessions - a workstation gets
 # no direnv.toml, and the trust decision below would be wrong on one.
 #

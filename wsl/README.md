@@ -19,6 +19,7 @@ wsl/
 ├── user/                                   # → /home/$TARGET_USER/   (installed owned by the user)
 │   ├── .claude/settings.json                   → ~/.claude/settings.json
 │   ├── .claude/skills/…                        → ~/.claude/skills/
+│   ├── .config/claude/templates/*.json         → ~/.config/claude/templates/
 │   ├── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
 │   └── .config/pixi/templates/*.toml           → ~/.config/pixi/templates/
 └── system/                                 # → /   (root-owned)
@@ -56,6 +57,7 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 | --- | --- | --- | --- |
 | `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
+| `user/.config/claude/templates/` | `~/.config/claude/templates/` | `distros/ubuntu/scripts/16-install-claude-templates.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/13-install-direnv-functions.sh` | — |
 | `user/.config/pixi/templates/` | `~/.config/pixi/templates/` | `distros/ubuntu/scripts/15-install-pixi-templates.sh` | — |
 | `system/usr/local/bin/code` | `/usr/local/bin/code` | `distros/ubuntu/scripts/09-install-vs-code-interop.sh` | `INSTALL_VS_CODE_INTEROP` |

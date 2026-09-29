@@ -1,0 +1,28 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v cloud-bootstrap-refresh >/dev/null 2>&1 && cloud-bootstrap-refresh || true"
+          },
+          {
+            "type": "command",
+            "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true"
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v direnv >/dev/null 2>&1 && direnv export bash >> \"$CLAUDE_ENV_FILE\" || true"
+          }
+        ]
+      }
+    ]
+  }
+}
