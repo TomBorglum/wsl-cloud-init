@@ -72,11 +72,26 @@ rm -rf "$REPO"
 mkdir -p "$(dirname "$REPO")"
 mv "$src" "$REPO"
 
-# The install scripts read these. CLOUD_HOME is where the per-user payload lands: the
-# session runs as the same account the setup script does, so $HOME is right - but it is
-# named and overridable here so a single variable moves it if that ever stops being true.
-export CLOUD_HOME="${CLOUD_HOME:-$HOME}"
+# The install scripts read these. CLOUD_HOME is where the per-user payload lands.
+#
+# Deliberately NOT $HOME. A setup script runs as root, but the session does not: on an
+# Anthropic-hosted VM it runs as a regular account with the repository cloned under its
+# home (observed: /home/user/<repo>). Taking root's $HOME would put the directives,
+# direnv.toml and pixi where the session never looks, and every symptom of that is
+# silent - direnv finds no directives and no whitelist, so the .envrc simply never loads
+# and the session gets a bare PATH with nothing to explain it.
+#
+# So resolve the first regular account from the passwd database. uid >= 1000 is what
+# separates it from root and the system accounts, and < 65534 drops "nobody". $HOME
+# remains the fallback for an image that has no such account, and an explicit CLOUD_HOME
+# still wins over both.
+if [[ -z "${CLOUD_HOME:-}" ]]; then
+  CLOUD_HOME="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 { print $6; exit }')"
+  [[ -n "$CLOUD_HOME" ]] || CLOUD_HOME="$HOME"
+fi
+export CLOUD_HOME
 export CLOUD_BOOTSTRAP_REF="$REF"
+echo "cloud-bootstrap: installing the per-user payload to CLOUD_HOME=$CLOUD_HOME"
 
 # Same exit-code contract as wsl/distros/ubuntu/install.sh, so a script that skipped is
 # distinguishable from one that did work:

@@ -34,8 +34,14 @@ SHA256=691c4f465b27b9ed0aeee0849c5a1f8b234f1ef02d4c7d7572855bcca84d3e10
 # unzip and zstd are archive utilities for the payload above, not a language runtime -
 # the no-transient-dependency rule is about not dragging in node/python/java to install
 # a tool, and neither of these is that.
+# apt-get update is not allowed to be fatal. The Anthropic-hosted image ships third-party
+# PPAs (deadsnakes, ondrej/php) whose hosts are not on the Trusted allowlist, so they
+# answer 403 and apt-get exits 100 even when archive.ubuntu.com - the only source these
+# packages come from - refreshed correctly. Under set -e that aborts before anything is
+# installed. The install below is the real gate: it fails loudly if the package genuinely
+# is not available.
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
+apt-get update -qq || echo "apt-get update reported errors (blocked third-party sources); continuing" >&2
 apt-get install -y -qq unzip zstd
 
 pkg="/tmp/pixi-$VERSION.conda"
@@ -51,6 +57,15 @@ unzip -p "$pkg" "pkg-pixi-$VERSION-$BUILD.tar.zst" \
   | tar -xf - -O bin/pixi > "$PIXI_BIN"
 chmod 0755 "$PIXI_BIN"
 rm -f "$pkg"
+
+# Installed by root, but read and run by the session account - so hand it over, the way
+# the WSL scripts do with `install -o "$TARGET_USER"`. Read access would be enough for
+# most of this, but pixi writes into its own home at runtime, and a root-owned tree there
+# fails in a way that looks like a pixi bug rather than a provisioning one.
+owner="$(stat -c '%u:%g' "$CLOUD_HOME" 2>/dev/null || true)"
+if [[ -n "$owner" ]]; then
+  chown -R "$owner" "$CLOUD_HOME/.pixi"
+fi
 
 # Also on PATH system-wide, so `pixi` resolves in a shell that has not loaded the .envrc
 # yet - which is every shell before the SessionStart hook has run.

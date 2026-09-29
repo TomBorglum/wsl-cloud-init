@@ -58,6 +58,17 @@ jobs:
           # Exercising the override is also what proves it works.
           echo "CLOUD_DIRENV_PREFIXES=$HOME:$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
 
+      - name: Reproduce the hosted image's blocked third-party apt sources
+        run: |
+          set -euo pipefail
+          # An Anthropic-hosted VM ships PPAs (deadsnakes, ondrej/php) whose hosts the
+          # Trusted allowlist does not cover, so they answer 403 and `apt-get update`
+          # exits 100 even though archive.ubuntu.com refreshed fine. Under set -e that
+          # aborted 01 and 02 before either installed anything. A clean ubuntu:24.04 has
+          # no such sources, which is exactly why this reached a real session first.
+          echo 'deb https://ppa.example.invalid/blocked/ubuntu noble main' \
+            > /etc/apt/sources.list.d/blocked-fixture.list
+
       - name: Run the install scripts
         run: |
           set -euo pipefail
@@ -71,6 +82,14 @@ jobs:
           set -euo pipefail
           command -v direnv
           direnv version
+          # A setup script runs as root; the session does not. bootstrap.sh therefore
+          # resolves CLOUD_HOME from the passwd database rather than $HOME, and getting
+          # that wrong is invisible - the payload lands where the session never looks.
+          # This job sets CLOUD_HOME explicitly, so assert the expression separately.
+          derived="$(getent passwd | awk -F: '$3 >= 1000 && $3 < 65534 { print $6; exit }')"
+          echo "derived CLOUD_HOME would be: ${derived:-<none>}"
+          test -n "$derived"
+          test "$derived" != /root
           # pixi at the exact path use_pixi guards on. Anywhere else and the directive
           # would try to install its own from pixi.sh, which a cloud session cannot reach.
           test -x "$HOME/.pixi/bin/pixi"

@@ -93,6 +93,15 @@ warn_timeout = "60s"
 bash_path = "/bin/bash"
 EOF
 
+# Installed by root, but read and run by the session account - so hand it over, the way
+# the WSL scripts do with `install -o "$TARGET_USER"`. Read access would be enough for
+# most of this, but pixi writes into its own home at runtime, and a root-owned tree there
+# fails in a way that looks like a pixi bug rather than a provisioning one.
+owner="$(stat -c '%u:%g' "$CLOUD_HOME" 2>/dev/null || true)"
+if [[ -n "$owner" ]]; then
+  chown -R "$owner" "$CLOUD_HOME/.config"
+fi
+
 echo "installed direnv directives to $LIB_DST"
 ls -1 "$LIB_DST"
 

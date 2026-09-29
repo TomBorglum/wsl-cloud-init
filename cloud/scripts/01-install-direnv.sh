@@ -22,8 +22,14 @@ if command -v direnv >/dev/null 2>&1; then
   exit 3  # already installed; see cloud/bootstrap.sh
 fi
 
+# apt-get update is not allowed to be fatal. The Anthropic-hosted image ships third-party
+# PPAs (deadsnakes, ondrej/php) whose hosts are not on the Trusted allowlist, so they
+# answer 403 and apt-get exits 100 even when archive.ubuntu.com - the only source these
+# packages come from - refreshed correctly. Under set -e that aborts before anything is
+# installed. The install below is the real gate: it fails loudly if the package genuinely
+# is not available.
 export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
+apt-get update -qq || echo "apt-get update reported errors (blocked third-party sources); continuing" >&2
 apt-get install -y -qq direnv
 
 direnv version

@@ -39,6 +39,18 @@ marker=/run/cloud-bootstrap.checked
 [[ -e "\$marker" ]] && exit 0
 : > "\$marker" 2>/dev/null || exit 0
 
+# A failed bootstrap is snapshotted like any other filesystem state, and it writes no
+# installed.sha256 - so the comparison below would have nothing to work from and the VM
+# would stay broken until the cache expires, up to a week later. Retry instead. It is
+# once per session (the marker above), and the usual causes are transient: a blocked
+# mirror, a package index that was briefly unreachable.
+if [[ -e "\$STATE/failed" ]]; then
+  echo "cloud-bootstrap-refresh: the last bootstrap left failures, retrying" >&2
+  curl -fsSL --proto '=https' --tlsv1.2 --max-time 60 "\$BOOTSTRAP" 2>/dev/null \\
+    | CLOUD_BOOTSTRAP_REF="\$REF" bash || true
+  exit 0
+fi
+
 installed="\$(cat "\$STATE/installed.sha256" 2>/dev/null || true)"
 [[ -n "\$installed" ]] || exit 0
 
