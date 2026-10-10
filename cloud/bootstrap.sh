@@ -7,9 +7,9 @@
 #   curl -fsSL --proto '=https' --tlsv1.2 \
 #     https://raw.githubusercontent.com/TomBorglum/wsl-cloud-init/main/cloud/bootstrap.sh | bash
 #
-# Everything else is here, so the cloud session is a third consumer of the same .envrc
-# contract the terminal (wsl/) and CI (actions/setup-direnv/) already honour, rather
-# than a second setup to keep in step.
+# Everything else is here, so the cloud session is a second consumer of the same .envrc
+# contract the provisioned terminal (wsl/) already honours, rather than a separate setup
+# to keep in step.
 #
 # Deliberately NOT `set -e`. A setup script that exits non-zero blocks the session from
 # starting outright, which is a worse outcome than a session whose environment is

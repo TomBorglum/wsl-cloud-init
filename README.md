@@ -180,8 +180,7 @@ Add `use sonarqube_mcp` to a project's `.envrc` (like `use pixi` / `use sdk`) an
 that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not the values), and on every
 activation direnv supplies those variables from your Windows Credential Manager. Because no
 secret is stored in the project, both `.envrc` and `.mcp.json` are safe to commit and share
-with your team — each teammate just keeps their own credentials (below), and the directive
-is a no-op in CI.
+with your team — each teammate just keeps their own credentials (below).
 
 Store two more generic credentials (a [SonarQube Cloud
 token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens/)
@@ -303,6 +302,10 @@ exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts
 `direnv allow` in a pixi project pauses while it downloads (direnv will note that it is taking a
 while — that is expected). Later projects reuse the same install.
 
+The same directives are available on a GitHub Actions runner through
+[`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
+so a committed `.envrc` can drive CI as well as your shell.
+
 #### pixi project templates
 
 pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name**. When a
@@ -393,8 +396,7 @@ week, skipping the setup script entirely.
 
 `use claude_env` itself never writes inside a cloud session — it only reports, on stderr, when the
 clone is missing the file, since Claude Code reads the hooks before direnv has run and a write
-there could not take effect until the next session. On CI the directive is a deliberate no-op, so a
-committed `use claude_env` evaluates cleanly on a runner without touching the checkout.
+there could not take effect until the next session.
 
 No `direnv allow` is needed in a cloud session. The bootstrap writes a `direnv.toml` whitelisting
 the clone roots, so a fresh checkout is trusted the moment it lands. That is a deliberate trade

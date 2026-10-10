@@ -62,12 +62,6 @@ why the lazydocker auto-update workflow uses `deps:` (bumping a shipped tool cut
 a patch release) while Dependabot's GitHub Actions bumps use `ci:` (they never
 reach a provisioned environment).
 
-The direnv auto-update workflow is the same mechanism landing on the other side of
-that line: it bumps the direnv pinned in `actions/setup-direnv/install-direnv.sh`,
-which only ever runs on a CI runner, so its PR is `ci:` and cuts no release. (The
-direnv a *user* gets is an apt package in `user-data.template` — a different
-install path, and a change there would be `deps:`.)
-
 ## Breaking changes
 
 A breaking change forces a **major** bump (2.0.0). Mark it either with a `!`
@@ -169,49 +163,22 @@ git grep -nP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
 (This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
 characters freely — this document does.)
 
-## The `setup-direnv` CI directives
+## direnv directives
 
-The [`setup-direnv`](actions/setup-direnv/) composite action lets CI honor the same `.envrc`
-a developer uses locally, so a runtime version is declared **once** (`use sdk java
-21.0.2-tem`) and consumed by both direnv on the workstation and the action in CI. That
-shared `.envrc` is the single source of truth that prevents version drift.
+The directives in `wsl/user/.config/direnv/lib/` are what let a project declare a runtime
+version **once** in its `.envrc` — `use sdk java 21.0.2-tem` — and have every instance this
+repo provisions honour it. `13-install-direnv-functions.sh` installs them on WSL,
+`cloud/scripts/03-install-direnv-functions.sh` in a cloud session.
 
-**A directive's job is to leave the environment correct; the action forwards it.** After
-evaluating the `.envrc`, the action copies the resulting environment into `$GITHUB_ENV`
-wholesale, so no directive writes there itself. Two consequences:
+The same directives are available on a GitHub Actions runner through
+[`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
+which is maintained and released independently of this repository.
 
-- **Not everything needs a directive.** Anything set through **stock** direnv —
-  `export FOO=bar`, `dotenv`, `dotenv_if_exists` — reaches later workflow steps with no
-  `use_*` function existing for it.
-- **A directive can drive its tool the way the tool documents.** `use_sdk` runs
-  `sdk install` then `sdk use`, and `sdk use` is what sets `<CANDIDATE>_HOME` — no
-  hand-derived path, no second copy of the value routed to `$GITHUB_ENV` around an
-  environment still holding the floating `candidates/<c>/current` symlink. What a
-  directive must not do is leave the environment saying one thing while publishing
-  another.
-
-Two names are held back from the copy: `DIRENV_*`, which is direnv's own bookkeeping and
-means nothing to a step that is not running direnv, and `PATH`, which belongs to the
-`$GITHUB_PATH` the directives below append to.
-
-The directive **implementations** are deliberately kept as two separate copies:
-`actions/setup-direnv/lib/` for CI, `wsl/user/.config/direnv/lib/` for the terminal. Do not
-unify them. They differ at nearly every step:
-
-| | terminal (`wsl/user/.config/direnv/lib`) | CI (`actions/setup-direnv/lib`) |
-| --- | --- | --- |
-| SDKMAN/fnm present? | assumed (`04`/`06` provision them) | must install it |
-| pixi present? | installs it if missing | must install it |
-| expose the runtime | `PATH_add` + `export <CANDIDATE>_HOME` — a plain `export` so direnv can restore the old value on leave, which `sdk use` would not allow | `$GITHUB_PATH` (cross-step file) + `sdk use`, whose `<CANDIDATE>_HOME` the action forwards; nothing is ever left to restore |
-| failure signal | `return 1` (visible interactively) | `exit 1` — direnv **silently ignores** a directive that `return`s non-zero under `direnv exec`, so a `return` would let the job go green with nothing installed |
-| success check | `[[ -d dir ]]` | resolve via the tool (`sdk home`) + handle unreliable installer exit codes |
-| arguments | validated (guards human typos) | trusted (the `.envrc` is committed and reviewed) |
-
-pixi is the odd one out in those first two rows, deliberately. It is the first terminal directive to
-install its own tool rather than rely on provisioning having done it — the first step toward
-directives that stand alone, so that an `.envrc` can eventually pull in the ones it needs on an
-instance this repo never provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh`
-and `04-install-sdkman.sh`.
+pixi is the odd one out among them, deliberately. `use_pixi` installs its own tool rather than
+relying on provisioning having done it — the first step toward directives that stand alone, so
+that an `.envrc` can eventually pull in the ones it needs on an instance this repo never
+provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh` and
+`04-install-sdkman.sh`.
 
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
@@ -219,13 +186,9 @@ passes `<candidate> <version>` straight to SDKMAN and exposes the result the sam
 `MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`, `use sdk gradle
 8.7`, and the like already work with **no code change**.
 
-You therefore only touch the CI copy for an entirely **new directive** (`use_fnm`, `use_pixi`,
-a new backend) — a new function, not a variant of `use_sdk`. When you add one, guard against
-local↔CI drift by:
-
-1. mirroring the terminal directive's **name and accepted arguments** in the CI copy, and
-2. adding a fixture `.envrc` to `.github/workflows/setup-direnv-test.yml` that exercises it
-   end to end (install + cross-step propagation).
+Adding an entirely **new directive** (a new backend, not a variant of `use_sdk`) means a new
+function here. If it is a runtime directive, its CI counterpart lives in the actions repository
+linked above and is that repository's to implement and test.
 
 ### Two directive conventions
 
@@ -240,9 +203,9 @@ therefore merges with `jq` rather than creating, adding only the hook entries wh
 absent, and rewrites nothing when they are all present — a directive that reformatted a tracked
 file on every `cd` would leave every consuming repository permanently dirty.
 
-**An optional directive must not break the `.envrc`.** The failure-signal row above (`return
-1`) is for *runtime* directives, where a missing Node/JVM is a genuine failure worth surfacing.
-A directive for an *optional* integration instead warns to stderr and `return`s 0 when a
-prerequisite is missing, so the rest of the environment still loads. `use_sonarqube_mcp`
-follows this pattern: a missing credential or an unreachable Credential Manager produces a
-warning, never a failed load.
+**An optional directive must not break the `.envrc`.** A *runtime* directive `return`s 1 when a
+prerequisite is missing, because a missing Node or JVM is a genuine failure worth surfacing — it
+is visible immediately in an interactive shell. A directive for an *optional* integration
+instead warns to stderr and `return`s 0, so the rest of the environment still loads.
+`use_sonarqube_mcp` follows this pattern: a missing credential or an unreachable Credential
+Manager produces a warning, never a failed load.
