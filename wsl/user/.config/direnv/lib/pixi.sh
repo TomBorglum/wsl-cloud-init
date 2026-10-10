@@ -10,7 +10,6 @@ use_pixi() {
     # Say so before the download: it is the one moment `direnv allow` visibly
     # stalls, and direnv's own warn_timeout (5s) fires during it.
     echo "direnv: pixi is not installed — installing it now" >&2
-    # The same fetch as the CI directive in actions/setup-direnv/lib/pixi.sh.
     # --proto '=https' --tlsv1.2 pins the transfer to HTTPS/TLS 1.2+ (no plaintext
     # redirects); PIXI_NO_PATH_UPDATE=1 stops the installer editing shell rc files,
     # since this directive owns PATH via PATH_add below.

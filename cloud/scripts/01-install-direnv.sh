@@ -5,11 +5,10 @@ set -euo pipefail
 # `direnv export bash` into $CLAUDE_ENV_FILE, so direnv is what turns the repository's
 # committed .envrc into the PATH every later Bash command sees.
 #
-# From apt, not from actions/setup-direnv/install-direnv.sh, even though that one is
-# pinned and checksummed. It fetches a GitHub *release asset*, and a cloud session's
-# GitHub proxy scopes release-asset requests to repositories attached to the session -
-# direnv/direnv is not one of them. apt's archive.ubuntu.com is on the default Trusted
-# allowlist and needs no network configuration.
+# From apt rather than a pinned GitHub release asset: a cloud session's GitHub proxy
+# scopes release-asset requests to repositories attached to the session, and direnv/direnv
+# is not one of them. apt's archive.ubuntu.com is on the default Trusted allowlist and
+# needs no network configuration.
 #
 # The version therefore floats with the distro rather than being pinned. On 24.04 that
 # is 2.32.1, which is the same version the provisioned WSL terminal runs; a newer distro

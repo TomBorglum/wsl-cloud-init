@@ -5,11 +5,8 @@ shopt -s nullglob
 # The direnv directives, the pixi templates they scaffold from, and direnv's own config.
 #
 # This is the cloud counterpart of wsl/distros/ubuntu/scripts/13-install-direnv-functions.sh
-# and installs the same terminal copy of the directives, wsl/user/.config/direnv/lib -
-# not the actions/setup-direnv/lib copy. CONTRIBUTING.md keeps those two deliberately
-# different, and a cloud session is on the terminal side of that split: real direnv
-# evaluates the .envrc and owns PATH through PATH_add, with nothing like $GITHUB_PATH in
-# the picture.
+# and installs the same directives, wsl/user/.config/direnv/lib. A cloud session is a
+# terminal: real direnv evaluates the .envrc and owns PATH through PATH_add.
 #
 # No already-installed guard, matching its WSL counterpart: this is configuration to keep
 # in sync rather than a payload to install once, and install(1) overwrites cleanly, so
