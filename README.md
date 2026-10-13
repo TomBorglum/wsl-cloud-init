@@ -287,20 +287,33 @@ directives you need:
 
 ```bash
 # .envrc
-use fnm node 22.14.0     # Node via fnm
-use pixi                 # pixi environment from pixi.toml (minimal one created if missing)
-use pixi python          # ...or scaffold pixi.toml from the "python" project template
-use sdk java 21.0.2-tem  # JVM SDK via SDKMAN
-use claude_env           # let Claude Code load this .envrc too (see below)
+use fnm node 22.14.0       # Node via fnm
+use pixi 0.81.0            # pixi environment from pixi.toml (minimal one created if missing)
+use pixi 0.81.0 python     # ...or scaffold pixi.toml from the "python" project template
+use sdk java 21.0.2-tem    # JVM SDK via SDKMAN
+use claude_env             # let Claude Code load this .envrc too (see below)
 ```
 
 then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
 installs the requested versions automatically on first use. Versions must be fully qualified — an
 exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
 
-`use pixi` goes one step further and installs **pixi itself** if it isn't there yet, so the first
+`use pixi` goes one step further and installs **pixi itself** at the version you pin, so the first
 `direnv allow` in a pixi project pauses while it downloads (direnv will note that it is taking a
-while — that is expected). Later projects reuse the same install.
+while — that is expected). Each version lands in its own directory under `~/.pixi/versions/`, the
+way SDKMAN and fnm keep theirs, and `~/.pixi/bin/pixi` is a symlink to the one the current project
+pins. Nothing is ever uninstalled, so switching back to a version you have used before is instant
+and needs no network; reclaim one with `rm -rf ~/.pixi/versions/<version>` and it will be
+re-downloaded the next time a project asks for it.
+
+The version lives in the `.envrc` and nowhere else, so that is where you change it — editing it
+re-triggers the directive on the next prompt. `pixi self-update` is therefore not the way to move
+a project to a new pixi: it rewrites the binary in place, and the next `direnv allow` puts the
+pinned version back. (A project that also wants the pin enforced outside direnv — a bare
+`pixi install`, or CI without this directive — can declare
+[`requires-pixi`](https://pixi.prefix.dev/latest/reference/pixi_manifest/) in its own `pixi.toml`;
+nothing here writes it for you.) One rough edge: zsh completions are generated from whichever
+version was activated most recently, since they are loaded once per shell.
 
 The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
@@ -308,16 +321,16 @@ so a committed `.envrc` can drive CI as well as your shell.
 
 #### pixi project templates
 
-pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name**. When a
-project has no `pixi.toml` yet, `use pixi <name>` scaffolds one from
-`~/.config/pixi/templates/<name>.toml` (substituting the project directory name), while bare
-`use pixi` writes the minimal `[workspace]`-only manifest as before. A `python` template ships by
+pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name** after the
+version. When a project has no `pixi.toml` yet, `use pixi <version> <name>` scaffolds one from
+`~/.config/pixi/templates/<name>.toml` (substituting the project directory name), while a bare
+`use pixi <version>` writes the minimal `[workspace]`-only manifest. A `python` template ships by
 default (runtime deps plus an isolated `test` feature with pytest/basedpyright/ruff tasks and
 `default`/`prod` environments on a shared solve-group); drop more `*.toml` files into that directory
 to add your own. First-time setup is two steps — you create the `.envrc` by hand:
 
 ```bash
-echo 'use pixi python' > .envrc && direnv allow
+echo 'use pixi 0.81.0 python' > .envrc && direnv allow
 ```
 
 An unknown template name is a hard error (`use_pixi: no '<name>' template found …`) — nothing is

@@ -33,7 +33,7 @@ for dir in "$LIB_SRC" "$LIB_SRC/claude"; do
 done
 
 # use_pixi scaffolds a missing pixi.toml from these. A repository that commits its own
-# never reaches that path, but `use pixi python` in one that does not would fail on a
+# never reaches that path, but `use pixi <version> python` in one that does not would fail on a
 # missing template rather than falling back.
 TPL_SRC="$REPO/wsl/user/.config/pixi/templates"
 TPL_DST="$CLOUD_HOME/.config/pixi/templates"

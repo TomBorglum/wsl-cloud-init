@@ -180,6 +180,20 @@ that an `.envrc` can eventually pull in the ones it needs on an instance this re
 provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh` and
 `04-install-sdkman.sh`.
 
+Because it owns the install, it also owns the **version store**: `use pixi <version> [template]`
+puts each pinned pixi in `~/.pixi/versions/<version>/bin` and points `~/.pixi/bin/pixi` at the one
+the active context wants, which is the path `pixi-completion.zsh` evaluates. Two details there are
+load-bearing. The store entry is guarded on the version the binary *reports*, not on its presence,
+so a `pixi self-update` inside an active context is undone by the next `direnv allow` rather than
+surviving forever at a path the directive would otherwise accept. And `PATH_add` gets the version
+directory, not just `~/.pixi/bin`, so a second terminal activating a differently pinned project
+cannot change what this one runs — the same reason `use_fnm` and `use_sdk` put a version directory
+on `PATH` instead of a shared `current` symlink.
+
+The pin lives in the `.envrc` and is not mirrored into `pixi.toml` as `requires-pixi`. Keeping the
+two in step would mean rewriting a tracked manifest on every bump, which is a larger licence than
+the one `use_claude_env` has below.
+
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
 **every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME` (`JAVA_HOME`,

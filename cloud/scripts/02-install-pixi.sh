@@ -1,17 +1,23 @@
 #!/bin/bash
 set -euo pipefail
 
-# pixi, pre-seeded to the path use_pixi looks for.
+# pixi, pre-seeded into the version store use_pixi resolves from.
 #
-# use_pixi installs pixi itself when it is missing, from https://pixi.sh/install.sh. That
-# is right for a workstation and wrong here twice over: pixi.sh is not on a cloud
-# session's default Trusted allowlist, and the installer's payload is a GitHub release
-# asset, which the session's GitHub proxy scopes to repositories attached to the session.
-# The directive would fail and take the whole .envrc load with it.
+# use_pixi installs pixi itself when the version an .envrc pins is missing, from
+# https://pixi.sh/install.sh. That is right for a workstation and wrong here twice over:
+# pixi.sh is not on a cloud session's default Trusted allowlist, and the installer's payload is
+# a GitHub release asset, which the session's GitHub proxy scopes to repositories attached to
+# the session. The directive would fail and take the whole .envrc load with it.
 #
-# So install the binary here instead. use_pixi guards on `[[ ! -x "$pixi_bin" ]]`, so a
-# pixi already at that exact path makes it skip its own download entirely - the directive
-# needs no change and keeps working unmodified on a workstation.
+# So install the binary here instead. use_pixi keys its store on the pinned version
+# ($PIXI_HOME/versions/<version>/bin/pixi) and skips its own download when that binary already
+# reports that version, so a pixi pre-seeded there needs no change to the directive and leaves
+# it working unmodified on a workstation. $PIXI_HOME/bin/pixi is the symlink the directive
+# maintains and pixi-completion.zsh evaluates by absolute path; it is created here too, so
+# completions work in a session whose .envrc has not loaded yet.
+#
+# The version below is this script's own, deliberately: a repository pinning a different one
+# cannot be served from here, and use_pixi will say so rather than silently run the wrong pixi.
 #
 # The source is the conda-forge package on conda.anaconda.org, which *is* allowlisted,
 # pinned by version, build and sha256 in the same spirit as install-direnv.sh. A .conda
@@ -20,16 +26,29 @@ set -euo pipefail
 
 : "${CLOUD_HOME:?CLOUD_HOME is required}"
 
-PIXI_BIN="$CLOUD_HOME/.pixi/bin/pixi"
-
-if [[ -x "$PIXI_BIN" ]]; then
-  echo "pixi already installed at $PIXI_BIN, skipping"
-  exit 3  # already installed; see cloud/bootstrap.sh
-fi
-
 VERSION=0.81.0
 BUILD=hf01adef_0
 SHA256=691c4f465b27b9ed0aeee0849c5a1f8b234f1ef02d4c7d7572855bcca84d3e10
+
+PIXI_VERSION_DIR="$CLOUD_HOME/.pixi/versions/$VERSION/bin"
+PIXI_BIN="$PIXI_VERSION_DIR/pixi"
+PIXI_LINK="$CLOUD_HOME/.pixi/bin/pixi"
+
+# The symlink is this script's other output, and the cheap one, so it is kept in step even on
+# the already-installed path: a store entry whose link went missing would leave completions
+# dead until the first .envrc load. Relative, so the tree survives being moved, and -n/-f so a
+# rerun against an older layout replaces whatever is there (use_pixi then repoints it to
+# whichever version a project pins).
+link_to_store() {
+  install -d "$CLOUD_HOME/.pixi/bin"
+  ln -sfn "../versions/$VERSION/bin/pixi" "$PIXI_LINK"
+}
+
+if [[ -x "$PIXI_BIN" ]]; then
+  echo "pixi $VERSION already installed at $PIXI_BIN, skipping"
+  link_to_store
+  exit 3  # already installed; see cloud/bootstrap.sh
+fi
 
 # unzip and zstd are archive utilities for the payload above, not a language runtime -
 # the no-transient-dependency rule is about not dragging in node/python/java to install
@@ -52,7 +71,7 @@ curl -fsSL --proto '=https' --tlsv1.2 \
   "https://conda.anaconda.org/conda-forge/linux-64/pixi-$VERSION-$BUILD.conda" -o "$pkg"
 echo "$SHA256  $pkg" | sha256sum -c -
 
-install -d "$CLOUD_HOME/.pixi/bin"
+install -d "$PIXI_VERSION_DIR"
 # -O to stdout rather than extracting in place: the member is a full package tree and
 # only bin/pixi is wanted.
 unzip -p "$pkg" "pkg-pixi-$VERSION-$BUILD.tar.zst" \
@@ -60,6 +79,8 @@ unzip -p "$pkg" "pkg-pixi-$VERSION-$BUILD.tar.zst" \
   | tar -xf - -O bin/pixi > "$PIXI_BIN"
 chmod 0755 "$PIXI_BIN"
 rm -f "$pkg"
+
+link_to_store
 
 # Installed by root, but read and run by the session account - so hand it over, the way
 # the WSL scripts do with `install -o "$TARGET_USER"`. Read access would be enough for
@@ -71,7 +92,8 @@ if [[ -n "$owner" ]]; then
 fi
 
 # Also on PATH system-wide, so `pixi` resolves in a shell that has not loaded the .envrc
-# yet - which is every shell before the SessionStart hook has run.
-ln -sf "$PIXI_BIN" /usr/local/bin/pixi
+# yet - which is every shell before the SessionStart hook has run. Chained through the
+# symlink above rather than straight at the store entry, so it tracks the active version.
+ln -sf "$PIXI_LINK" /usr/local/bin/pixi
 
 "$PIXI_BIN" --version
