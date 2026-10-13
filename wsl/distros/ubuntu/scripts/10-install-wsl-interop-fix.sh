@@ -1,37 +1,51 @@
 #!/bin/bash
 set -euo pipefail
 
-# Keep WSL's binfmt_misc interop handler registered.
+# Stop systemd-binfmt from wiping WSL's interop handler.
 #
-# binfmt_misc is shared across the WSL VM. When another distro's
-# systemd-binfmt (or a daemon-reload) flushes it, this distro's WSLInterop
-# entry is wiped and never restored -- so Windows *.exe launches (code,
-# explorer.exe, the Windows git credential helper, ...) start failing. A
-# ~10s timer re-registers the handler whenever it goes missing.
+# binfmt_misc is one table shared by every distro in the WSL VM, and WSL's own /init
+# registers the WSLInterop entry in it that makes Windows *.exe launches work (code,
+# explorer.exe, the Windows git credential helper, ...).
+#
+# systemd-binfmt.service manages that same table on systemd's behalf:
+#
+#   ExecStart=/usr/lib/systemd/systemd-binfmt              # add what /usr/lib/binfmt.d lists
+#   ExecStop=/usr/lib/systemd/systemd-binfmt --unregister  # flush the table - all of it
+#
+# The ExecStop is the problem. It runs when this distro shuts down and takes WSLInterop
+# with it, so interop breaks in every *other* distro still running in the VM, with
+# nothing to explain it but "Exec format error". The ExecStart half is merely noisy:
+# python3.14-minimal ships /usr/lib/binfmt.d/python3.14.conf (the .pyc magic), which is
+# what satisfies the unit's ConditionDirectoryNotEmpty and makes it run at all, so the
+# first distro to boot registers it and every later one exits 1 on an entry that is
+# already there - one failed unit, and `systemctl is-system-running` reporting
+# "degraded" forever after.
+#
+# So mask it. Nothing here needs systemd to manage binfmt_misc: WSL registers the one
+# entry that matters, and the .pyc handler it would add is a convenience nothing in a
+# provisioned instance uses. Masking removes the cause outright, rather than repairing the
+# damage afterwards with a poll that re-registered WSLInterop whenever it went missing.
+#
+# This only holds for distros that have it masked. binfmt_misc is shared, so one distro
+# this repo never provisioned - or `docker buildx`'s binfmt installer, or
+# qemu-user-static/binfmt-support - can still flush the table. Those are documented in
+# the README as a step to take by hand, deliberately: a background service that polled
+# against them would hide the fact that one was missed.
 
-tee /etc/systemd/system/wsl-interop-register.service > /dev/null <<'EOF'
-[Unit]
-Description=Re-register WSL interop binfmt handler if missing
-ConditionPathExists=/init
+# cloud-init's package phase runs before this script and will already have started - and, on
+# any distro that is not the first to boot in the VM, failed - the unit. Masking does not undo
+# that: the failure stays recorded for the rest of the boot, so a freshly provisioned instance
+# would report "degraded" and look as though this had not worked. Clear it first, then mask so
+# it cannot come back. Both are idempotent - mask is a symlink to /dev/null that `mask`
+# overwrites - so this needs no already-installed guard.
+systemctl reset-failed systemd-binfmt.service >/dev/null 2>&1 || true
+systemctl mask systemd-binfmt.service
 
-[Service]
-Type=oneshot
-ExecStart=/bin/sh -c 'grep -qs "^enabled" /proc/sys/fs/binfmt_misc/WSLInterop || { echo -1 > /proc/sys/fs/binfmt_misc/WSLInterop 2>/dev/null; echo ":WSLInterop:M::MZ::/init:P" > /proc/sys/fs/binfmt_misc/register; }'
-EOF
-
-tee /etc/systemd/system/wsl-interop-register.timer > /dev/null <<'EOF'
-[Unit]
-Description=Keep WSL interop binfmt registration alive
-
-[Timer]
-OnBootSec=10s
-OnUnitActiveSec=10s
-AccuracySec=1s
-
-[Install]
-WantedBy=timers.target
-EOF
-
-systemctl daemon-reload
-systemctl enable wsl-interop-register.timer
-systemctl start wsl-interop-register.timer
+# Say what the instance is left with, since the useful signal is the handler's presence
+# rather than the unit's state. Not a gate: WSL registers WSLInterop when the distro
+# starts, and provisioning can run before that has happened.
+if grep -qs '^enabled' /proc/sys/fs/binfmt_misc/WSLInterop; then
+  echo "systemd-binfmt masked; WSLInterop is registered"
+else
+  echo "systemd-binfmt masked; WSLInterop is not registered yet (WSL registers it on distro start)" >&2
+fi

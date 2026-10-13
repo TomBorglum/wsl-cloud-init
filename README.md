@@ -629,8 +629,33 @@ upgrades are not supported](#in-place-upgrades-are-not-supported), so re-provisi
 to pick it up.
 
 **WSL interop stops working** — `code`, `open`, and Git authentication fail, often with an "Exec
-format error". WSL's `binfmt_misc` interop handler is shared across the VM and another distro can
-flush it. A systemd timer re-registers it every 10 seconds, so wait a moment and try again.
+format error". `binfmt_misc` is a single table shared by every distro in the WSL VM, and WSL's own
+`/init` registers the `WSLInterop` entry in it. `systemd-binfmt.service` flushes that whole table
+when a distro shuts down (`ExecStop=… --unregister`), so one distro stopping takes interop down in
+every other distro still running. Provisioning **masks that unit**, which removes the cause — but
+only for the distros it provisioned. Check whether the handler is there, and which distro is still
+flushing it:
+
+```bash
+grep -qs '^enabled' /proc/sys/fs/binfmt_misc/WSLInterop && echo registered || echo MISSING
+systemctl is-enabled systemd-binfmt.service    # expect: masked
+```
+
+Mask it by hand in any distro this repo did not provision — that includes a plain Ubuntu install
+sharing the VM:
+
+```bash
+sudo systemctl mask systemd-binfmt.service
+```
+
+`docker buildx`'s binfmt installer (`docker run --privileged tonistiigi/binfmt …`),
+`qemu-user-static` and `binfmt-support` manage the same table and can flush it too. If interop
+breaks after running one of those, start any distro in the VM to have WSL re-register the handler.
+
+A side effect of the same unit, harmless on its own: the first distro to boot registers the `.pyc`
+handler from `/usr/lib/binfmt.d/python3.14.conf`, every later one fails on an entry that already
+exists, and `systemctl is-system-running` then reports `degraded` for the rest of that boot. A
+masked distro never runs it, so it does not happen there.
 
 **Zed hangs on "Starting proxy"** — Zed runs a remote server inside the instance and remembers its
 PID, but PIDs do not survive a WSL restart. On the next boot that PID belongs to something else, and
