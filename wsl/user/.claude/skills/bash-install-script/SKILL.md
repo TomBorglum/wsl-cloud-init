@@ -1,6 +1,8 @@
 ---
 name: bash-install-script
-description: Scaffold a self-contained, idempotent bash script that installs a tool/CLI/language/package. Use whenever the user wants an install or setup script written for some tool — phrasings like "write a bash installer for X", "add an install script for X", "scaffold a setup script for X", or "create an NN-install-*.sh script". Reach for this whenever the deliverable is a shell script whose job is to install something.
+description: Scaffold a self-contained, idempotent NN-install-<tool>.sh that installs one tool, following this repository's install-script conventions.
+argument-hint: <tool to write an install script for>
+disable-model-invocation: true
 ---
 
 # bash-install-script
