@@ -1,5 +1,27 @@
 # Changelog
 
+## [2.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.5...v2.0.0) (2026-10-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* `use pixi` now requires a fully qualified version as its first argument, so the template moves to second: `use pixi 0.81.0 python`. An .envrc written against the old form fails to load. Existing installs at ~/.pixi/bin/pixi are replaced by the symlink on the first load.
+
+### Features
+
+* bundle a spec-interview skill with Claude Code ([#104](https://github.com/TomBorglum/wsl-cloud-init/issues/104)) ([513d7cf](https://github.com/TomBorglum/wsl-cloud-init/commit/513d7cfa4c300d51169b15b9135c828780d1dc7f))
+* install pixi from the `use pixi` directive, not at provision time ([#93](https://github.com/TomBorglum/wsl-cloud-init/issues/93)) ([0bd7cc9](https://github.com/TomBorglum/wsl-cloud-init/commit/0bd7cc929b39c461f4a12e068be22d7ee5aca028))
+* move the setup-direnv action to TomBorglum/actions ([#101](https://github.com/TomBorglum/wsl-cloud-init/issues/101)) ([dbbe3e5](https://github.com/TomBorglum/wsl-cloud-init/commit/dbbe3e506b8a396eb991f45972ec5b6c243612a0))
+* open Zed files permanently and diff the clipboard ([#97](https://github.com/TomBorglum/wsl-cloud-init/issues/97)) ([a8d3302](https://github.com/TomBorglum/wsl-cloud-init/commit/a8d3302b4168534f879682e03f10b219364f4037))
+* pin the pixi version in the use pixi directive ([#102](https://github.com/TomBorglum/wsl-cloud-init/issues/102)) ([ede26f0](https://github.com/TomBorglum/wsl-cloud-init/commit/ede26f0c7d1d996595d3a89d8d75a19908c4298a))
+* pin the seeded Claude settings to Opus 5 and declare their schema ([#99](https://github.com/TomBorglum/wsl-cloud-init/issues/99)) ([aefa760](https://github.com/TomBorglum/wsl-cloud-init/commit/aefa76098bf0b2c296a8648d4f65c1f17b505fbf))
+* provision Claude Code cloud sessions from the same .envrc ([#98](https://github.com/TomBorglum/wsl-cloud-init/issues/98)) ([f7b94f2](https://github.com/TomBorglum/wsl-cloud-init/commit/f7b94f2fce73aedc03dd75053903187eb6c087f5))
+
+
+### Bug Fixes
+
+* mask systemd-binfmt instead of repairing what it wipes ([#103](https://github.com/TomBorglum/wsl-cloud-init/issues/103)) ([95d69d0](https://github.com/TomBorglum/wsl-cloud-init/commit/95d69d089caf0b187751acd3a8ac9766fa6d1131))
+
 ## [1.4.5](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.4...v1.4.5) (2026-08-31)
 
 
