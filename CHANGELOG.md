@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v2.0.0...v3.0.0) (2026-10-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* use_claude_env is no longer installed. An .envrc containing `use claude_env` will fail that line on an instance provisioned from this version until the add-on is installed:
+
+### Features
+
+* move the cloud dimension to TomBorglum/claude-cloud-bootstrap ([#105](https://github.com/TomBorglum/wsl-cloud-init/issues/105)) ([dfa17eb](https://github.com/TomBorglum/wsl-cloud-init/commit/dfa17eb5b3ac0dc3d3b7dd3f7b44a6febe198abe))
+
 ## [2.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v1.4.5...v2.0.0) (2026-10-14)
 
 
