@@ -167,12 +167,16 @@ characters freely — this document does.)
 
 The directives in `wsl/user/.config/direnv/lib/` are what let a project declare a runtime
 version **once** in its `.envrc` — `use sdk java 21.0.2-tem` — and have every instance this
-repo provisions honour it. `13-install-direnv-functions.sh` installs them on WSL,
-`cloud/scripts/03-install-direnv-functions.sh` in a cloud session.
+repo provisions honour it. `13-install-direnv-functions.sh` is what installs them.
 
 The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
-which is maintained and released independently of this repository.
+and in a Claude Code cloud session through
+[`TomBorglum/claude-cloud-bootstrap`](https://github.com/TomBorglum/claude-cloud-bootstrap). Both
+are maintained and released independently of this repository, and both carry their own copies —
+the actions one a deliberately different CI-only implementation, the cloud one a vendored copy of
+these. Keeping those in step is a maintainer duty there, not a gate here, which is the whole point
+of the split: a change to a directive in this repository no longer has to answer for either.
 
 pixi is the odd one out among them, deliberately. `use_pixi` installs its own tool rather than
 relying on provisioning having done it — the first step toward directives that stand alone, so
@@ -192,7 +196,7 @@ on `PATH` instead of a shared `current` symlink.
 
 The pin lives in the `.envrc` and is not mirrored into `pixi.toml` as `requires-pixi`. Keeping the
 two in step would mean rewriting a tracked manifest on every bump, which is a larger licence than
-the one `use_claude_env` has below.
+the scaffold-once one `use_sonarqube_mcp` takes below.
 
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
@@ -207,15 +211,12 @@ linked above and is that repository's to implement and test.
 ### Two directive conventions
 
 **A directive may scaffold a project file** on first activation. `use_pixi` writes a starter
-`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`; `use_claude_env` writes a
-`.claude/settings.json`. Each prints a reminder to commit it — those generated files are part of
-the repository, so commit them.
+`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`. Each prints a reminder to commit it —
+those generated files are part of the repository, so commit them.
 
-`use_claude_env` is the one that writes into a file it does not own, since a repository's
-`.claude/settings.json` usually already exists and holds permissions and `env` of its own. It
-therefore merges with `jq` rather than creating, adding only the hook entries whose `command` is
-absent, and rewrites nothing when they are all present — a directive that reformatted a tracked
-file on every `cd` would leave every consuming repository permanently dirty.
+A directive that scaffolds must never rewrite what it already wrote: this runs on every `cd`, so
+reformatting a tracked file each time would leave every consuming repository permanently dirty.
+Scaffold when the file is absent, and be a no-op when it is there.
 
 **An optional directive must not break the `.envrc`.** A *runtime* directive `return`s 1 when a
 prerequisite is missing, because a missing Node or JVM is a genuine failure worth surfacing — it

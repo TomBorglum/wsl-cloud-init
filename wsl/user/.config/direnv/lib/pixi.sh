@@ -50,7 +50,7 @@ use_pixi() {
   # pixi-completion.zsh evaluates, by absolute path, before any PATH_add has run. Relative,
   # so the tree survives being moved. Rewritten only when it has to be, since this runs on
   # every load; -n/-f also replaces a plain file left by an older install or by
-  # cloud/scripts/02-install-pixi.sh.
+  # claude-cloud-bootstrap's cloud/scripts/02-install-pixi.sh.
   local link="$pixi_home/bin/pixi" want="../versions/$version/bin/pixi"
   if [[ "$(readlink "$link" 2>/dev/null)" != "$want" ]]; then
     mkdir -p "$pixi_home/bin"
