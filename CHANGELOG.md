@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.1.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.0.0...v3.1.0) (2026-10-24)
+
+
+### Features
+
+* deny the built-in subagents in the seeded Claude settings ([#108](https://github.com/TomBorglum/wsl-cloud-init/issues/108)) ([e577bed](https://github.com/TomBorglum/wsl-cloud-init/commit/e577bed5467de6266a46317b542eca3d28a40746))
+* route subagents to haiku and cap the compaction window ([#110](https://github.com/TomBorglum/wsl-cloud-init/issues/110)) ([38030c9](https://github.com/TomBorglum/wsl-cloud-init/commit/38030c97782a830b6f849055931da72c81f867f7))
+
 ## [3.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v2.0.0...v3.0.0) (2026-10-16)
 
 
