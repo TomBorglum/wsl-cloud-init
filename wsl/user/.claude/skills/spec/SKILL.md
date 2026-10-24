@@ -8,7 +8,7 @@ description: >-
   practices, and produces a plan for approval. Specification only; it never implements.
 argument-hint: <feature to specify>
 disable-model-invocation: true
-allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, EnterPlanMode, ExitPlanMode, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(git log:*), Bash(git diff:*), Bash(git status:*)]
+allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(git log:*), Bash(git diff:*), Bash(git status:*)]
 ---
 
 # Spec
@@ -78,13 +78,19 @@ select:EnterPlanMode,ExitPlanMode,mcp__context7__resolve-library-id,mcp__context
 
 ### 2. Enter plan mode
 
-Call `EnterPlanMode` unless the session is already in it.
+Call `EnterPlanMode` unless the session is already in it. If it already is, continue in it
+rather than re-entering.
 
 Plan mode is what actually enforces this skill's restrictions. It routes every file-edit and
 shell-write tool past allow rules, so no write can be auto-approved while planning, and it
 supplies both the designated plan file path and the `ExitPlanMode` approval gate. The
-`allowed-tools` list in this skill's frontmatter grants permission without prompting; it does
-not restrict anything. The restriction comes from the mode.
+restriction comes from the mode, not from frontmatter.
+
+`EnterPlanMode` and `ExitPlanMode` are deliberately absent from this skill's `allowed-tools`
+list and must stay absent. That list grants permission without prompting, and the
+plan-approval dialogue **is** `ExitPlanMode`'s permission prompt — so pre-approving it replaces
+the plan review with a bare mode-switch confirmation. Adding either tool to the list destroys
+the approval gate this skill exists to reach.
 
 ### 3. Confirm the request
 
