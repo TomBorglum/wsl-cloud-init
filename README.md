@@ -53,12 +53,14 @@ second token to create and no `gh auth login` to run.
 ### Claude Code
 
 Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the
-**[Context7](https://context7.com)** MCP for up-to-date library docs, plus two bundled
-skills, both invoked explicitly and never on Claude's own initiative:
+**[Context7](https://context7.com)** MCP for up-to-date library docs, plus three bundled
+skills, all invoked explicitly and never on Claude's own initiative:
 **`/bash-install-script`**, which scaffolds a new `NN-install-*.sh` to this repository's
-conventions, and **`/spec-interview`**, which fetches current docs from Context7 and
-interviews you — one documented recommendation per question — before anything gets
-written.
+conventions; **`/spec`**, which specifies a new feature through a bounded interview,
+delegating codebase exploration to subagents and reviewing the finished plan against current
+practice before it reaches you for approval; and **`/spec-interview`**, which fetches current
+docs from Context7 and interviews you — one documented recommendation per question — before
+anything gets written.
 
 ### WSL interop
 
