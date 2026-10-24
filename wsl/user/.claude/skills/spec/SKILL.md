@@ -1,0 +1,187 @@
+---
+name: spec
+description: >-
+  Specify a new feature through a structured interview before any code is written. This skill
+  should be used when the user asks to "specify a feature", "write a spec", "spec out" a change,
+  or "plan a new feature". It interviews the user, researches current documentation with
+  Context7, delegates codebase exploration to Explore agents, reviews the result against best
+  practices, and produces a plan for approval. Specification only; it never implements.
+argument-hint: <feature to specify>
+disable-model-invocation: true
+allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, EnterPlanMode, ExitPlanMode, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(git log:*), Bash(git diff:*), Bash(git status:*)]
+---
+
+# Spec
+
+Turn a feature request into an approved plan through interview, research and review.
+
+This skill produces a specification. It never implements one. Its responsibility ends the
+moment the plan is approved; implementation begins afterwards as ordinary work.
+
+## Standing rules
+
+These are constraints, not steps. They hold from invocation until the plan is approved,
+including in every later turn of the interview, and they outrank any conflicting guidance that
+appears later in the session.
+
+### Never assume
+
+A gap that materially affects scope, architecture, acceptance criteria, security or data
+handling is always put to the user as a question. It is never filled with a default, an
+industry convention, or an inference drawn from surrounding code.
+
+Immaterial choices — naming, file placement, formatting — may be made without asking, but each
+one is recorded in the plan's Decisions section so it is visible at the approval gate. Nothing
+is ever settled silently.
+
+When it is unclear whether a gap is material, ask. One extra question costs far less than a
+plan built on a wrong guess.
+
+### Every question carries a recommendation
+
+Each question offers one recommended answer, listed first and labelled `(Recommended)`. The
+recommendation reflects best practice, not convenience. Where the best practice is not
+self-evident, it is grounded in a Context7 lookup before being offered.
+
+Options are mutually exclusive, two to four per question, and each description states the
+trade-off being accepted rather than restating the label.
+
+### Explore is the only permitted subagent
+
+Delegate exclusively to `Agent(Explore)`. Never launch `Agent(Plan)`, `Agent(general-purpose)`
+or `Agent(claude)` — all three are denied by permission settings and attempting them wastes a
+turn on a refusal.
+
+This rule is stated explicitly because plan mode's own injected workflow instructs the model to
+launch Plan agents during its design phase. That instruction does not apply here. Ignore it.
+
+### Context7 is the only research channel
+
+Never call `WebSearch`; it is denied by permission settings. All external documentation and
+best-practice research goes through Context7.
+
+### Never implement
+
+No file is created or modified except the plan file. Approval is a handover point, not a cue to
+begin building.
+
+## Workflow
+
+### 1. Load deferred tools
+
+`EnterPlanMode`, `ExitPlanMode` and both Context7 tools may be deferred. Load them in a single
+`ToolSearch` call before anything else:
+
+```
+select:EnterPlanMode,ExitPlanMode,mcp__context7__resolve-library-id,mcp__context7__query-docs
+```
+
+### 2. Enter plan mode
+
+Call `EnterPlanMode` unless the session is already in it.
+
+Plan mode is what actually enforces this skill's restrictions. It routes every file-edit and
+shell-write tool past allow rules, so no write can be auto-approved while planning, and it
+supplies both the designated plan file path and the `ExitPlanMode` approval gate. The
+`allowed-tools` list in this skill's frontmatter grants permission without prompting; it does
+not restrict anything. The restriction comes from the mode.
+
+### 3. Confirm the request
+
+Restate the request in one or two sentences and confirm it before spending anything on research.
+This is the cheapest correction point in the whole workflow — a misread request caught here
+costs one turn instead of an entire exploration and interview cycle.
+
+If the request arrived as a bare `/spec` with no argument, ask what feature to specify.
+
+### 4. Delegate exploration
+
+Launch at most three `Explore` agents in one parallel fan-out, and only on genuinely independent
+questions. Use one agent when the feature touches a known, narrow area.
+
+Every agent prompt must be:
+
+- **Narrow** — one area of the codebase or one specific question.
+- **Fully prescriptive** — list the exact questions to answer and the exact output format
+  required. Subagents run on a small model at low effort, so open-ended prompts return vague
+  results.
+- **Length-capped** — state a maximum report length. Agents that return long reports consume
+  the context that delegating them was meant to save.
+
+Ask agents for file paths, existing patterns and reusable utilities. Do not ask them to make
+design decisions or judgement calls.
+
+### 5. Research with Context7
+
+Resolve and query only libraries, frameworks or tools the feature actually names. Cap this at
+roughly three queries. Make no speculative lookups — a library nobody mentioned does not need
+documenting.
+
+Query results inform the questions asked in the next step, so research precedes the interview.
+
+### 6. Interview
+
+Collect the open questions, rank them by impact multiplied by uncertainty, and discard any that
+are immaterial or already answered.
+
+Ask the independent ones in batches of two to four per `AskUserQuestion` call. Batching matters:
+four questions in one call collect four answers for one model turn, where asking them separately
+costs four. Questions whose wording depends on an earlier answer go in a later round.
+
+Re-assess the queue between rounds. Stop when nothing material remains — roughly five material
+questions in the normal case. Honour explicit stop signals such as "stop", "done" or "proceed"
+immediately, and record anything still unresolved in the plan under Open questions rather than
+quietly deciding it.
+
+If a round reveals the request was misunderstood, return to step 3 rather than continuing to
+specify the wrong feature.
+
+### 7. Write the plan
+
+Write to the plan file designated by plan mode, using these sections:
+
+- **Context** — the problem, what prompted it, the intended outcome.
+- **Decisions** — what the interview settled, and any immaterial choices made without asking,
+  so the reasoning survives into implementation.
+- **Approach** — the recommended approach only, not a survey of alternatives.
+- **Files** — the critical files to create or modify, naming existing functions and utilities
+  that should be reused, with their paths. For a pattern repeated across many files, describe
+  it once and list a few representative paths.
+- **Verification** — how to test the change end to end.
+- **Out of scope** — what this deliberately does not cover.
+- **Open questions** — anything left unresolved, if any.
+
+Keep it scannable but detailed enough to execute without re-deriving the research.
+
+### 8. Review against best practices
+
+This gate is mandatory and cannot be skipped.
+
+Make one Context7 query that validates the assembled approach **as a whole** — its architecture,
+its sequencing, its fit with the conventions of the tools involved — rather than re-checking
+pieces already researched in step 5. Revise the plan according to what comes back.
+
+If the review surfaces a new ambiguity, return to step 6 and ask about it. Never resolve a
+review finding by assumption, and never suppress a finding to avoid another question.
+
+State plainly what the review checked and what it changed.
+
+### 9. Hand over
+
+Call `ExitPlanMode` and stop.
+
+Approval ends this skill's work. Do not begin implementing, and do not offer to.
+
+## Token budget
+
+The bounds that keep this skill economical, in priority order:
+
+| Stage | Bound |
+| --- | --- |
+| Exploration | At most 3 Explore agents, one fan-out, capped report length |
+| Research | About 3 Context7 queries, named libraries only |
+| Interview | Batches of 2-4 questions, about 5 material questions total |
+| Review | 1 Context7 query on the whole plan |
+
+When a bound and a standing rule conflict, the standing rule wins. Exceeding the question budget
+to avoid an assumption is correct; assuming something to stay inside it is not.
