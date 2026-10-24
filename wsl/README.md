@@ -70,7 +70,7 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 sources it to derive the path to `powershell.exe` before any script runs, and the `gh` wrapper
 re-sources it at runtime, so neither can depend on the `/opt` checkout still being present.
 
-## Two places the mirror is not literal
+## Three places the mirror is not literal
 
 **`git/` is flattened.** The `git/` subfolder under `system/usr/local/share/zsh/site-functions/` is a
 source-side grouping, not a real destination subdirectory. It holds the helpers installed only when
