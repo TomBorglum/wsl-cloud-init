@@ -19,7 +19,18 @@ interview about — say so and do the work.
 
 ## Workflow
 
-1. **Fetch the docs first — always, no exceptions.** Before the first question, run at
+1. **Enter plan mode before anything else.** Unless the request is one this skill declines
+   above, call `EnterPlanMode` as the opening action whatever mode the session is in; if
+   already in plan mode, continue in it rather than re-entering. Plan mode's injected
+   phase sequence puts subagent exploration and a written plan file ahead of the
+   questions, inverting this order — the steps here take precedence.
+
+2. **Plan in the main session.** Delegate only read-only codebase sweeps, and only to
+   `Explore`, where a wide search costs fewer main-session tokens because only its
+   conclusion returns. The interview and the plan stay here: `EnterPlanMode` does not
+   work in an agent context, so a subagent cannot hold the mode step 1 establishes.
+
+3. **Fetch the docs first — always, no exceptions.** Before the first question, run at
    least one `resolve-library-id` → `query-docs` round against the Context7 MCP server
    (that order; `query-docs` needs the ID the first call returns) for every library,
    framework, SDK, CLI or cloud service the request names or implies. When the work is
@@ -28,13 +39,13 @@ interview about — say so and do the work.
    to reason from. Never open the interview on memory alone: the point of the lookup is
    that training data lags behind the tool being used.
 
-2. **Interview — assume nothing.** Every unknown becomes a question, never a silent
+4. **Interview — assume nothing.** Every unknown becomes a question, never a silent
    default. Ask with `AskUserQuestion` rather than in prose, so answering is clicking:
    up to 4 questions per batch, 2–4 options each. Keep asking in batches until nothing
    material is unresolved, and prefer a second batch informed by the first over one
    oversized batch of guesses.
 
-3. **One recommendation per question.** Exactly one option per question is labelled
+5. **One recommendation per question.** Exactly one option per question is labelled
    `(Recommended)` and placed first, and its description states the fact from the fetched
    documentation that makes it the recommendation — not a generic preference and not
    "best practice" in the abstract. Where the documentation does not settle a question,
@@ -42,15 +53,10 @@ interview about — say so and do the work.
    instead. Every non-recommended option still gets an honest description of its
    trade-off; an option nobody would pick is not a choice.
 
-4. **Cite what was consulted.** Name the Context7 library IDs the recommendations rest
+6. **Cite what was consulted.** Name the Context7 library IDs the recommendations rest
    on. Where a lookup returned nothing relevant, say that plainly and mark the
    recommendations that therefore rest on judgement. An uncited recommendation is
-   indistinguishable from a guess, which defeats the purpose of step 1.
-
-5. **Plan, then stop.** Write the plan and call `ExitPlanMode` for approval before
-   touching a file. If the session is not already in plan mode, call `EnterPlanMode`
-   first; if it is, continue in it rather than re-entering. No edits until the plan is
-   approved.
+   indistinguishable from a guess, which defeats the purpose of step 3.
 
 ## Hand off, do not duplicate
 
@@ -61,8 +67,8 @@ here would duplicate them badly and leave two copies to keep in step.
 
 ## The user overrides
 
-A request to skip the interview, or the lookup, or to just make the change, is honoured
-for that request. State what is being skipped, then proceed.
+A request to skip the interview, the lookup, or plan mode, or to just make the change, is
+honoured for that request. State what is being skipped, then proceed.
 
 ## Adding to this file
 
