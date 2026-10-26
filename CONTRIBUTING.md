@@ -211,7 +211,8 @@ linked above and is that repository's to implement and test.
 ### Two directive conventions
 
 **A directive may scaffold a project file** on first activation. `use_pixi` writes a starter
-`pixi.toml`; `use_sonarqube_mcp` writes a `.mcp.json`. Each prints a reminder to commit it —
+`pixi.toml`; `use_sonarqube_mcp` writes a `.claude/agents/sonarqube.md`. Each prints a
+reminder to commit it —
 those generated files are part of the repository, so commit them.
 
 A directive that scaffolds must never rewrite what it already wrote: this runs on every `cd`, so

@@ -62,6 +62,11 @@ practice before it reaches you for approval; and **`/spec-interview`**, which fe
 docs from Context7 and interviews you — one documented recommendation per question — before
 anything gets written.
 
+A `use sonarqube_mcp` direnv directive comes with it, for the projects that want it: it gives
+them a read-only Sonar subagent that collects SonarQube Cloud issues on demand, without
+putting an MCP server in your main session. See
+[the setup below](#optional-the-use-sonarqube_mcp-direnv-directive-private-repos).
+
 ### WSL interop
 
 - **`open`** — launches a file or URL with its default Windows app. Always installed.
@@ -175,18 +180,27 @@ Or via the GUI — Control Panel → **Credential Manager** → **Windows Creden
 ##### Optional: the `use sonarqube_mcp` direnv directive (private repos)
 
 `-InstallClaudeCode` also installs a [direnv](https://direnv.net) directive,
-`use sonarqube_mcp`, that enables the [SonarQube Cloud MCP
-server](https://github.com/SonarSource/sonarqube-mcp-server) for a project, so Claude can
-read and fix Sonar issues — handy for **private** repos whose SonarCloud dashboards aren't
-publicly reachable. The server runs via Docker (pulled once on first use), so nothing extra
-is installed at provision time.
+`use sonarqube_mcp`, that gives a project a **read-only Sonar subagent**. Claude spawns it
+when it needs data from the [SonarQube Cloud MCP
+server](https://github.com/SonarSource/sonarqube-mcp-server) — handy for **private** repos
+whose SonarCloud dashboards aren't publicly reachable — and it hands the issues back for your
+main session to reason about and fix.
+
+The MCP server is declared *inside* the subagent rather than registered with the session, so
+it costs your main session nothing: only the subagent's one-line description is ever in
+context, and the Docker container (pulled once on first use) doesn't start until the subagent
+actually runs. The subagent is deliberately powerless, too — the Sonar server's tools are the
+only ones it has, so it cannot read your files, run commands or edit anything, and the server
+runs in read-only mode, so it cannot change an issue's status either. Every bit of reasoning
+and every write stays in your main session.
 
 Add `use sonarqube_mcp` to a project's `.envrc` (like `use pixi` / `use sdk`) and run
-`direnv allow`. On first activation the directive scaffolds a **secret-free** `.mcp.json`
-that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not the values), and on every
-activation direnv supplies those variables from your Windows Credential Manager. Because no
-secret is stored in the project, both `.envrc` and `.mcp.json` are safe to commit and share
-with your team — each teammate just keeps their own credentials (below).
+`direnv allow`. On first activation the directive scaffolds a **secret-free**
+`.claude/agents/sonarqube.md` that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not
+the values), and on every activation direnv supplies those variables from your Windows
+Credential Manager. Because no secret is stored in the project, both `.envrc` and the agent
+file are safe to commit and share with your team — each teammate just keeps their own
+credentials (below).
 
 Store two more generic credentials (a [SonarQube Cloud
 token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens/)
@@ -203,7 +217,14 @@ cmdkey /generic:wsl-cloud-init:SONARQUBE_ORG   /user:wsl-cloud-init /pass:<sonar
 | `wsl-cloud-init:SONARQUBE_ORG` | `wsl-cloud-init` | your SonarQube Cloud organization key |
 
 Then, in the project you want it for, add `use sonarqube_mcp` to `.envrc` and run
-`direnv allow`.
+`direnv allow`. The first `claude` session there has to trust the folder — the prompt you
+accept on first use anyway — before the subagent's server will load.
+
+Two notes for a mixed team. The agent file is portable: nothing in it is specific to a
+wsl-cloud-init instance, so any teammate who supplies `SONARQUBE_TOKEN` and `SONARQUBE_ORG`
+their own way gets the same subagent from the repo. The `.envrc` line is not — direnv's `use`
+aborts an `.envrc` when the directive is undefined, so a teammate without this instance's
+direnv library gets a hard direnv failure from that line.
 
 #### `-InstallGitConfig` — a Git identity and a GitHub sign-in
 
@@ -512,8 +533,8 @@ Windows Credential Manager provides:
 | Credential | Used for |
 | --- | --- |
 | `wsl-cloud-init:CONTEXT7_API_KEY` | Claude Code's Context7 MCP — **only required with `-InstallClaudeCode`** |
-| `wsl-cloud-init:SONARQUBE_TOKEN` | Read by direnv for the `use sonarqube_mcp` directive (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
-| `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `use sonarqube_mcp` directive (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
+| `wsl-cloud-init:SONARQUBE_TOKEN` | Read by direnv for the `use sonarqube_mcp` directive's Sonar subagent (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
+| `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `use sonarqube_mcp` directive's Sonar subagent (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
 `git` and `gh` authenticate from that single credential — no second token to create, and no
