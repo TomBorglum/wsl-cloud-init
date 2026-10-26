@@ -38,6 +38,14 @@ use_sonarqube_mcp() {
   #    in step 2. They keep their `:-` defaults deliberately — an unset variable *without* a
   #    default is passed through as the literal "${VAR}" text rather than an empty value,
   #    which the server would then try to authenticate with.
+  #
+  #    The file pins no model and no effort level: which model runs a subagent is the host's
+  #    call, not the project's. On an instance this repo provisions, ~/.claude/settings.json
+  #    already runs every subagent on haiku at low effort — and its
+  #    CLAUDE_CODE_SUBAGENT_MODEL_FORCE makes Claude Code ignore a `model:` here outright, so
+  #    pinning one would be dead config that reads as though it did something. What this file
+  #    does pin is capability: the tool allowlist and the server's read-only mode, which is
+  #    what the collect-don't-reason contract actually rests on.
   local agent_file=.claude/agents/sonarqube.md
   if [[ ! -f "$agent_file" ]]; then
     if ! mkdir -p "$(dirname "$agent_file")"; then
@@ -52,8 +60,6 @@ description: >-
   needed, especially for a private repo whose dashboard is not publicly reachable. It
   reports data only; it never diagnoses, prioritises or fixes.
 tools: mcp__sonarqube__*
-model: haiku
-effort: low
 omitClaudeMd: true
 mcpServers:
   - sonarqube:
