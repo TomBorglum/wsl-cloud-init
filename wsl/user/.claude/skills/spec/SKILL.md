@@ -5,7 +5,7 @@ description: >-
   should be used when the user asks to "specify a feature", "write a spec", "spec out" a change,
   or "plan a new feature". It interviews the user, researches current documentation with
   Context7, delegates codebase exploration to Explore agents, reviews the result against best
-  practices, and produces a plan for approval. Specification only; it never implements.
+  practices, and produces a plan for approval. Once the plan is approved it implements it.
 argument-hint: <feature to specify>
 disable-model-invocation: true
 allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(git log:*), Bash(git diff:*), Bash(git status:*)]
@@ -13,10 +13,11 @@ allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, m
 
 # Spec
 
-Turn a feature request into an approved plan through interview, research and review.
+Turn a feature request into working code, by way of an approved plan: interview, research,
+review, approval, then implementation.
 
-This skill produces a specification. It never implements one. Its responsibility ends the
-moment the plan is approved; implementation begins afterwards as ordinary work.
+Nothing is built while the plan is unapproved. Approval is the go-ahead: implementation starts
+straight away in that same turn, exactly as it would on any other exit from plan mode.
 
 ## Standing rules
 
@@ -60,10 +61,13 @@ launch Plan agents during its design phase. That instruction does not apply here
 Never call `WebSearch`; it is denied by permission settings. All external documentation and
 best-practice research goes through Context7.
 
-### Never implement
+### Nothing is built before approval
 
-No file is created or modified except the plan file. Approval is a handover point, not a cue to
-begin building.
+While the plan is unapproved, no file is created or modified except the plan file itself.
+
+Approval lifts these standing rules, with one exception: a material gap discovered during
+implementation is still put to the user as a question rather than filled with a default.
+Decisions the plan already records are settled and are not reopened.
 
 ## Workflow
 
@@ -172,11 +176,17 @@ review finding by assumption, and never suppress a finding to avoid another ques
 
 State plainly what the review checked and what it changed.
 
-### 9. Hand over
+### 9. Implement on approval
 
-Call `ExitPlanMode` and stop.
+Call `ExitPlanMode`.
 
-Approval ends this skill's work. Do not begin implementing, and do not offer to.
+If the user approves, begin implementing in the same turn. Do not ask whether to start and do
+not restate the plan back — approval already said yes, so an offer to build it only costs the
+user another turn. Work through the Approach and Files sections in order, then verify by the
+plan's Verification section and report what passed and what did not.
+
+If the user rejects the plan or asks for changes, return to the step the feedback belongs to —
+step 6 for a question it reopens, step 7 for the plan's wording — and reach the gate again.
 
 ## Token budget
 

@@ -58,9 +58,9 @@ skills, all invoked explicitly and never on Claude's own initiative:
 **`/bash-install-script`**, which scaffolds a new `NN-install-*.sh` to this repository's
 conventions; **`/spec`**, which specifies a new feature through a bounded interview,
 delegating codebase exploration to subagents and reviewing the finished plan against current
-practice before it reaches you for approval; and **`/spec-interview`**, which fetches current
-docs from Context7 and interviews you — one documented recommendation per question — before
-anything gets written.
+practice before it reaches you for approval, then builds it once you approve; and
+**`/spec-interview`**, which fetches current docs from Context7 and interviews you — one
+documented recommendation per question — before anything gets written.
 
 A `use sonarqube_mcp` direnv directive comes with it, for the projects that want it: it gives
 them a read-only Sonar subagent that collects SonarQube Cloud issues on demand, without
