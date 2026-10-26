@@ -8,7 +8,6 @@ description: >-
   practices, and produces a plan for approval. Once the plan is approved it implements it.
 argument-hint: <feature to specify>
 disable-model-invocation: true
-allowed-tools: [Read, Glob, Grep, AskUserQuestion, Agent(Explore), ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, Bash(git log:*), Bash(git diff:*), Bash(git status:*)]
 ---
 
 # Spec
@@ -90,11 +89,16 @@ shell-write tool past allow rules, so no write can be auto-approved while planni
 supplies both the designated plan file path and the `ExitPlanMode` approval gate. The
 restriction comes from the mode, not from frontmatter.
 
-`EnterPlanMode` and `ExitPlanMode` are deliberately absent from this skill's `allowed-tools`
-list and must stay absent. That list grants permission without prompting, and the
-plan-approval dialogue **is** `ExitPlanMode`'s permission prompt — so pre-approving it replaces
-the plan review with a bare mode-switch confirmation. Adding either tool to the list destroys
-the approval gate this skill exists to reach.
+Never pre-approve `ExitPlanMode`, whether through an `allowed-tools` entry here or an `allow`
+rule in settings. The plan-approval dialogue **is** `ExitPlanMode`'s permission prompt, so
+granting it replaces the plan review with a bare mode-switch confirmation and destroys the
+approval gate this skill exists to reach.
+
+This file carries no `allowed-tools` list at all, because on an instance this repository
+provisions there is nothing left for one to grant: reads and read-only shell commands are
+already permitted inside plan mode, and Context7 is registered at user scope by
+`07-install-claude-code.sh`. A list of tools that would not have prompted anyway reads as
+load-bearing while doing nothing, which is how `ExitPlanMode` ends up added to it.
 
 ### 3. Confirm the request
 
