@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.1.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.0.0...v3.1.0) (2026-10-31)
+
+
+### Features
+
+* add a /spec skill for feature specification ([#113](https://github.com/TomBorglum/wsl-cloud-init/issues/113)) ([258fdc2](https://github.com/TomBorglum/wsl-cloud-init/commit/258fdc25d1b0ccff83f235c8aac155f951ac4679))
+* deny the built-in subagents in the seeded Claude settings ([#108](https://github.com/TomBorglum/wsl-cloud-init/issues/108)) ([e577bed](https://github.com/TomBorglum/wsl-cloud-init/commit/e577bed5467de6266a46317b542eca3d28a40746))
+* implement the plan on approval in the /spec skill ([#115](https://github.com/TomBorglum/wsl-cloud-init/issues/115)) ([e8f2bc8](https://github.com/TomBorglum/wsl-cloud-init/commit/e8f2bc8f3fb9c65de5269faf7935bf1dca34b8d2))
+* route subagents to haiku and cap the compaction window ([#110](https://github.com/TomBorglum/wsl-cloud-init/issues/110)) ([38030c9](https://github.com/TomBorglum/wsl-cloud-init/commit/38030c97782a830b6f849055931da72c81f867f7))
+* scope the SonarQube MCP server to a read-only subagent ([#114](https://github.com/TomBorglum/wsl-cloud-init/issues/114)) ([1599c35](https://github.com/TomBorglum/wsl-cloud-init/commit/1599c35d2b846c4a133cce3dbd2a0366bb65ce54))
+
+
+### Bug Fixes
+
+* mask the VT getty so a provisioned instance is not degraded ([#116](https://github.com/TomBorglum/wsl-cloud-init/issues/116)) ([8379626](https://github.com/TomBorglum/wsl-cloud-init/commit/8379626243ee4ae634141a736a5ae57483019e5d))
+
 ## [3.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v2.0.0...v3.0.0) (2026-10-16)
 
 
