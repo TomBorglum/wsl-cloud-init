@@ -7,7 +7,8 @@ description: >-
   Context7, delegates codebase exploration to Explore agents, reviews the result against best
   practices, and produces a plan for approval. Once the plan is approved it implements it,
   splitting large work into phases that are each gated by a merged PR or a runbook the user
-  performs. It also resumes an in-progress plan after the session is cleared.
+  performs. Given the path to an existing plan file instead of a feature, it resumes that plan
+  from its next unfinished phase.
 argument-hint: <feature to specify, or a plan file to resume>
 disable-model-invocation: true
 ---
@@ -103,6 +104,18 @@ Use the `Status` value, never a synonym. A phase at a PR gate is `awaiting gate`
 "complete": the work is done and the merge is not. `complete` is written and reported only after
 step 12 verifies the gate.
 
+Every report that stops with a phase still unfinished ends with the command that resumes the
+plan, written out in full:
+
+```
+/spec /home/<user>/.claude/plans/<name>.md
+```
+
+Give the plan's complete absolute path. Step 2 scans nothing and looks nothing up, so this line
+is the only record of where the plan lives once the session is cleared. A bare filename, or the
+directory alone, resumes nothing. Omit the line when the last phase reached `complete`, because
+there is then nothing to resume.
+
 ## Workflow
 
 ### 1. Load deferred tools
@@ -114,29 +127,40 @@ step 12 verifies the gate.
 select:EnterPlanMode,ExitPlanMode,mcp__context7__resolve-library-id,mcp__context7__query-docs
 ```
 
-### 2. Resume an in-progress plan
+### 2. Dispatch on the argument
 
-Check for an unfinished plan before entering plan mode, never after. Plan mode designates a
-fresh plan file and permits edits to that file alone, so entering it first leaves the resumed
-plan unwritable. A plan being resumed is already approved, so plan mode is not wanted on this
-path at all.
+The argument decides which path the skill takes. Never infer the path from anything else, and
+never go looking for a plan the user did not name.
 
-1. If the argument is a path to an existing plan file, resume that file.
-2. Otherwise scan for candidates:
+| Argument | Path |
+| --- | --- |
+| A path to an existing file | Resume that plan |
+| Path-shaped, but no such file | Report the path and stop |
+| Anything else | Specify it as new work: continue to step 3 |
+| Empty | Ask what feature to specify |
 
-   ```
-   grep -rl '^- Status: \(not started\|in progress\|awaiting gate\)' ~/.claude/plans/ 2>/dev/null
-   ```
+Path-shaped means it starts with `/`, `~`, `./` or `../`, or ends in `.md`. Test existence with:
 
-   Pass the directory, not a glob. A glob that matches nothing makes zsh fail the command with
-   `no matches found`.
-3. No hits: continue to step 3 and specify the request as new work.
-4. One or more hits: read each candidate's title and the status of its phases, then ask with
-   `AskUserQuestion` which to resume. Always include an option for "none of these, this is new
-   work".
-5. On resume, read the whole plan file, then run `git log --oneline -15` and `git status
-   --short`. State which phase is next and what its gate is before touching anything.
-6. Do not call `EnterPlanMode` on this path. Go to step 12.
+```
+arg="<argument>"; [ -f "${arg/#\~/$HOME}" ]
+```
+
+Expand a leading `~` before the test. A quoted `~` is not expanded, so `[ -f "~/x.md" ]` fails
+on a file that exists and the skill would reject a correct path.
+
+Report the exact path, as given, when the test fails. A typo in a plan path must not become a
+feature request named after the typo.
+
+To resume, do all of this before touching anything:
+
+1. Read the whole plan file.
+2. Run `git log --oneline -15` and `git status --short`.
+3. State which phase is next, what its gate is, and what the plan's `Status` fields say.
+4. Do not call `EnterPlanMode`. Go to step 12.
+
+Plan mode is wrong for a resumed plan twice over: the plan is already approved, and plan mode
+designates a fresh plan file and permits edits to that file alone, which would leave the resumed
+plan unwritable.
 
 ### 3. Enter plan mode
 
@@ -264,9 +288,8 @@ A runbook phase block replaces `Branch` and `PR` with `Steps`, a numbered list o
 performs.
 
 `Status` is one of `not started`, `in progress`, `awaiting gate`, `complete`. Its spelling is
-fixed: step 2 greps for it, so a reworded status makes the plan unresumable. The fields are
-written as fields rather than prose for the same reason — a cleared session reads this block
-cold.
+fixed, and the state is written as fields rather than prose, because a resumed session reads
+this block cold and decides from it alone which phase runs next.
 
 Keep it scannable but detailed enough to execute without re-deriving the research.
 
@@ -304,12 +327,14 @@ A PR gate closes in this order:
 4. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
    block.
 5. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
-   and URL, state what passed and what did not in the phase's verification, and end the turn.
+   and URL, state what passed and what did not in the phase's verification, print the resume
+   command, and end the turn.
 
 Never merge the pull request. The merge is the user's act and it is what the gate waits for.
 
 A runbook gate closes by writing `Status: awaiting gate` into the phase block, restating the
-numbered steps for the user under the same heading, and ending the turn. Implement nothing.
+numbered steps for the user under the same heading, printing the resume command, and ending the
+turn. Implement nothing.
 
 The plan file lives under `~/.claude/plans/`, outside the repository. It is never part of a
 phase commit.
