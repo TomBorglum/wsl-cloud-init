@@ -104,18 +104,6 @@ Use the `Status` value, never a synonym. A phase at a PR gate is `awaiting gate`
 "complete": the work is done and the merge is not. `complete` is written and reported only after
 step 12 verifies the gate.
 
-Every report that stops with a phase still unfinished ends with the command that resumes the
-plan, written out in full:
-
-```
-/spec /home/<user>/.claude/plans/<name>.md
-```
-
-Give the plan's complete absolute path. Step 2 scans nothing and looks nothing up, so this line
-is the only record of where the plan lives once the session is cleared. A bare filename, or the
-directory alone, resumes nothing. Omit the line when the last phase reached `complete`, because
-there is then nothing to resume.
-
 ## Workflow
 
 ### 1. Load deferred tools
@@ -327,14 +315,12 @@ A PR gate closes in this order:
 4. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
    block.
 5. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
-   and URL, state what passed and what did not in the phase's verification, print the resume
-   command, and end the turn.
+   and URL, state what passed and what did not in the phase's verification, and end the turn.
 
 Never merge the pull request. The merge is the user's act and it is what the gate waits for.
 
 A runbook gate closes by writing `Status: awaiting gate` into the phase block, restating the
-numbered steps for the user under the same heading, printing the resume command, and ending the
-turn. Implement nothing.
+numbered steps for the user under the same heading, and ending the turn. Implement nothing.
 
 The plan file lives under `~/.claude/plans/`, outside the repository. It is never part of a
 phase commit.
