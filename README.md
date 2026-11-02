@@ -1,70 +1,75 @@
 # wsl-cloud-init
 
-An opinionated, cloud-init–driven way to provision a fully configured WSL Ubuntu developer environment from a single command — so you're productive immediately.
+An opinionated, cloud-init–driven way to provision a configured WSL Ubuntu developer environment from a single command.
 
 ## Overview
 
-Setting up a productive WSL environment by hand is slow and easy to get subtly wrong
-— installing tools, configuring the shell, wiring up Git credentials, and bridging
-Windows apps, repeated for every new instance.
+Setting up a WSL environment by hand means installing tools, configuring the shell, wiring up
+Git credentials, and bridging Windows apps, repeated for every new instance.
 
-wsl-cloud-init replaces that with one repeatable step. It uses cloud-init to
-declaratively build a fresh WSL Ubuntu instance with a curated, opinionated set of
-tools and configuration, so every instance you create comes out the same — fully
-configured and ready to work in.
+wsl-cloud-init replaces that with one repeatable step. It uses cloud-init to build a fresh WSL
+Ubuntu instance from a declarative config, with a curated set of tools, so every instance comes
+out the same.
 
-Provisioning runs from Windows: a PowerShell script renders a cloud-init template,
-installs the distro, and waits for setup to finish. On first boot cloud-init runs a
-series of scripts that build the environment and wire Windows tools — VS Code, Git
-Credential Manager — into the Linux shell.
+Provisioning runs from Windows: a PowerShell script renders a cloud-init template, installs the
+distro, and waits for setup to finish. On first boot cloud-init runs a series of scripts that
+build the environment and wire Windows tools — VS Code, Git Credential Manager — into the Linux
+shell.
 
 ## What you get
 
-Every provisioned instance comes ready with the baseline below. Four additions are
-opt-in, each behind a provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`,
-`-InstallVsCodeInterop`, and `-InstallZedInterop`.
+Every provisioned instance gets the baseline below. Four additions are opt-in, each behind a
+provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`, `-InstallVsCodeInterop`, and
+`-InstallZedInterop`.
 
 ### Shell
 
-Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions
-plus the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for
+Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus
+the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for
 per-directory environment loading.
 
 ### Language runtimes
 
 **[fnm](https://github.com/Schniz/fnm)** (Node), **[pixi](https://pixi.sh)** (Python), and
-**[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right
-versions activate automatically as you enter each project.
+**[SDKMAN](https://sdkman.io)** (JVM) are installed and wired into direnv, so the right versions
+activate on entering each project.
 
 ### Docker
 
-**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin —
-ready to run without extra setup — plus **[lazydocker](https://github.com/jesseduffield/lazydocker)**,
-a terminal UI for managing containers, images, and volumes.
+**[Docker](https://docs.docker.com/engine/)** Engine, the CLI, and the Compose plugin, plus
+**[lazydocker](https://github.com/jesseduffield/lazydocker)**, a terminal UI for managing
+containers, images, and volumes.
 
 ### Git
 
 Opt-in via `-InstallGitConfig`: your Git identity, the credential helper, `gh` auth, and the
 Git shell helpers. Both `git` and `gh` authenticate through Windows
 **[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing
-the GitHub sign-in you already have on Windows — one credential serves both, so there is no
-second token to create and no `gh auth login` to run.
+your existing Windows GitHub sign-in. One credential serves both, so there is no second token
+to create and no `gh auth login` to run.
 
 ### Claude Code
 
 Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the
-**[Context7](https://context7.com)** MCP for up-to-date library docs, plus three bundled
-skills, all invoked explicitly and never on Claude's own initiative:
-**`/bash-install-script`**, which scaffolds a new `NN-install-*.sh` to this repository's
-conventions; **`/spec`**, which specifies a new feature through a bounded interview,
-delegating codebase exploration to subagents and reviewing the finished plan against current
-practice before it reaches you for approval, then builds it once you approve; and
-**`/spec-interview`**, which fetches current docs from Context7 and interviews you — one
-documented recommendation per question — before anything gets written.
+**[Context7](https://context7.com)** MCP for current library docs.
 
-A `use sonarqube_mcp` direnv directive comes with it, for the projects that want it: it gives
-them a read-only Sonar subagent that collects SonarQube Cloud issues on demand, without
-putting an MCP server in your main session. See
+Settings ship with it, including the `Concise` output style, and so does a
+`~/.claude/CLAUDE.md` writing style that applies to every markdown file Claude authors on the
+instance: reference prose rather than narrative, with constraints, paths, flags and error text
+never dropped for brevity.
+
+Three skills come bundled, all invoked explicitly and never on Claude's own initiative:
+
+- **`/bash-install-script`** scaffolds a new `NN-install-*.sh` to this repository's conventions.
+- **`/spec`** specifies a new feature through a bounded interview, delegating codebase
+  exploration to subagents and reviewing the finished plan against current practice before it
+  reaches you for approval, then builds it once you approve.
+- **`/spec-interview`** fetches current docs from Context7 and interviews you, one documented
+  recommendation per question, before anything gets written.
+
+A `use sonarqube_mcp` direnv directive comes with it for the projects that want it. It gives
+them a read-only Sonar subagent that collects SonarQube Cloud issues on demand, without putting
+an MCP server in your main session. See
 [the setup below](#optional-the-use-sonarqube_mcp-direnv-directive-private-repos).
 
 ### WSL interop
@@ -75,7 +80,7 @@ putting an MCP server in your main session. See
   also seeds a default `settings.json`/`keymap.json` into your Windows Zed config.
 
 `code` and `zed` locate the Windows editor via a one-time interop lookup and cache the resolved
-path under `~/.cache/wsl-cloud-init/`, so only the first launch pays that cost; the cache
+path under `~/.cache/wsl-cloud-init/`, so only the first launch pays that cost. The cache
 re-resolves automatically if the editor is later moved or reinstalled.
 
 ### Shell helpers
@@ -83,7 +88,7 @@ re-resolves automatically if the editor is later moved or reinstalled.
 `pj` jumps between checkouts under `~/projects`. Always installed.
 
 Opt-in via `-InstallGitConfig`: `clone-repo`, `create-repo`, `create-branch`, `rebase-branch`,
-and `prune-branches` streamline everyday Git work.
+and `prune-branches`.
 
 ### Base packages
 
@@ -101,23 +106,24 @@ Installed from the cloud-init package list:
 
 ## Prerequisites
 
-The baseline environment needs only two things on the Windows side — the Ubuntu environment
-is built for you:
+The baseline environment needs two things on the Windows side; the Ubuntu environment is built
+for you:
 
-- **An up-to-date WSL 2** — run `wsl --update` to make sure you're current.
+- **An up-to-date WSL 2** — run `wsl --update`.
 - **Git for Windows** — `provision.ps1` runs local `git` to resolve the commit your checkout
   is on, verify that commit exists on origin, and record it in the instance.
 
-Each opt-in flag needs some additional Windows-side setup, described under
+Each opt-in flag needs additional Windows-side setup, described under
 [Opt-in features](#opt-in-features).
 
 ## Getting started
 
-Both steps run on **Windows**. This is the whole baseline path — no accounts or secrets required.
+Both steps run on **Windows**. This is the whole baseline path, with no accounts or secrets
+required.
 
 ### 1. Clone this repository
 
-You run the provisioning script from it.
+The provisioning script runs from it.
 
 ```powershell
 git clone https://github.com/TomBorglum/wsl-cloud-init.git
@@ -139,10 +145,10 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 Every parameter is described under [Provisioning parameters](#provisioning-parameters).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then
-launches you into the new instance — signed in as a Linux user derived from your Windows
-username, with passwordless sudo and `zsh` as the shell.
+launches the new instance, signed in as a Linux user derived from your Windows username, with
+passwordless sudo and `zsh` as the shell.
 
-To provision a specific released version rather than the latest, use `checkout-ref.ps1` — see
+To provision a specific released version rather than the latest, use `checkout-ref.ps1`. See
 [Released-version parameters](#released-version-parameters).
 
 ```powershell
@@ -152,8 +158,8 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\checkout-ref.ps1 -Ref
 ## Opt-in features
 
 Four flags add tooling on top of the baseline: `-InstallClaudeCode`, `-InstallGitConfig`,
-`-InstallVsCodeInterop`, and `-InstallZedInterop`. Each needs some Windows-side setup first. You
-can enable them when provisioning, or add them later to a running instance.
+`-InstallVsCodeInterop`, and `-InstallZedInterop`. Each needs Windows-side setup first. Enable
+them when provisioning, or add them later to a running instance.
 
 ### Windows setup
 
@@ -180,31 +186,30 @@ Or via the GUI — Control Panel → **Credential Manager** → **Windows Creden
 ##### Optional: the `use sonarqube_mcp` direnv directive (private repos)
 
 `-InstallClaudeCode` also installs a [direnv](https://direnv.net) directive,
-`use sonarqube_mcp`, that gives a project a **read-only Sonar subagent**. Claude spawns it
-when it needs data from the [SonarQube Cloud MCP
-server](https://github.com/SonarSource/sonarqube-mcp-server) — handy for **private** repos
-whose SonarCloud dashboards aren't publicly reachable — and it hands the issues back for your
+`use sonarqube_mcp`, that gives a project a **read-only Sonar subagent**. Claude spawns it when
+it needs data from the [SonarQube Cloud MCP
+server](https://github.com/SonarSource/sonarqube-mcp-server), which covers **private** repos
+whose SonarCloud dashboards are not publicly reachable, and it hands the issues back for your
 main session to reason about and fix.
 
-The MCP server is declared *inside* the subagent rather than registered with the session, so
-it costs your main session nothing: only the subagent's one-line description is ever in
-context, and the Docker container (pulled once on first use) doesn't start until the subagent
-actually runs. The subagent is deliberately powerless, too — the Sonar server's tools are the
-only ones it has, so it cannot read your files, run commands or edit anything, and the server
-runs in read-only mode, so it cannot change an issue's status either. Every bit of reasoning
-and every write stays in your main session.
+The MCP server is declared *inside* the subagent rather than registered with the session, so it
+costs your main session nothing: only the subagent's one-line description is ever in context,
+and the Docker container (pulled once on first use) does not start until the subagent runs. The
+subagent is deliberately powerless: the Sonar server's tools are the only ones it has, so it
+cannot read your files, run commands or edit anything, and the server runs in read-only mode, so
+it cannot change an issue's status either. Every bit of reasoning and every write stays in your
+main session.
 
 Add `use sonarqube_mcp` to a project's `.envrc` (like `use pixi` / `use sdk`) and run
 `direnv allow`. On first activation the directive scaffolds a **secret-free**
-`.claude/agents/sonarqube.md` that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}` (not
-the values), and on every activation direnv supplies those variables from your Windows
-Credential Manager. Because no secret is stored in the project, both `.envrc` and the agent
-file are safe to commit and share with your team — each teammate just keeps their own
-credentials (below).
+`.claude/agents/sonarqube.md` that references `${SONARQUBE_TOKEN}` / `${SONARQUBE_ORG}`, not the
+values, and on every activation direnv supplies those variables from your Windows Credential
+Manager. Because no secret is stored in the project, both `.envrc` and the agent file are safe to
+commit and share with your team; each teammate keeps their own credentials (below).
 
-Store two more generic credentials (a [SonarQube Cloud
+Store two more generic credentials, a [SonarQube Cloud
 token](https://docs.sonarsource.com/sonarqube-cloud/managing-your-account/managing-tokens/)
-and your organization key):
+and your organization key:
 
 ```powershell
 cmdkey /generic:wsl-cloud-init:SONARQUBE_TOKEN /user:wsl-cloud-init /pass:<sonar-token>
@@ -217,13 +222,13 @@ cmdkey /generic:wsl-cloud-init:SONARQUBE_ORG   /user:wsl-cloud-init /pass:<sonar
 | `wsl-cloud-init:SONARQUBE_ORG` | `wsl-cloud-init` | your SonarQube Cloud organization key |
 
 Then, in the project you want it for, add `use sonarqube_mcp` to `.envrc` and run
-`direnv allow`. The first `claude` session there has to trust the folder — the prompt you
-accept on first use anyway — before the subagent's server will load.
+`direnv allow`. The first `claude` session there has to trust the folder — the prompt you accept
+on first use anyway — before the subagent's server will load.
 
 Two notes for a mixed team. The agent file is portable: nothing in it is specific to a
 wsl-cloud-init instance, so any teammate who supplies `SONARQUBE_TOKEN` and `SONARQUBE_ORG`
-their own way gets the same subagent from the repo. The `.envrc` line is not — direnv's `use`
-aborts an `.envrc` when the directive is undefined, so a teammate without this instance's
+their own way gets the same subagent from the repo. The `.envrc` line is not portable: direnv's
+`use` aborts an `.envrc` when the directive is undefined, so a teammate without this instance's
 direnv library gets a hard direnv failure from that line.
 
 #### `-InstallGitConfig` — a Git identity and a GitHub sign-in
@@ -238,7 +243,7 @@ git config --global user.email "you@example.com"
 Then make sure you are signed in to GitHub on Windows. Both `git` and `gh` reuse the
 `git:https://github.com` credential that **Git Credential Manager** stores in Windows Credential
 Manager. There is **no separate token to create**: a single `git clone` or `git push` against a
-private repo on Windows — or `git-credential-manager github login` — signs you in and creates it.
+private repo on Windows, or `git-credential-manager github login`, signs you in and creates it.
 
 #### `-InstallVsCodeInterop` — VS Code on your PATH
 
@@ -247,20 +252,21 @@ Windows `PATH`.
 
 #### `-InstallZedInterop` — Zed on your PATH
 
-No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed` command
-is on your Windows `PATH`.
+No secret is needed. Install **[Zed](https://zed.dev)** on Windows and make sure the `zed`
+command is on your Windows `PATH`.
 
-This installs the `zed` interop wrapper, plus a boot-time cleanup of the state Zed's remote server
-leaves behind in the instance (see [Troubleshooting](#troubleshooting)). It does **not** touch your
-Windows Zed config.
+This installs the `zed` interop wrapper, plus a boot-time cleanup of the state Zed's remote
+server leaves behind in the instance (see [Troubleshooting](#troubleshooting)). It does **not**
+touch your Windows Zed config.
 
-Seeding a default config is a separate, WSL-only opt-in via `INSTALL_ZED_CONFIG` (there is no
-provision-time switch for it — see [Enabling on a running instance](#enabling-on-a-running-instance)).
-When set alongside `INSTALL_ZED_INTEROP`, it writes a default `settings.json` and `keymap.json` into
-your Windows Zed config directory (`%APPDATA%\Zed`). Any existing file is moved aside to `<name>.bak`
-first, and the config is re-asserted on every opt-in — so if several WSL instances seed the config,
-they converge on the same one (the last run wins). Because config requires interop, opting into the
-config without interop does nothing.
+Seeding a default config is a separate, WSL-only opt-in via `INSTALL_ZED_CONFIG`. There is no
+provision-time switch for it; see [Enabling on a running
+instance](#enabling-on-a-running-instance). When set alongside `INSTALL_ZED_INTEROP`, it writes a
+default `settings.json` and `keymap.json` into your Windows Zed config directory
+(`%APPDATA%\Zed`). Any existing file is moved aside to `<name>.bak` first, and the config is
+re-asserted on every opt-in, so several WSL instances seeding the config converge on the same one
+and the last run wins. Config requires interop, so opting into the config without interop does
+nothing.
 
 ### Enabling at provision time
 
@@ -279,10 +285,10 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
 
 ### Enabling on a running instance
 
-Provisioned without one of the flags and want it now? You don't need to re-provision. Re-run the
-provisioning loop **inside the WSL instance**, setting only the `INSTALL_*` variable matching the
-flag you want to add. The Windows-side setup for that flag must be in place first — `install.sh`
-fetches what it needs from Windows at runtime.
+Adding a flag to an existing instance needs no re-provision. Re-run the provisioning loop
+**inside the WSL instance**, setting only the `INSTALL_*` variable matching the flag you want to
+add. The Windows-side setup for that flag must be in place first, because `install.sh` fetches
+what it needs from Windows at runtime.
 
 ```bash
 # Claude Code
@@ -304,12 +310,12 @@ sudo INSTALL_ZED_INTEROP=true INSTALL_ZED_CONFIG=true \
 
 ## Usage
 
-The following day-to-day commands and per-project setup are included in the provisioned instance.
+The commands and per-project setup below are included in the provisioned instance.
 
 ### direnv
 
-fnm, pixi, and SDKMAN aren't on your global `PATH` — each project activates the versions it needs
-through direnv (already hooked into your shell). Add an `.envrc` to the project root with the
+fnm, pixi, and SDKMAN are not on your global `PATH`. Each project activates the versions it needs
+through direnv, already hooked into your shell. Add an `.envrc` to the project root with the
 directives you need:
 
 ```bash
@@ -320,26 +326,26 @@ use pixi 0.81.0 python     # ...or scaffold pixi.toml from the "python" project 
 use sdk java 21.0.2-tem    # JVM SDK via SDKMAN
 ```
 
-then approve it with `direnv allow`. direnv activates these on entry and removes them on exit, and
-installs the requested versions automatically on first use. Versions must be fully qualified — an
-exact release such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
+then approve it with `direnv allow`. direnv activates these on entry, removes them on exit, and
+installs the requested versions on first use. Versions must be fully qualified: an exact release
+such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
 
-`use pixi` goes one step further and installs **pixi itself** at the version you pin, so the first
-`direnv allow` in a pixi project pauses while it downloads (direnv will note that it is taking a
-while — that is expected). Each version lands in its own directory under `~/.pixi/versions/`, the
-way SDKMAN and fnm keep theirs, and `~/.pixi/bin/pixi` is a symlink to the one the current project
-pins. Nothing is ever uninstalled, so switching back to a version you have used before is instant
-and needs no network; reclaim one with `rm -rf ~/.pixi/versions/<version>` and it will be
-re-downloaded the next time a project asks for it.
+`use pixi` also installs **pixi itself** at the version you pin, so the first `direnv allow` in a
+pixi project pauses while it downloads, and direnv notes that it is taking a while. Each version
+lands in its own directory under `~/.pixi/versions/`, the way SDKMAN and fnm keep theirs, and
+`~/.pixi/bin/pixi` is a symlink to the one the current project pins. Nothing is ever uninstalled,
+so switching back to a version you have used before is instant and needs no network. Reclaim one
+with `rm -rf ~/.pixi/versions/<version>` and it is re-downloaded the next time a project asks for
+it.
 
-The version lives in the `.envrc` and nowhere else, so that is where you change it — editing it
+The version lives in the `.envrc` and nowhere else, so that is where you change it; editing it
 re-triggers the directive on the next prompt. `pixi self-update` is therefore not the way to move
 a project to a new pixi: it rewrites the binary in place, and the next `direnv allow` puts the
-pinned version back. (A project that also wants the pin enforced outside direnv — a bare
+pinned version back. A project that also wants the pin enforced outside direnv — a bare
 `pixi install`, or CI without this directive — can declare
-[`requires-pixi`](https://pixi.prefix.dev/latest/reference/pixi_manifest/) in its own `pixi.toml`;
-nothing here writes it for you.) One rough edge: zsh completions are generated from whichever
-version was activated most recently, since they are loaded once per shell.
+[`requires-pixi`](https://pixi.prefix.dev/latest/reference/pixi_manifest/) in its own
+`pixi.toml`; nothing here writes it for you. One rough edge: zsh completions are generated from
+whichever version was activated most recently, because they are loaded once per shell.
 
 The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
@@ -349,41 +355,41 @@ so a committed `.envrc` can drive CI as well as your shell.
 
 pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name** after the
 version. When a project has no `pixi.toml` yet, `use pixi <version> <name>` scaffolds one from
-`~/.config/pixi/templates/<name>.toml` (substituting the project directory name), while a bare
+`~/.config/pixi/templates/<name>.toml`, substituting the project directory name, while a bare
 `use pixi <version>` writes the minimal `[workspace]`-only manifest. A `python` template ships by
-default (runtime deps plus an isolated `test` feature with pytest/basedpyright/ruff tasks and
-`default`/`prod` environments on a shared solve-group); drop more `*.toml` files into that directory
-to add your own. First-time setup is two steps — you create the `.envrc` by hand:
+default: runtime deps plus an isolated `test` feature with pytest/basedpyright/ruff tasks and
+`default`/`prod` environments on a shared solve-group. Drop more `*.toml` files into that
+directory to add your own. First-time setup is two steps, because you create the `.envrc` by hand:
 
 ```bash
 echo 'use pixi 0.81.0 python' > .envrc && direnv allow
 ```
 
-An unknown template name is a hard error (`use_pixi: no '<name>' template found …`) — nothing is
-scaffolded and `pixi install` does not run — so a typo surfaces instead of silently producing a
+An unknown template name is a hard error (`use_pixi: no '<name>' template found …`): nothing is
+scaffolded and `pixi install` does not run, so a typo surfaces instead of silently producing a
 minimal manifest. Once `pixi.toml` exists it is never overwritten, so the template name is only
 consulted on first scaffold.
 
-`use pixi` also watches `pixi.toml` for you, so editing dependencies re-runs `pixi install` on the
-next `cd` into the project — you don't need a separate `watch_file pixi.toml` line in the `.envrc`.
+`use pixi` also watches `pixi.toml`, so editing dependencies re-runs `pixi install` on the next
+`cd` into the project. No separate `watch_file pixi.toml` line is needed in the `.envrc`.
 
 ### Claude Code cloud sessions
 
-The same `.envrc` also drives [Claude Code cloud sessions](https://code.claude.com/docs/en/claude-code-on-the-web) —
+The same `.envrc` also drives [Claude Code cloud sessions](https://code.claude.com/docs/en/claude-code-on-the-web),
 the ephemeral VMs behind the phone and desktop apps, `claude --cloud`, and routines. Those start
-from a fresh clone with none of this instance's tooling, so direnv, pixi and these directives have
-to be installed into the container before Claude starts working.
+from a fresh clone with none of this instance's tooling, so direnv, pixi and these directives
+have to be installed into the container before Claude starts working.
 
 That is
 [**`TomBorglum/claude-cloud-bootstrap`**](https://github.com/TomBorglum/claude-cloud-bootstrap),
 maintained and released independently of this repository. It publishes the setup script a cloud
 environment runs, and an add-on you can run on an instance this repo provisioned to make it
-"Claude cloud enabled" — which is what lets a project scaffold the one file a cloud session needs
+"Claude cloud enabled", which is what lets a project scaffold the one file a cloud session needs
 to consume. Nothing in this repository is required for any of it.
 
 ### pj
 
-Jump straight into a checked-out project under `~/projects` without typing the full path — supports
+Jump into a checked-out project under `~/projects` without typing the full path. Supports
 Tab-completion.
 
 ```bash
@@ -412,9 +418,9 @@ create-repo --owner some-owner service # creates some-owner/service
 
 ### create-branch
 
-*Requires `-InstallGitConfig`.* Create a branch off the repo's default branch and check it out with
-tracking, so a plain `git push` just works. If the branch already exists on origin it's just checked
-out; it refuses a local-only branch that isn't on origin yet.
+*Requires `-InstallGitConfig`.* Create a branch off the repo's default branch and check it out
+with tracking, so a plain `git push` works. A branch that already exists on origin is just
+checked out; a local-only branch that is not on origin yet is refused.
 
 ```bash
 create-branch my-feature   # branch off the default branch, tracking origin/my-feature
@@ -434,21 +440,20 @@ resolve them.
 
 ### prune-branches
 
-*Requires `-InstallGitConfig`.* Tidy up local branches whose remote branch is gone — merged and
-auto-deleted, or just deleted. Those are the branches that pile up locally once their life at the
-remote has ended.
+*Requires `-InstallGitConfig`.* Delete local branches whose remote branch is gone, whether merged
+and auto-deleted or just deleted.
 
 ```bash
 prune-branches        # ask before deleting each gone branch
 prune-branches -y     # delete them all without prompting
 ```
 
-It asks before each deletion (default keeps; `y` deletes, `a` deletes all remaining, `q` stops) —
-pass `-y`/`--yes` to skip the prompts. It keeps branches that were never pushed (no upstream —
+It asks before each deletion (default keeps; `y` deletes, `a` deletes all remaining, `q` stops);
+pass `-y`/`--yes` to skip the prompts. It keeps branches that were never pushed (no upstream, so
 purely-local work is always safe) and branches still tracking a live upstream (work in progress),
-and never touches the branch you're on. Each deletion prints the tip SHA so the branch is
-recoverable with `git branch <name> <sha>` until git eventually garbage-collects it. Stale
-`origin/*` refs are pruned automatically by git's `fetch.prune`, which `-InstallGitConfig` sets.
+and never touches the branch you are on. Each deletion prints the tip SHA, so the branch is
+recoverable with `git branch <name> <sha>` until git garbage-collects it. Stale `origin/*` refs
+are pruned automatically by git's `fetch.prune`, which `-InstallGitConfig` sets.
 
 ### open
 
@@ -464,8 +469,8 @@ open in your Windows browser.
 
 ### code
 
-*Requires `-InstallVsCodeInterop`.* Open a file or folder in your Windows VS Code (via the WSL
-remote).
+*Requires `-InstallVsCodeInterop`.* Open a file or folder in your Windows VS Code, via the WSL
+remote.
 
 ```bash
 code .            # open the current folder
@@ -474,8 +479,7 @@ code src/app.ts   # open a file
 
 ### zed
 
-*Requires `-InstallZedInterop`.* Open a file or folder in your Windows Zed (via the WSL
-remote).
+*Requires `-InstallZedInterop`.* Open a file or folder in your Windows Zed, via the WSL remote.
 
 ```bash
 zed .             # open the current folder
@@ -507,14 +511,14 @@ What you can set when provisioning, and how the instance is derived.
 - `-Force` (optional) — unregister an existing instance of the same name first. This destroys it.
 
 `provision.ps1` provisions the commit its own checkout is on, and refuses to run against a dirty
-working tree — commit or stash your changes first. That commit must also exist on origin, because
-cloud-init reproduces the environment by cloning this repo from GitHub *inside* the instance and
-checking that commit out; an unpushed commit cannot be fetched there.
+working tree, so commit or stash your changes first. That commit must also exist on origin,
+because cloud-init reproduces the environment by cloning this repo from GitHub *inside* the
+instance and checking that commit out; an unpushed commit cannot be fetched there.
 
 ### Released-version parameters
 
 `windows/scripts/checkout-ref.ps1` clones a chosen ref into its own directory, detached, so that
-version provisions itself — its `provision.ps1`, cloud-init template, and in-distro setup all come
+version provisions itself: its `provision.ps1`, cloud-init template, and in-distro setup all come
 from the same commit, and your working tree is left untouched. It takes:
 
 - `-Ref` (required) — tag, branch, or commit to check out (e.g. `v1.0.0`). Must exist on origin.
@@ -522,7 +526,7 @@ from the same commit, and your working tree is left untouched. It takes:
   shown with a confirmation prompt before cloning; pass it explicitly to skip the prompt. If the
   directory already exists and is non-empty, it prompts to delete and re-clone (defaults to no).
 
-It then prints a `provision.ps1` command you can copy, paste, and run. The path is absolute, so no
+It then prints a `provision.ps1` command to copy, paste, and run. The path is absolute, so no
 `cd` is needed, and the parameters are read from that version's own declaration, so the command
 stays correct even for older releases whose entrypoint sits at a different path.
 
@@ -537,15 +541,15 @@ Windows Credential Manager provides:
 | `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `use sonarqube_mcp` directive's Sonar subagent (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
-`git` and `gh` authenticate from that single credential — no second token to create, and no
-`gh auth login` to run. When `gh`'s session stops working it re-reads the credential and retries,
-so a token rotated in Windows Credential Manager takes effect on the next `gh` call.
+`git` and `gh` authenticate from that single credential, so there is no second token to create
+and no `gh auth login` to run. When `gh`'s session stops working it re-reads the credential and
+retries, so a token rotated in Windows Credential Manager takes effect on the next `gh` call.
 
 ### Target user
 
-The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped to
-`[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker` group,
-`zsh` as its shell, and is set as the WSL **default user**.
+The Linux user is derived from your Windows username (`$env:USERNAME`), lowercased and stripped
+to `[a-z0-9_-]`. The account is created with passwordless `sudo`, membership in the `docker`
+group, `zsh` as its shell, and is set as the WSL **default user**.
 
 ## Versioning
 
@@ -557,7 +561,7 @@ Every instance records the version it was built from in `/etc/wsl-cloud-init-rel
 cat /etc/wsl-cloud-init-release
 ```
 
-Two fields identify the build. `COMMIT` is the authoritative identifier — the commit
+Two fields identify the build. `COMMIT` is the authoritative identifier, the commit
 `/opt/wsl-cloud-init` is checked out at. `REF` is the friendliest name `provision.ps1` could give
 that commit, resolved from the checkout it ran out of:
 
@@ -567,28 +571,28 @@ that commit, resolved from the checkout it ran out of:
 | a branch tip | the branch name, e.g. `main` |
 | a detached, untagged commit | the short SHA |
 
-`REF` is a **label captured at provision time, not a live pointer**: an instance built from `main`
-keeps `REF="main"` even after `main` moves on.
+`REF` is a **label captured at provision time, not a live pointer**: an instance built from
+`main` keeps `REF="main"` even after `main` moves on.
 
 ### In-place upgrades are not supported
 
-`/etc/wsl-cloud-init-release` is written once, by cloud-init, and never updated. An instance is tied
-to the commit it was provisioned from for its whole life.
+`/etc/wsl-cloud-init-release` is written once, by cloud-init, and never updated. An instance is
+tied to the commit it was provisioned from for its whole life.
 
-Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not** upgrade the
-instance. Each install script skips whatever it finds already installed, so only the handful that
-rewrite their payload unconditionally would apply, leaving an instance that matches no version at
-all. To prevent that, the run aborts before anything else executes if `/opt/wsl-cloud-init` is no
-longer at the commit `/etc/wsl-cloud-init-release` records.
+Moving `/opt/wsl-cloud-init` to a newer commit and re-running `install.sh` does **not** upgrade
+the instance. Each install script skips whatever it finds already installed, so only the handful
+that rewrite their payload unconditionally would apply, leaving an instance that matches no
+version at all. To prevent that, the run aborts before anything else executes if
+`/opt/wsl-cloud-init` is no longer at the commit `/etc/wsl-cloud-init-release` records.
 
 To move an instance to a new version, re-provision it with `provision.ps1 -Force`, which destroys
-and recreates it. Adding an opt-in feature to an existing instance is unaffected: that re-run leaves
-`/opt/wsl-cloud-init` where it is, so the check passes and the file is left untouched.
+and recreates it. Adding an opt-in feature to an existing instance is unaffected: that re-run
+leaves `/opt/wsl-cloud-init` where it is, so the check passes and the file is left untouched.
 
 ## Troubleshooting
 
-**Provisioning failed** — inspect the logs inside the instance; if the cause was transient (e.g. a
-network blip), re-provision with `-Force`.
+**Provisioning failed** — inspect the logs inside the instance. If the cause was transient (e.g.
+a network blip), re-provision with `-Force`.
 
 ```bash
 less /var/log/cloud-init-output.log   # install-script output
@@ -599,10 +603,10 @@ less /var/log/cloud-init.log          # cloud-init's own log
 step it is on and captures that step's output, replaying it only if the step fails. A step that
 asked a question would therefore sit waiting on a prompt you cannot see, and one that put the
 terminal into raw mode would take `Ctrl-C` with it, leaving the terminal apparently locked up.
-Every step now runs with its stdin detached, so a step that wants input fails immediately and
-its output is shown instead of hanging. To recover a session already stuck like that, kill the
-run from another shell (or `wsl --terminate <instance>` from Windows) and run `reset` to restore
-the terminal. Instances provisioned before this fix still carry the old scripts — [in-place
+Every step now runs with its stdin detached, so a step that wants input fails immediately and its
+output is shown instead of hanging. To recover a session already stuck like that, kill the run
+from another shell (or `wsl --terminate <instance>` from Windows) and run `reset` to restore the
+terminal. Instances provisioned before this fix still carry the old scripts, and [in-place
 upgrades are not supported](#in-place-upgrades-are-not-supported), so re-provision with `-Force`
 to pick it up.
 
@@ -610,7 +614,7 @@ to pick it up.
 format error". `binfmt_misc` is a single table shared by every distro in the WSL VM, and WSL's own
 `/init` registers the `WSLInterop` entry in it. `systemd-binfmt.service` flushes that whole table
 when a distro shuts down (`ExecStop=… --unregister`), so one distro stopping takes interop down in
-every other distro still running. Provisioning **masks that unit**, which removes the cause — but
+every other distro still running. Provisioning **masks that unit**, which removes the cause, but
 only for the distros it provisioned. Check whether the handler is there, and which distro is still
 flushing it:
 
@@ -619,7 +623,7 @@ grep -qs '^enabled' /proc/sys/fs/binfmt_misc/WSLInterop && echo registered || ec
 systemctl is-enabled systemd-binfmt.service    # expect: masked
 ```
 
-Mask it by hand in any distro this repo did not provision — that includes a plain Ubuntu install
+Mask it by hand in any distro this repo did not provision, including a plain Ubuntu install
 sharing the VM:
 
 ```bash
@@ -636,16 +640,17 @@ exists, and `systemctl is-system-running` then reports `degraded` for the rest o
 masked distro never runs it, so it does not happen there.
 
 **Zed hangs on "Starting proxy"** — Zed runs a remote server inside the instance and remembers its
-PID, but PIDs do not survive a WSL restart. On the next boot that PID belongs to something else, and
-Zed either kills it (silently, if you own it) or fails to and gives up (if root owns it, which is
-what leaves the window stuck on "Starting proxy"). `-InstallZedInterop` installs a `systemd-tmpfiles`
-rule that clears the state at boot, before anything can read it. Instances provisioned before that
-existed need it installed once — re-run the install (see [Enabling on a running
-instance](#enabling-on-a-running-instance)) with `INSTALL_ZED_INTEROP=true`, or clear the state by
-hand with `rm -rf ~/.local/share/zed/server_state`.
+PID, but PIDs do not survive a WSL restart. On the next boot that PID belongs to something else,
+and Zed either kills it (silently, if you own it) or fails to and gives up (if root owns it, which
+is what leaves the window stuck on "Starting proxy"). `-InstallZedInterop` installs a
+`systemd-tmpfiles` rule that clears the state at boot, before anything can read it. Instances
+provisioned before that existed need it installed once: re-run the install (see [Enabling on a
+running instance](#enabling-on-a-running-instance)) with `INSTALL_ZED_INTEROP=true`, or clear the
+state by hand with `rm -rf ~/.local/share/zed/server_state`.
 
 **The systemd user session fails to start** — starting an Ubuntu 26.04 instance while other
-instances are already running may show `wsl: Failed to start the systemd user session for '<user>'`.
-It's intermittent and the instance still works. To clear it, run `wsl --shutdown` and relaunch the
-instance. To check whether an instance is affected, run `systemctl is-active user@1000.service` — it
-prints `failed` when the session didn't start, or `active` when it's running normally.
+instances are already running may show
+`wsl: Failed to start the systemd user session for '<user>'`. It is intermittent and the instance
+still works. To clear it, run `wsl --shutdown` and relaunch the instance. To check whether an instance is affected, run
+`systemctl is-active user@1000.service`: it prints `failed` when the session did not start, or
+`active` when it is running normally.

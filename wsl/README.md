@@ -1,13 +1,13 @@
 # `wsl/` — the WSL guest side
 
-Everything that runs **inside** the WSL Linux instance lives here, mirroring `windows/`, which
-holds the PowerShell that runs on the Windows **host**. Two kinds of thing live under `wsl/`:
+Everything that runs inside the WSL Linux instance lives here, mirroring `windows/`, which holds
+the PowerShell that runs on the Windows host. `wsl/` holds two kinds of thing:
 
-- **`distros/`** — per-distro *provisioning logic*: the cloud-init entry point, the `install.sh`
+- **`distros/`** — per-distro provisioning logic: the cloud-init entry point, the `install.sh`
   orchestrator, and the ordered `scripts/`. One subfolder per distro (`distros/ubuntu/`).
-- **`user/` and `system/`** — the *files* copied onto every distro, laid out as a destination
-  mirror. Under these two trees the source path **equals the path the file lands at** on a
-  provisioned instance, so you can read the destination straight off the tree.
+- **`user/` and `system/`** — the files copied onto every distro, laid out as a destination
+  mirror. Under these two trees the source path equals the path the file lands at on a
+  provisioned instance.
 
 ```
 wsl/
@@ -17,6 +17,7 @@ wsl/
 │       ├── install.sh                      # orchestrator (cloud-init runcmd OR manual re-run)
 │       └── scripts/NN-install-*.sh         # ordered install steps
 ├── user/                                   # → /home/$TARGET_USER/   (installed owned by the user)
+│   ├── .claude/CLAUDE.md                       → ~/.claude/CLAUDE.md
 │   ├── .claude/settings.json                   → ~/.claude/settings.json
 │   ├── .claude/skills/…                        → ~/.claude/skills/
 │   ├── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
@@ -34,8 +35,9 @@ wsl/
 
 ## How the install scripts report back
 
-`install.sh` runs `scripts/NN-install-*.sh` in order and reads what each one did from its exit code,
-because a script that skipped is otherwise indistinguishable from one that installed something:
+`install.sh` runs `scripts/NN-install-*.sh` in order and reads what each one did from its exit
+code, because a script that skipped is otherwise indistinguishable from one that installed
+something:
 
 | Code | Meaning | Shown on a terminal as |
 | --- | --- | --- |
@@ -44,16 +46,17 @@ because a script that skipped is otherwise indistinguishable from one that insta
 | `4` | not selected — the `INSTALL_*` flag for an opt-in feature is not set | `-> not selected (0.0s)` |
 | anything else | failed; the run stops and names the script | — |
 
-New scripts have to honour this. One consequence worth knowing: running a numbered script by hand
-can now exit non-zero without anything being wrong.
+New scripts have to honour this. Running a numbered script by hand can therefore exit non-zero
+without anything being wrong.
 
 Under cloud-init the same run reports through `===> ` / `<=== ` marker lines instead, which
-`provision.ps1` pairs into one progress line per step — see the comments in `install.sh`.
+`provision.ps1` pairs into one progress line per step. See the comments in `install.sh`.
 
 ## Which script installs what
 
 | Source (`wsl/…`) | Destination | Installed by | Gating |
 | --- | --- | --- | --- |
+| `user/.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/13-install-direnv-functions.sh` | — |
@@ -66,23 +69,25 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 | `system/usr/local/lib/wsl-cloud-init/` | `/usr/local/lib/wsl-cloud-init/` | `distros/ubuntu/install.sh` (bootstrap) | — |
 | `system/usr/local/share/zsh/site-functions/` | `/usr/local/share/zsh/site-functions/` | `distros/ubuntu/scripts/12-install-zsh-functions.sh` | — (`git/` needs `INSTALL_GIT_CONFIG`) |
 
-`wsl-interop.sh` is installed by `install.sh` directly rather than by a numbered script: `install.sh`
-sources it to derive the path to `powershell.exe` before any script runs, and the `gh` wrapper
-re-sources it at runtime, so neither can depend on the `/opt` checkout still being present.
+`wsl-interop.sh` is installed by `install.sh` directly rather than by a numbered script.
+`install.sh` sources it to derive the path to `powershell.exe` before any script runs, and the
+`gh` wrapper re-sources it at runtime, so neither can depend on the `/opt` checkout still being
+present.
 
-## Two places the mirror is not literal
+## Three places the mirror is not literal
 
-**`git/` is flattened.** The `git/` subfolder under `system/usr/local/share/zsh/site-functions/` is a
-source-side grouping, not a real destination subdirectory. It holds the helpers installed only when
-`INSTALL_GIT_CONFIG=true`, and `12-install-zsh-functions.sh` copies them into the parent directory —
-so `git/rebase-branch.zsh` lands at `/usr/local/share/zsh/site-functions/rebase-branch.zsh`.
+**`git/` is flattened.** The `git/` subfolder under `system/usr/local/share/zsh/site-functions/`
+is a source-side grouping, not a destination subdirectory. It holds the helpers installed only
+when `INSTALL_GIT_CONFIG=true`, and `12-install-zsh-functions.sh` copies them into the parent
+directory: `git/rebase-branch.zsh` lands at
+`/usr/local/share/zsh/site-functions/rebase-branch.zsh`.
 
-**`/usr/local/lib/wsl-cloud-init/` also receives files from `windows/`.** Alongside `wsl-interop.sh`,
-`install.sh` installs `windows/lib/Wsl.ps1` and `windows/lib/Credentials.ps1` there, co-locating the
-shell helper with the PowerShell it dot-sources.
+**`/usr/local/lib/wsl-cloud-init/` also receives files from `windows/`.** Alongside
+`wsl-interop.sh`, `install.sh` installs `windows/lib/Wsl.ps1` and `windows/lib/Credentials.ps1`
+there, co-locating the shell helper with the PowerShell it dot-sources.
 
-**`share/zed/*.json` is also seeded onto Windows.** These Zed config assets install to
-the mirror path `/usr/local/share/zed/` like any other system file, but
-`14-install-zed-interop.sh` additionally copies them into the Windows Zed config directory
-(`%APPDATA%\Zed`, resolved over interop), backing up any existing file to `<name>.bak` first. This is
-the only place a provisioning step writes into the Windows filesystem rather than just reading from it.
+**`share/zed/*.json` is also seeded onto Windows.** These Zed config assets install to the mirror
+path `/usr/local/share/zed/` like any other system file, and `14-install-zed-interop.sh`
+additionally copies them into the Windows Zed config directory (`%APPDATA%\Zed`, resolved over
+interop), backing up any existing file to `<name>.bak` first. This is the only place a
+provisioning step writes into the Windows filesystem rather than just reading from it.

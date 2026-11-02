@@ -5,9 +5,7 @@ It reads the commit history on `main`, decides the next version, and maintains a
 "chore(main): release X.Y.Z" pull request that updates [`CHANGELOG.md`](CHANGELOG.md)
 and the version. Merging that PR tags the version and publishes the GitHub Release.
 
-For that to work, commits must follow [Conventional Commits](https://www.conventionalcommits.org/).
-This document is the guard rail for how to name commits and branches so the
-automation does the right thing.
+Commits must therefore follow [Conventional Commits](https://www.conventionalcommits.org/).
 
 ## Commit message format
 
@@ -19,19 +17,18 @@ automation does the right thing.
 <optional footer — BREAKING CHANGE:, Refs #123, Co-Authored-By:>
 ```
 
-The first line (the *subject*) is what release-please parses. Keep it lowercase,
-in the imperative mood ("add", not "added" or "adds"), with no trailing period,
-and ideally under ~72 characters.
+release-please parses the first line, the *subject*. Keep it lowercase, in the
+imperative mood ("add", not "added" or "adds"), with no trailing period, and
+ideally under ~72 characters.
 
 ## Types
 
 These are the types configured in [`release-please-config.json`](release-please-config.json).
 A type does two independent things: it selects the changelog section the change
-appears under, and — because release-please treats any commit in a **visible**
-(non-hidden) section as a *releasable unit* — it decides whether the change can
-cut a release on its own. We keep only `feat`, `fix`, and `deps` visible, so only
-those (plus any breaking change) cut releases; every other type is hidden and
-merely rides along.
+appears under, and it decides whether the change can cut a release on its own,
+because release-please treats any commit in a **visible** (non-hidden) section as
+a *releasable unit*. Only `feat`, `fix`, and `deps` are visible, so only those
+plus any breaking change cut releases; every other type is hidden and rides along.
 
 | Type | Example | Changelog section | Cuts a release? |
 | --- | --- | --- | --- |
@@ -45,22 +42,22 @@ merely rides along.
 | `ci` | `ci: pin actions by sha` | *(hidden)* | no — rides along¹ |
 | `build` `refactor` `style` `test` | `refactor: extract a helper` | *(hidden)* | no — rides along¹ |
 
-¹ **Rides along**: does not trigger a release on its own and — being hidden —
-does not appear in the notes either. A PR containing only ride-along types will
-not open a release PR until a `feat`/`fix`/`deps` lands.
+¹ **Rides along**: triggers no release on its own and, being hidden, does not
+appear in the notes either. A PR containing only ride-along types opens no
+release PR until a `feat`/`fix`/`deps` lands.
 
-> **Visibility = releasability.** If you un-hide a section in
-> `release-please-config.json`, commits of that type will start cutting releases.
+> **Visibility = releasability.** Un-hiding a section in
+> `release-please-config.json` makes commits of that type start cutting releases.
 > That is deliberate for `deps`; be intentional before un-hiding anything else
 > (a `docs:`-only change cutting a release is usually noise).
 
 ### `deps:` vs `ci:`
 
 **If the change alters what a user receives when they provision, it's `deps:` (or
-`feat`/`fix`); if it only touches the build or CI, it's `ci:`/`chore:`.** That is
-why the lazydocker auto-update workflow uses `deps:` (bumping a shipped tool cuts
-a patch release) while Dependabot's GitHub Actions bumps use `ci:` (they never
-reach a provisioned environment).
+`feat`/`fix`); if it only touches the build or CI, it's `ci:`/`chore:`.** The
+lazydocker auto-update workflow therefore uses `deps:`, because bumping a shipped
+tool cuts a patch release, while Dependabot's GitHub Actions bumps use `ci:`,
+because they never reach a provisioned environment.
 
 ## Breaking changes
 
@@ -79,28 +76,28 @@ BREAKING CHANGE: 22.04 is no longer provisioned; use 24.04 or newer.
 
 ## Squash merges
 
-Pull requests are **squash-merged**, so the whole branch collapses into a single
-commit on `main` whose subject is taken from the **PR title** and whose body is
-the branch's own commit messages. Therefore:
+Pull requests are **squash-merged**: the whole branch collapses into a single
+commit on `main` whose subject comes from the **PR title** and whose body is the
+branch's own commit messages. Therefore:
 
 > **The PR title must be a valid Conventional Commit.**
 
-A PR titled `Update docker script` (no type) is invisible to release-please and
-will neither appear in the changelog nor bump the version. Title it
-`fix: ...` / `feat: ...` instead. That holds however many commits the branch
-carries, because `squash_merge_commit_title` is `PR_TITLE`. GitHub's default,
-`COMMIT_OR_PR_TITLE`, takes the subject from the *commit* when a branch has
-exactly one — so a single sloppy commit subject would quietly cut no release.
+A PR titled `Update docker script` has no type, so it is invisible to
+release-please and will neither appear in the changelog nor bump the version.
+Title it `fix: ...` / `feat: ...` instead. This holds however many commits the
+branch carries, because `squash_merge_commit_title` is `PR_TITLE`. GitHub's
+default, `COMMIT_OR_PR_TITLE`, takes the subject from the *commit* when a branch
+has exactly one, so a single sloppy commit subject would quietly cut no release.
 
 The one thing release-please still reads from a squash commit's body is a
 `BREAKING CHANGE:` footer. That body is the branch's own commit messages
-(`squash_merge_commit_message` is `COMMIT_MESSAGES`), **not** the PR
-description, so put the footer in a commit on the branch. A footer written only
-in the PR description never reaches `main` and is never parsed.
+(`squash_merge_commit_message` is `COMMIT_MESSAGES`), **not** the PR description,
+so put the footer in a commit on the branch. A footer written only in the PR
+description never reaches `main` and is never parsed.
 
-A squash-merged PR yields exactly one changelog entry: its title. So prefer
-**focused PRs** — one logical change, one type. A branch that would produce
-several separate entries is two PRs: the `main-protection` ruleset requires
+A squash-merged PR yields exactly one changelog entry, its title, so prefer
+**focused PRs**: one logical change, one type. Split a branch that would produce
+several separate entries into two PRs. The `main-protection` ruleset requires
 linear history and allows only squash and rebase, so the merge commit that would
 have preserved each Conventional Commit individually cannot land.
 
@@ -119,10 +116,10 @@ else only ride-along types         →  no release
 
 ## Branch names
 
-release-please ignores branch names entirely — it only reads commit subjects and
-PR titles on `main` (its own release branch, `release-please--branches--main`, is
-the exception, and it manages that one itself). Branch names are therefore a
-human convention only. Mirror the commit type for readability:
+release-please ignores branch names entirely; it reads only commit subjects and
+PR titles on `main`. Its own release branch, `release-please--branches--main`, is
+the exception, and it manages that one itself. Branch names are a human
+convention. Mirror the commit type for readability:
 
 ```
 <type>/<short-kebab-description>
@@ -139,7 +136,7 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 
 1. Open a PR with a Conventional Commit **title** and let the SonarCloud check pass.
 2. Merge it. release-please opens or updates the **chore(main): release X.Y.Z** PR.
-3. Merge that release PR — the version is tagged and the GitHub Release is
+3. Merge that release PR. The version is tagged and the GitHub Release is
    published automatically. No manual tagging.
 
 ## ASCII-only PowerShell scripts
@@ -147,8 +144,8 @@ Optionally prefix an issue number: `feat/123-opensuse-template`.
 Keep every `.ps1` file (e.g. [`windows/scripts/`](windows/scripts/)) **ASCII-only**. The
 provisioning entrypoints run under **Windows PowerShell 5.1** (`powershell.exe`), which reads
 a script that has no byte-order mark as ANSI (Windows-1252), not UTF-8. A stray non-ASCII
-character therefore gets mangled into invalid bytes and aborts parsing at provision time —
-the failure surfaces on the user's machine, not in review.
+character is mangled into invalid bytes and aborts parsing at provision time, on the user's
+machine rather than in review.
 
 The usual culprits are characters an editor or paste inserts automatically: em/en dashes
 (`—` `–`), smart quotes (`“” ‘’`), arrows (`→ ↔`), and ellipses (`…`). Use their ASCII
@@ -160,28 +157,27 @@ Check before committing:
 git grep -nP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
 ```
 
-(This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
-characters freely — this document does.)
+This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
+characters freely, as this document does.
 
 ## direnv directives
 
-The directives in `wsl/user/.config/direnv/lib/` are what let a project declare a runtime
-version **once** in its `.envrc` — `use sdk java 21.0.2-tem` — and have every instance this
-repo provisions honour it. `13-install-direnv-functions.sh` is what installs them.
+The directives in `wsl/user/.config/direnv/lib/` let a project declare a runtime version
+**once** in its `.envrc` — `use sdk java 21.0.2-tem` — and have every instance this repo
+provisions honour it. `13-install-direnv-functions.sh` installs them.
 
 The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
 and in a Claude Code cloud session through
 [`TomBorglum/claude-cloud-bootstrap`](https://github.com/TomBorglum/claude-cloud-bootstrap). Both
-are maintained and released independently of this repository, and both carry their own copies —
+are maintained and released independently of this repository, and both carry their own copies:
 the actions one a deliberately different CI-only implementation, the cloud one a vendored copy of
-these. Keeping those in step is a maintainer duty there, not a gate here, which is the whole point
-of the split: a change to a directive in this repository no longer has to answer for either.
+these. Keeping those in step is a maintainer duty there, not a gate here, so a change to a
+directive in this repository does not have to answer for either.
 
-pixi is the odd one out among them, deliberately. `use_pixi` installs its own tool rather than
-relying on provisioning having done it — the first step toward directives that stand alone, so
-that an `.envrc` can eventually pull in the ones it needs on an instance this repo never
-provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh` and
+pixi is the odd one out, deliberately. `use_pixi` installs its own tool rather than relying on
+provisioning having done it, as a first step toward directives that stand alone on an instance
+this repo never provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh` and
 `04-install-sdkman.sh`.
 
 Because it owns the install, it also owns the **version store**: `use pixi <version> [template]`
@@ -189,19 +185,19 @@ puts each pinned pixi in `~/.pixi/versions/<version>/bin` and points `~/.pixi/bi
 the active context wants, which is the path `pixi-completion.zsh` evaluates. Two details there are
 load-bearing. The store entry is guarded on the version the binary *reports*, not on its presence,
 so a `pixi self-update` inside an active context is undone by the next `direnv allow` rather than
-surviving forever at a path the directive would otherwise accept. And `PATH_add` gets the version
+surviving at a path the directive would otherwise accept. And `PATH_add` gets the version
 directory, not just `~/.pixi/bin`, so a second terminal activating a differently pinned project
 cannot change what this one runs — the same reason `use_fnm` and `use_sdk` put a version directory
 on `PATH` instead of a shared `current` symlink.
 
 The pin lives in the `.envrc` and is not mirrored into `pixi.toml` as `requires-pixi`. Keeping the
-two in step would mean rewriting a tracked manifest on every bump, which is a larger licence than
-the scaffold-once one `use_sonarqube_mcp` takes below.
+two in step would mean rewriting a tracked manifest on every bump, a larger licence than the
+scaffold-once one `use_sonarqube_mcp` takes below.
 
 Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
-**every** candidate — the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME` (`JAVA_HOME`,
-`MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. So `use sdk maven 3.9.6`, `use sdk gradle
+**every** candidate: the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME` (`JAVA_HOME`,
+`MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. `use sdk maven 3.9.6`, `use sdk gradle
 8.7`, and the like already work with **no code change**.
 
 Adding an entirely **new directive** (a new backend, not a variant of `use_sdk`) means a new
@@ -211,17 +207,16 @@ linked above and is that repository's to implement and test.
 ### Two directive conventions
 
 **A directive may scaffold a project file** on first activation. `use_pixi` writes a starter
-`pixi.toml`; `use_sonarqube_mcp` writes a `.claude/agents/sonarqube.md`. Each prints a
-reminder to commit it —
-those generated files are part of the repository, so commit them.
+`pixi.toml`; `use_sonarqube_mcp` writes a `.claude/agents/sonarqube.md`. Each prints a reminder
+to commit it, because those generated files are part of the repository.
 
-A directive that scaffolds must never rewrite what it already wrote: this runs on every `cd`, so
+A directive that scaffolds must never rewrite what it already wrote. This runs on every `cd`, so
 reformatting a tracked file each time would leave every consuming repository permanently dirty.
 Scaffold when the file is absent, and be a no-op when it is there.
 
 **An optional directive must not break the `.envrc`.** A *runtime* directive `return`s 1 when a
-prerequisite is missing, because a missing Node or JVM is a genuine failure worth surfacing — it
-is visible immediately in an interactive shell. A directive for an *optional* integration
-instead warns to stderr and `return`s 0, so the rest of the environment still loads.
-`use_sonarqube_mcp` follows this pattern: a missing credential or an unreachable Credential
-Manager produces a warning, never a failed load.
+prerequisite is missing, because a missing Node or JVM is a genuine failure worth surfacing
+immediately in an interactive shell. A directive for an *optional* integration instead warns to
+stderr and `return`s 0, so the rest of the environment still loads. `use_sonarqube_mcp` follows
+this pattern: a missing credential or an unreachable Credential Manager produces a warning, never
+a failed load.
