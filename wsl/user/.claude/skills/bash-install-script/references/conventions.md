@@ -1,8 +1,7 @@
 # Install script conventions
 
-These conventions make a tool-install script robust: strict-mode, fail-fast on a
-bad environment, idempotent on re-runs, and self-contained. Follow them so a new
-script behaves predictably wherever it runs.
+These conventions make a tool-install script robust: strict mode, fail-fast on a
+bad environment, idempotent on re-runs, and self-contained.
 
 ## Output location and naming
 
@@ -24,9 +23,9 @@ script behaves predictably wherever it runs.
 
 ## File permissions
 
-New scripts are created with mode **`644`** (`rw-r--r--`) — non-executable. These
+New scripts are created with mode **`644`** (`rw-r--r--`), non-executable. These
 scripts are run with `bash <script>` (typically a `for script ... bash "$script"`
-loop), not invoked directly, so the executable bit is unnecessary; `644` also
+loop), not invoked directly, so the executable bit is unnecessary, and `644`
 matches every existing script in the repo. After writing the file, ensure its mode
 is `644` (`chmod 644 <file>`); never add `+x`.
 
@@ -49,8 +48,7 @@ work against the wrong path.
 Assert the env vars a script depends on are set and non-empty **before any work that
 uses them**, so a bad environment fails immediately with a clear message instead of
 part-way through. "Work that uses them" includes an already-installed guard whose
-detection method references the var (see the next section for the exact ordering
-rule):
+detection method references the var; the next section gives the exact ordering rule:
 
 ```bash
 : "${TARGET_USER:?TARGET_USER is required}"
@@ -67,7 +65,7 @@ Assert whatever variables your script actually needs — there is no fixed list.
 
 ## Exit-code contract
 
-A script reports **what it did** through its exit code. Without this a script that
+A script reports **what it did** through its exit code. Without it a script that
 skipped is indistinguishable from one that installed something, and a runner can only
 say "ok" for both:
 
@@ -85,16 +83,16 @@ One consequence worth stating in the script's own output: running a numbered scr
 hand can now exit non-zero without anything being wrong.
 
 **This assumes a runner that reads those codes.** `wsl-cloud-init`'s
-`wsl/distros/ubuntu/install.sh` does — it captures each status with
+`wsl/distros/ubuntu/install.sh` does: it captures each status with
 `rc=0; bash "$script" || rc=$?` and maps `3`/`4` rather than letting `set -e` make a
-failure of them. A plain `for f in *.sh; do bash "$f"; done` under `set -e` does not:
-there a non-zero guard aborts the rest of the run. When the target directory's runner
-is of that second kind, use `exit 0` for both guards instead and note why in a comment.
+failure of them. A plain `for f in *.sh; do bash "$f"; done` under `set -e` does not,
+because there a non-zero guard aborts the rest of the run. When the target directory's
+runner is of that second kind, use `exit 0` for both guards and note why in a comment.
 
 ## Already-installed guard (idempotency)
 
-Scripts may be re-run (re-provisioning, or by hand). Before doing any install work,
-check whether the tool is already present and bail out early.
+Scripts may be re-run, on re-provisioning or by hand. Before any install work, check
+whether the tool is already present and bail out early.
 
 Place the guard **as early as possible**, which depends on its detection method:
 
@@ -204,18 +202,18 @@ and just operate under `$HOME`.
 ## Non-interactive execution
 
 An install script must never wait for input. It runs unattended (cloud-init, CI), and a runner
-that captures a step's output hides the prompt on top of that, so the run looks hung rather
-than stuck on a question — worse if the waiting program switched the terminal to raw mode,
-which takes `Ctrl-C` with it and leaves the terminal apparently locked up.
+that captures a step's output hides the prompt, so the run looks hung rather than stuck on a
+question. A waiting program that switched the terminal to raw mode is worse: it takes `Ctrl-C`
+with it and leaves the terminal apparently locked up.
 
 **Detaching stdin is the runner's job, not the script's.** `wsl-cloud-init`'s `install.sh`
 runs every step with `</dev/null`, once, for all of them; a script repeating that per command
 adds nothing, and would have to be repeated in every script to mean anything. Assume stdin is
 already unusable, and never read from it.
 
-What is the script's job is the **third-party installers and CLIs** it invokes: detached stdin
-stops them prompting, but not every unattended behaviour is stdin-driven. Pass the unattended
-flag where one exists:
+The script's job is the **third-party installers and CLIs** it invokes: detached stdin stops
+them prompting, but not every unattended behaviour is stdin-driven. Pass the unattended flag
+where one exists:
 
 ```bash
 # without --unattended this installer execs a shell and runs chsh at the end, neither of
@@ -223,7 +221,7 @@ flag where one exists:
 sudo -u "$TARGET_USER" sh -c "$(curl -fsSL --proto '=https' --tlsv1.2 <url>)" "" --unattended
 ```
 
-Prefer both to a timeout — a hung step and a slow download are indistinguishable from the
+Prefer both to a timeout: a hung step and a slow download are indistinguishable from the
 outside, and a download is allowed to take minutes.
 
 ## Download pattern
@@ -238,13 +236,13 @@ rm -f /tmp/<name>
 
 `curl` flags: `-fsSL` (fail on error, silent, show errors, follow redirects) plus
 `--proto '=https' --tlsv1.2`. **Always include `--proto '=https'`** on any `curl`
-that downloads: with `-L`, a redirect from the `https://` URL to a plaintext
+that downloads. With `-L`, a redirect from the `https://` URL to a plaintext
 `http://` one would otherwise be followed silently, downloading code over an
-insecure channel. `--proto '=https'` restricts the transfer — including redirects —
-to HTTPS, so such a downgrade fails loudly instead. `--tlsv1.2` floors the TLS
-version. This applies to **every** download `curl` in the script, including the
-keyring fetch in the apt pattern below. Static analyzers (e.g. SonarCloud) flag a
-bare `curl ... https://...` as a vulnerability for exactly this reason.
+insecure channel; `--proto '=https'` restricts the transfer, redirects included, to
+HTTPS, so such a downgrade fails loudly. `--tlsv1.2` floors the TLS version. This
+applies to **every** download `curl` in the script, including the keyring fetch in
+the apt pattern below. Static analyzers (e.g. SonarCloud) flag a bare
+`curl ... https://...` as a vulnerability for this reason.
 
 ## apt pattern
 
@@ -268,10 +266,10 @@ apt-get install -y -qq <packages>
 
 ## Self-contained installs (no transient dependencies)
 
-A script installs **exactly one tool**. The *binding* constraint is that an install
+A script installs **exactly one tool**. The binding constraint is that an install
 must **not** pull in a shared language runtime (node, python, java, ruby, …) or any
-other broad dependency as a side effect of installing the tool. Doing so pollutes the
-system with a transient dependency and creates hidden coupling between scripts.
+other broad dependency as a side effect. Doing so pollutes the system with a
+transient dependency and creates hidden coupling between scripts.
 
 Reject the anti-pattern of pulling a runtime in just to install a tool:
 

@@ -12,7 +12,7 @@ disable-model-invocation: true
 
 # Spec
 
-Turn a feature request into working code, by way of an approved plan: interview, research,
+Turn a feature request into working code by way of an approved plan: interview, research,
 review, approval, then implementation.
 
 Nothing is built while the plan is unapproved. Approval is the go-ahead: implementation starts
@@ -49,7 +49,7 @@ trade-off being accepted rather than restating the label.
 ### Explore is the only permitted subagent
 
 Delegate exclusively to `Agent(Explore)`. Never launch `Agent(Plan)`, `Agent(general-purpose)`
-or `Agent(claude)` — all three are denied by permission settings and attempting them wastes a
+or `Agent(claude)`: all three are denied by permission settings, and attempting them wastes a
 turn on a refusal.
 
 This rule is stated explicitly because plan mode's own injected workflow instructs the model to
@@ -84,27 +84,27 @@ select:EnterPlanMode,ExitPlanMode,mcp__context7__resolve-library-id,mcp__context
 Call `EnterPlanMode` unless the session is already in it. If it already is, continue in it
 rather than re-entering.
 
-Plan mode is what actually enforces this skill's restrictions. It routes every file-edit and
-shell-write tool past allow rules, so no write can be auto-approved while planning, and it
-supplies both the designated plan file path and the `ExitPlanMode` approval gate. The
-restriction comes from the mode, not from frontmatter.
+Plan mode is what enforces this skill's restrictions: it routes every file-edit and shell-write
+tool past allow rules, so no write can be auto-approved while planning, and it supplies both the
+designated plan file path and the `ExitPlanMode` approval gate. The restriction comes from the
+mode, not from frontmatter.
 
 Never pre-approve `ExitPlanMode`, whether through an `allowed-tools` entry here or an `allow`
 rule in settings. The plan-approval dialogue **is** `ExitPlanMode`'s permission prompt, so
 granting it replaces the plan review with a bare mode-switch confirmation and destroys the
 approval gate this skill exists to reach.
 
-This file carries no `allowed-tools` list at all, because on an instance this repository
-provisions there is nothing left for one to grant: reads and read-only shell commands are
-already permitted inside plan mode, and Context7 is registered at user scope by
-`07-install-claude-code.sh`. A list of tools that would not have prompted anyway reads as
-load-bearing while doing nothing, which is how `ExitPlanMode` ends up added to it.
+This file carries no `allowed-tools` list at all. On an instance this repository provisions
+there is nothing left for one to grant: reads and read-only shell commands are already permitted
+inside plan mode, and Context7 is registered at user scope by `07-install-claude-code.sh`. A
+list of tools that would not have prompted anyway reads as load-bearing while doing nothing,
+which is how `ExitPlanMode` ends up added to it.
 
 ### 3. Confirm the request
 
 Restate the request in one or two sentences and confirm it before spending anything on research.
-This is the cheapest correction point in the whole workflow — a misread request caught here
-costs one turn instead of an entire exploration and interview cycle.
+A misread request caught here costs one turn instead of an entire exploration and interview
+cycle.
 
 If the request arrived as a bare `/spec` with no argument, ask what feature to specify.
 
@@ -128,7 +128,7 @@ design decisions or judgement calls.
 ### 5. Research with Context7
 
 Resolve and query only libraries, frameworks or tools the feature actually names. Cap this at
-roughly three queries. Make no speculative lookups — a library nobody mentioned does not need
+roughly three queries. Make no speculative lookups; a library nobody mentioned does not need
 documenting.
 
 Query results inform the questions asked in the next step, so research precedes the interview.
@@ -142,7 +142,7 @@ Ask the independent ones in batches of two to four per `AskUserQuestion` call. B
 four questions in one call collect four answers for one model turn, where asking them separately
 costs four. Questions whose wording depends on an earlier answer go in a later round.
 
-Re-assess the queue between rounds. Stop when nothing material remains — roughly five material
+Re-assess the queue between rounds. Stop when nothing material remains, roughly five material
 questions in the normal case. Honour explicit stop signals such as "stop", "done" or "proceed"
 immediately, and record anything still unresolved in the plan under Open questions rather than
 quietly deciding it.
@@ -185,7 +185,7 @@ State plainly what the review checked and what it changed.
 Call `ExitPlanMode`.
 
 If the user approves, begin implementing in the same turn. Do not ask whether to start and do
-not restate the plan back — approval already said yes, so an offer to build it only costs the
+not restate the plan back: approval already said yes, so an offer to build it only costs the
 user another turn. Work through the Approach and Files sections in order, then verify by the
 plan's Verification section and report what passed and what did not.
 

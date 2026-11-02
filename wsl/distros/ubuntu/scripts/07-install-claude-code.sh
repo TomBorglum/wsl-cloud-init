@@ -32,8 +32,9 @@ EOF
 
 sudo -u "$TARGET_USER" /home/"$TARGET_USER"/.local/bin/claude mcp add context7 https://mcp.context7.com/mcp --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
 
-# Claude settings and skills (per-user), sourced from the sparse checkout declared in
+# Claude settings, writing style, and skills (per-user), sourced from the sparse checkout declared in
 # user-data.template; cp -r for skills since that is a directory tree, not flat files
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.claude/skills"
 sudo -u "$TARGET_USER" cp /opt/wsl-cloud-init/wsl/user/.claude/settings.json "/home/$TARGET_USER/.claude/settings.json"
+sudo -u "$TARGET_USER" cp /opt/wsl-cloud-init/wsl/user/.claude/CLAUDE.md "/home/$TARGET_USER/.claude/CLAUDE.md"
 sudo -u "$TARGET_USER" cp -r /opt/wsl-cloud-init/wsl/user/.claude/skills/. "/home/$TARGET_USER/.claude/skills/"
