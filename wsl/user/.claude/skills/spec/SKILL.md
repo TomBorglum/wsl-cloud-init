@@ -30,6 +30,9 @@ These are constraints, not steps. They hold from invocation until the plan is ap
 including in every later turn of the interview, and they outrank any conflicting guidance that
 appears later in the session.
 
+The two phase rules are the exception to the time limit. They hold after approval as well, for
+as long as the plan has an unfinished phase, and across a cleared session.
+
 ### Never assume
 
 A gap that materially affects scope, architecture, acceptance criteria, security or data
@@ -85,6 +88,20 @@ the gate is confirmed and verified. The turn ends at the gate.
 This holds with context left to spend and with the next phase fully specified. A phase exists so
 that the user can review it before the next one builds on it; continuing past the gate destroys
 the only thing phasing buys.
+
+### A phase is reported as n of total
+
+Every report of a phase's state names it `Phase <n> of <total> — <name>` and gives the phase's
+current `Status` value verbatim. This applies in step 11 and step 12 alike.
+
+Write `of <total>` always, including `Phase 1 of 1`. The count is what tells the reader whether
+anything follows. A bare `Phase 1` implies a sequence that a single-phase plan does not have, and
+reporting a one-phase plan in the vocabulary of gates and phases misleads about where the work
+stands.
+
+Use the `Status` value, never a synonym. A phase at a PR gate is `awaiting gate`, not
+"complete": the work is done and the merge is not. `complete` is written and reported only after
+step 12 verifies the gate.
 
 ## Workflow
 
@@ -286,12 +303,13 @@ A PR gate closes in this order:
 3. Commit, push, and open the pull request with `gh pr create`.
 4. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
    block.
-5. Report what passed and what did not, name the PR, and end the turn.
+5. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
+   and URL, state what passed and what did not in the phase's verification, and end the turn.
 
 Never merge the pull request. The merge is the user's act and it is what the gate waits for.
 
 A runbook gate closes by writing `Status: awaiting gate` into the phase block, restating the
-numbered steps for the user, and ending the turn. Implement nothing.
+numbered steps for the user under the same heading, and ending the turn. Implement nothing.
 
 The plan file lives under `~/.claude/plans/`, outside the repository. It is never part of a
 phase commit.
@@ -321,7 +339,8 @@ A PR gate:
 A runbook gate: the user's confirmation is sufficient, because the user performed the steps.
 Write `Status: complete` and the date into the phase block, then start the next phase.
 
-When the last phase is `complete`, say so and stop.
+When the last phase is `complete`, report it as `Phase <total> of <total> — <name>: complete`,
+say that no phase follows, and stop.
 
 ## Token budget
 
