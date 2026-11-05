@@ -91,3 +91,12 @@ path `/usr/local/share/zed/` like any other system file, and `14-install-zed-int
 additionally copies them into the Windows Zed config directory (`%APPDATA%\Zed`, resolved over
 interop), backing up any existing file to `<name>.bak` first. This is the only place a
 provisioning step writes into the Windows filesystem rather than just reading from it.
+
+`settings.json` pins YAML formatting deliberately. Zed formats YAML with its bundled Prettier,
+whose `tabWidth`, `printWidth` and `useTabs` follow Zed's `tab_size`, `preferred_line_length` and
+`hard_tabs` unless set in the `prettier` object. `tab_size` defaults to 4, so an unpinned Zed
+re-indents this repository's 2-space YAML to 4. The asset sets `tab_size: 2` at the top level and
+pins `tabWidth: 2` again under `languages.YAML.prettier`, because a language-specific value
+replaces the top-level one entirely rather than merging with it. `printWidth` is pinned to 100
+there as well: at the default 80 Prettier would break the `- uses: <action>@<sha> # <version>`
+lines the workflows pin by SHA, which run to 96 characters.
