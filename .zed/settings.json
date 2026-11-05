@@ -11,21 +11,24 @@
 // Not set on purpose:
 //   format_on_save - left to your user settings. Formatting stays manual; nothing in CI
 //                    gates it, so this file is the only thing keeping the editor honest.
-//   formatter      - Zed's default "auto" already picks Prettier for these languages.
-//                    The one exception is Markdown, below.
+//   formatter      - Zed's default "auto" already picks Prettier for every language here.
+//                    Disallowing Prettier for Markdown below is enough to stop it: with
+//                    no Markdown language server installed, "auto" then finds nothing.
 {
-  // This repo is 2-space indented throughout - shell, JSON, YAML, Markdown - and its
-  // YAML and JSON run to 100 columns. Setting these two is what makes Prettier's output
-  // match: they are the documented source for tabWidth and printWidth.
+  // This repo is 2-space indented throughout - shell, JSON, YAML, Markdown. Setting
+  // these two is what makes Prettier's output match, because they are the documented
+  // source for its tabWidth and printWidth.
   //
   // 100 rather than 80 because every workflow pins its actions by SHA, and
   // `- uses: <action>@<40-char-sha> # <version>` reaches 96 characters
-  // (.github/workflows/release-please.yml). It is also what keeps the compact
-  // `{ "type": "perf", ... }` lines in release-please-config.json (82 chars) from being
-  // exploded onto four lines each.
+  // (.github/workflows/release-please.yml). 100 also keeps the twelve compact
+  // `{ "type": ..., "section": ... }` entries in release-please-config.json on one line
+  // each; the longest is 82 characters, so Prettier at 80 would explode every one of
+  // them onto four lines.
   //
   // Lines past 100 do exist, but Prettier cannot touch them: they are inside `run: |`
-  // and `body: |` block scalars, which it never reflows.
+  // and `body: |` block scalars, which it never reflows, and the 100-character $schema
+  // URL in release-please-config.json, which is a single string it cannot break.
   "tab_size": 2,
   "preferred_line_length": 100,
 
@@ -34,6 +37,12 @@
     // language-specific value REPLACES the top-level one entirely rather than merging
     // with it. Should Zed ever ship a YAML tab_size default, the derivation above stops
     // reaching YAML; this does not.
+    //
+    // Verified honored at project level: formatting a 4-space file reindents it to 2 and
+    // leaves the 93-character `uses:` line in .github/workflows/sonarcloud.yml intact,
+    // which requires printWidth >= 93. Worth stating because Zed documents project
+    // settings only as "editor behavior and language tooling options like tab_size,
+    // formatter, and format_on_save" - it does not name the prettier key.
     //
     // singleQuote is already Prettier's default. It is stated so the repo's quote style
     // is declared rather than inherited, and cannot move with a future Prettier default.
@@ -53,16 +62,19 @@
     // runs past 300 columns in places (docs/index.md, CHANGELOG.md), so there is no
     // printWidth that makes Prettier a no-op. Reflowing it would rewrite every file.
     //
-    // "formatter" is set alongside "prettier" because Zed documents project settings as
-    // limited to "editor behavior and language tooling options like tab_size, formatter,
-    // and format_on_save" - formatter is named, the prettier key is not. With no Markdown
-    // language server installed, "language_server" formats nothing, so the guard holds
-    // even if the prettier key is ignored at project level.
+    // JSON gets no entry of its own. Prettier handles it at the width above, which is
+    // what keeps release-please-config.json intact. One known consequence: Prettier
+    // collapses any array that fits inside printWidth and has no option to keep one
+    // expanded - the "respect the author's line break" heuristic covers objects only -
+    // so the "deny" list in wsl/user/.claude/settings.json becomes a single 83-character
+    // line the first time that file is formatted. Preserving it would need printWidth
+    // <= 82, which is also the exact minimum release-please-config.json needs; the two
+    // constraints meet on a single value with no slack either way, so JSON is left to
+    // Prettier rather than balanced on one character.
     "Markdown": {
       "prettier": {
         "allowed": false
-      },
-      "formatter": "language_server"
+      }
     }
   }
 }
