@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.1.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.0.0...v3.1.0) (2026-11-05)
+
+
+### Features
+
+* add a /spec skill for feature specification ([#113](https://github.com/TomBorglum/wsl-cloud-init/issues/113)) ([258fdc2](https://github.com/TomBorglum/wsl-cloud-init/commit/258fdc25d1b0ccff83f235c8aac155f951ac4679))
+* deny the built-in subagents in the seeded Claude settings ([#108](https://github.com/TomBorglum/wsl-cloud-init/issues/108)) ([e577bed](https://github.com/TomBorglum/wsl-cloud-init/commit/e577bed5467de6266a46317b542eca3d28a40746))
+* implement the plan on approval in the /spec skill ([#115](https://github.com/TomBorglum/wsl-cloud-init/issues/115)) ([e8f2bc8](https://github.com/TomBorglum/wsl-cloud-init/commit/e8f2bc8f3fb9c65de5269faf7935bf1dca34b8d2))
+* route subagents to haiku and cap the compaction window ([#110](https://github.com/TomBorglum/wsl-cloud-init/issues/110)) ([38030c9](https://github.com/TomBorglum/wsl-cloud-init/commit/38030c97782a830b6f849055931da72c81f867f7))
+* scope the SonarQube MCP server to a read-only subagent ([#114](https://github.com/TomBorglum/wsl-cloud-init/issues/114)) ([1599c35](https://github.com/TomBorglum/wsl-cloud-init/commit/1599c35d2b846c4a133cce3dbd2a0366bb65ce54))
+* ship a Concise output style and a documentation writing style ([#118](https://github.com/TomBorglum/wsl-cloud-init/issues/118)) ([c9e8791](https://github.com/TomBorglum/wsl-cloud-init/commit/c9e87912b2a5e8f74fa68c55ca0490eed78c32f0))
+* split /spec plans into PR-gated phases that survive a clear ([#119](https://github.com/TomBorglum/wsl-cloud-init/issues/119)) ([c759dc8](https://github.com/TomBorglum/wsl-cloud-init/commit/c759dc8dbcab02b73cdb3f5b8ebb925d49c145f3))
+
+
+### Bug Fixes
+
+* mask the VT getty so a provisioned instance is not degraded ([#116](https://github.com/TomBorglum/wsl-cloud-init/issues/116)) ([8379626](https://github.com/TomBorglum/wsl-cloud-init/commit/8379626243ee4ae634141a736a5ae57483019e5d))
+* pin Zed's formatting to this repo's style ([#121](https://github.com/TomBorglum/wsl-cloud-init/issues/121)) ([d2a8d24](https://github.com/TomBorglum/wsl-cloud-init/commit/d2a8d24a378975cb8784e01f3e990dd03d3bf5f6))
+* Update sonarcloud.yml ([#120](https://github.com/TomBorglum/wsl-cloud-init/issues/120)) ([483bf4f](https://github.com/TomBorglum/wsl-cloud-init/commit/483bf4f4775eb155ee618c2161a8d214b043419e))
+
 ## [3.0.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v2.0.0...v3.0.0) (2026-10-16)
 
 
