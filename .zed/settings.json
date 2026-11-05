@@ -1,0 +1,68 @@
+// Project settings for Zed. Deliberately minimal: it carries only what is specific to
+// THIS repo, so it never overrides a preference set in your user settings.
+//
+// Its one job is to stop the editor reformatting files away from how they are written.
+// Zed formats YAML, JSON and Markdown with its bundled Prettier, and Prettier's
+// tabWidth, printWidth and useTabs follow Zed's tab_size, preferred_line_length and
+// hard_tabs unless set in a "prettier" object. tab_size defaults to 4 and
+// preferred_line_length to 80, so an unconfigured Zed re-indents this repo's 2-space
+// YAML to 4 and breaks lines it should leave alone.
+//
+// Not set on purpose:
+//   format_on_save - left to your user settings. Formatting stays manual; nothing in CI
+//                    gates it, so this file is the only thing keeping the editor honest.
+//   formatter      - Zed's default "auto" already picks Prettier for these languages.
+//                    The one exception is Markdown, below.
+{
+  // This repo is 2-space indented throughout - shell, JSON, YAML, Markdown - and its
+  // YAML and JSON run to 100 columns. Setting these two is what makes Prettier's output
+  // match: they are the documented source for tabWidth and printWidth.
+  //
+  // 100 rather than 80 because every workflow pins its actions by SHA, and
+  // `- uses: <action>@<40-char-sha> # <version>` reaches 96 characters
+  // (.github/workflows/release-please.yml). It is also what keeps the compact
+  // `{ "type": "perf", ... }` lines in release-please-config.json (82 chars) from being
+  // exploded onto four lines each.
+  //
+  // Lines past 100 do exist, but Prettier cannot touch them: they are inside `run: |`
+  // and `body: |` block scalars, which it never reflows.
+  "tab_size": 2,
+  "preferred_line_length": 100,
+
+  "languages": {
+    // Pinned again here, not just derived from the two settings above, because a
+    // language-specific value REPLACES the top-level one entirely rather than merging
+    // with it. Should Zed ever ship a YAML tab_size default, the derivation above stops
+    // reaching YAML; this does not.
+    //
+    // singleQuote is already Prettier's default. It is stated so the repo's quote style
+    // is declared rather than inherited, and cannot move with a future Prettier default.
+    // Consequence: `cron: '0 6 * * 1'` in update-lazydocker.yml becomes
+    // `cron: "0 6 * * 1"` the next time that file is formatted. That matches the six
+    // double-quoted scalars in .github/dependabot.yml and docs/_config.yml.
+    "YAML": {
+      "prettier": {
+        "allowed": true,
+        "tabWidth": 2,
+        "printWidth": 100,
+        "singleQuote": false
+      }
+    },
+
+    // Markdown is turned off rather than widened: the prose here is hand-wrapped and
+    // runs past 300 columns in places (docs/index.md, CHANGELOG.md), so there is no
+    // printWidth that makes Prettier a no-op. Reflowing it would rewrite every file.
+    //
+    // "formatter" is set alongside "prettier" because Zed documents project settings as
+    // limited to "editor behavior and language tooling options like tab_size, formatter,
+    // and format_on_save" - formatter is named, the prettier key is not. With no Markdown
+    // language server installed, "language_server" formats nothing, so the guard holds
+    // even if the prettier key is ignored at project level.
+    "Markdown": {
+      "prettier": {
+        "allowed": false
+      },
+      "formatter": "language_server"
+    }
+  }
+}
