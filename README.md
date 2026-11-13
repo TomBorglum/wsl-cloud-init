@@ -54,8 +54,9 @@ Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the
 **[Context7](https://context7.com)** MCP for current library docs.
 
 Settings ship with it, including the `Concise` output style, and so does a
-`~/.claude/CLAUDE.md` writing style that applies to every markdown file Claude authors on the
-instance: reference prose rather than narrative, with constraints, paths, flags and error text
+`~/.claude/CLAUDE.md` writing style covering every markdown file Claude authors on the instance
+and every comment it writes in code: reference prose rather than narrative, no restating what
+the code or a vendor's documentation already says, and constraints, paths, flags and error text
 never dropped for brevity.
 
 Three skills come bundled, all invoked explicitly and never on Claude's own initiative:
