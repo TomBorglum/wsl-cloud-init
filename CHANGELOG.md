@@ -1,5 +1,12 @@
 # Changelog
 
+## [3.2.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.1.0...v3.2.0) (2026-11-13)
+
+
+### Features
+
+* drop the spec-interview skill ([#124](https://github.com/TomBorglum/wsl-cloud-init/issues/124)) ([beb7d1c](https://github.com/TomBorglum/wsl-cloud-init/commit/beb7d1cdf5eb7c2e4140a5c8965fa058a7cb2725))
+
 ## [3.1.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.0.0...v3.1.0) (2026-11-13)
 
 
