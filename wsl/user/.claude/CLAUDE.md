@@ -18,7 +18,7 @@ Write reference material, not narrative.
   passed, the values set, the literal strings printed — document the surface the reader
   controls and what changes when they change it, never the mechanics that produce it.
 - Never document a third-party tool's own flags, options or environment variables. Name the one
-  being used; its vendor's documentation is the reference.
+  being used and stop.
 - No second-person tour framing: not "the sign-in you already have", "so there is no second
   token to create", "ready to run without extra setup".
 - No superlatives, no editorial adjectives, no suspense. "Fast", "simply", "just", "powerful"
