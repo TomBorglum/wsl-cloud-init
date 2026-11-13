@@ -1,7 +1,7 @@
 # Writing style
 
 Never write what is already written elsewhere — in the code, in a vendor's documentation, in
-git history, or in another file of this project. Name the thing and let the reader go there.
+git history, or in another file of this project.
 
 ## Authored documents
 
