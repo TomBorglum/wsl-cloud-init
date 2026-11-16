@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.2.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.1.0...v3.2.0) (2026-11-16)
+
+
+### Features
+
+* activate the pixi environment in `use pixi` ([#128](https://github.com/TomBorglum/wsl-cloud-init/issues/128)) ([029a720](https://github.com/TomBorglum/wsl-cloud-init/commit/029a720560bcdcf87e6c489f5ae90b4c82dc3b58))
+* drop the spec-interview skill ([#124](https://github.com/TomBorglum/wsl-cloud-init/issues/124)) ([beb7d1c](https://github.com/TomBorglum/wsl-cloud-init/commit/beb7d1cdf5eb7c2e4140a5c8965fa058a7cb2725))
+* install direnv from a pinned release instead of apt ([#127](https://github.com/TomBorglum/wsl-cloud-init/issues/127)) ([c2b0690](https://github.com/TomBorglum/wsl-cloud-init/commit/c2b06905d60afe50e5258ccd402424ef34478549))
+
+
+### Bug Fixes
+
+* remove downloads on failure with mktemp and an EXIT trap ([#129](https://github.com/TomBorglum/wsl-cloud-init/issues/129)) ([fbc30b8](https://github.com/TomBorglum/wsl-cloud-init/commit/fbc30b8a327f73248559df79f421f4360ff893b4))
+
 ## [3.1.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.0.0...v3.1.0) (2026-11-13)
 
 
