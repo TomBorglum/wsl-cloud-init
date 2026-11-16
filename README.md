@@ -95,7 +95,6 @@ Installed from the cloud-init package list:
 
 - build-essential
 - curl
-- direnv
 - gh
 - git
 - jq
