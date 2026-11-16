@@ -34,6 +34,4 @@ curl -fsSL --proto '=https' --tlsv1.2 \
 
 echo "${SHA256}  ${tmp}" | sha256sum -c -
 
-# /usr/local/bin precedes /usr/bin in the default PATH, so this shadows the dpkg-installed
-# direnv on an instance provisioned before the package was dropped.
 install -m 0755 "$tmp" /usr/local/bin/direnv
