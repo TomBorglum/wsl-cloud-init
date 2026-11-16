@@ -1,0 +1,118 @@
+name: Update direnv
+
+# Dependabot can't track a version pinned in a shell script, and wouldn't refresh
+# the embedded checksums anyway. This job does both: it bumps VERSION and both
+# per-arch SHA-256 sums, then opens a PR that goes through the normal SonarCloud
+# gate + branch rules before merge.
+#
+# direnv publishes bare per-arch binaries and no checksums file, so the sums are
+# computed from the downloaded assets. That is the sole difference from
+# update-lazydocker.yml.
+#
+# Authenticates as the wsl-cloud-init-bot GitHub App (Contents: read/write and Pull
+# requests: read/write) rather than with GITHUB_TOKEN, because events created by
+# GITHUB_TOKEN do not trigger further workflow runs and the PR would never run the
+# required status checks. App installation tokens have no such restriction.
+
+on:
+  schedule:
+    - cron: '30 6 * * 1' # Mondays 06:30 UTC, after the lazydocker job
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        id: app-token
+        with:
+          app-id: ${{ secrets.AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.AUTOMATION_APP_PRIVATE_KEY }}
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Check for a newer direnv release
+        id: check
+        env:
+          # The app token is scoped to this repo, so it cannot read direnv/direnv.
+          # The built-in token reads any public repo.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          script="wsl/distros/ubuntu/scripts/17-install-direnv.sh"
+
+          current="$(grep -oP '^VERSION=\K.*' "$script")"
+          latest="$(gh api repos/direnv/direnv/releases/latest --jq '.tag_name' | sed 's/^v//')"
+          echo "current=$current  latest=$latest"
+
+          if [[ "$current" == "$latest" ]]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Already on the latest version; nothing to do."
+            exit 0
+          fi
+
+          # use_pixi calls require_allowed, so a release older than 2.38.0 must never be
+          # pinned here. `sort -V` puts the lower version first.
+          if [[ "$(printf '%s\n2.38.0\n' "$latest" | sort -V | head -1)" != "2.38.0" ]]; then
+            echo "direnv v${latest} is older than the required 2.38.0; refusing to downgrade" >&2
+            exit 1
+          fi
+
+          declare -A sums
+          for arch in amd64 arm64; do
+            asset="direnv.linux-${arch}"
+            curl -fsSL --proto '=https' --tlsv1.2 \
+              "https://github.com/direnv/direnv/releases/download/v${latest}/${asset}" \
+              -o "$RUNNER_TEMP/$asset"
+            sums[$arch]="$(sha256sum "$RUNNER_TEMP/$asset" | cut -d' ' -f1)"
+            echo "$asset ${sums[$arch]}"
+          done
+
+          # Address each line by its architecture label so spacing/order can't break the edit.
+          sed -i \
+            -e "s/^VERSION=.*/VERSION=${latest}/" \
+            -e "/^  amd64)/ s/SHA256=[0-9a-f]\{64\}/SHA256=${sums[amd64]}/" \
+            -e "/^  arm64)/ s/SHA256=[0-9a-f]\{64\}/SHA256=${sums[arm64]}/" \
+            "$script"
+
+          bash -n "$script"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+          echo "latest=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the bot's commit identity
+        id: bot
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: |
+          set -euo pipefail
+          # create-github-app-token exposes the slug but not the numeric user id,
+          # which the noreply address needs.
+          id="$(gh api "/users/${SLUG}[bot]" --jq .id)"
+          echo "name=${SLUG}[bot]" >> "$GITHUB_OUTPUT"
+          echo "email=${id}+${SLUG}[bot]@users.noreply.github.com" >> "$GITHUB_OUTPUT"
+
+      - name: Create pull request
+        if: steps.check.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@3ffccacd46053766916f087ce41d627c0b8cf2d1 # v8.1.3
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          committer: ${{ steps.bot.outputs.name }} <${{ steps.bot.outputs.email }}>
+          author: ${{ steps.bot.outputs.name }} <${{ steps.bot.outputs.email }}>
+          branch: chore/update-direnv
+          delete-branch: true
+          base: main
+          commit-message: "deps: bump direnv to v${{ steps.check.outputs.latest }}"
+          title: "deps: bump direnv to v${{ steps.check.outputs.latest }}"
+          body: |
+            Automated update of direnv to **v${{ steps.check.outputs.latest }}**.
+
+            `VERSION` and both per-arch `SHA256` values were refreshed by hashing the
+            release's `direnv.linux-amd64` and `direnv.linux-arm64` assets. The SonarCloud
+            gate must pass before merge.
