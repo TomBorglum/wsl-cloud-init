@@ -1,16 +1,11 @@
 name: Release Please
 
-# Automates releases. On every push to main, release-please opens (or updates) a
-# single "chore: release X.Y.Z" PR that bumps CHANGELOG.md and the version
-# manifest from the Conventional Commit messages since the last tag. Merging that
-# PR creates the git tag and the GitHub Release with the generated notes.
-#
-# Authenticates as the wsl-cloud-init-bot GitHub App rather than with GITHUB_TOKEN,
-# because events created by GITHUB_TOKEN do not trigger further workflow runs: the
-# release PR would never run the required SonarCloud gate, and the tag/release could
-# not trigger downstream workflows. App installation tokens have no such restriction.
-# The App needs Contents: read/write (branch, tag, release), Pull requests:
-# read/write (the release PR) and Issues: read/write (the autorelease:* labels).
+# Authenticates as the wsl-cloud-init-bot GitHub App rather than with GITHUB_TOKEN, because
+# events created by GITHUB_TOKEN do not trigger further workflow runs: the release PR would
+# never run the required SonarCloud gate, and the tag and release could not trigger downstream
+# workflows. App installation tokens have no such restriction. The App needs Contents:
+# read/write (branch, tag, release), Pull requests: read/write (the release PR) and Issues:
+# read/write (the autorelease:* labels).
 
 on:
   push:

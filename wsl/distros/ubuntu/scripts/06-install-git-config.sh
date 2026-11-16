@@ -10,17 +10,12 @@ fi
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
-# Install the gh wrapper ahead of the apt-provided /usr/bin/gh on PATH. The wrapper
-# authenticates gh on demand from the Windows "git:https://github.com" credential — on
-# first use and after a token rotation — via the shared wsl_interop_credential helper,
-# so no gh token is provisioned here. No eager sign-in: the wrapper handles it lazily on
-# first use (mirroring 09, which likewise only installs its wrapper). The credential is
-# the Git Credential Manager one, hence the INSTALL_GIT_CONFIG gate above.
+# Installed ahead of the apt-provided /usr/bin/gh on PATH. The wrapper authenticates itself on
+# demand, so no gh token is provisioned here. The credential it reads is the Git Credential
+# Manager one, hence the INSTALL_GIT_CONFIG gate above.
 #
-# The wrapper is a real file under wsl/system (provided by the sparse checkout declared in
-# user-data.template), installed (idempotent overwrite) with the executable bit. This runs
-# before the git-config early-exit below so that on-demand re-runs of an already-configured
-# instance still (re)install the wrapper.
+# This runs before the git-config early exit below, so an on-demand re-run on an
+# already-configured instance still reinstalls the wrapper.
 install -D -m 755 /opt/wsl-cloud-init/wsl/system/usr/local/bin/gh /usr/local/bin/gh
 
 sudo -u "$TARGET_USER" git config --global fetch.prune true
@@ -30,19 +25,15 @@ if sudo -u "$TARGET_USER" git config --global user.email >/dev/null 2>&1; then
   exit 3  # already installed; see install.sh
 fi
 
-# Resolve the git config from Windows over interop via wsl_interop_git_config (all the
-# PowerShell lives in wsl-interop.sh). We are committed to installing and none of
-# the values are set yet, so each KEY=VALUE line is assigned directly; the assertions
-# below prove the trio came back filled.
+# None of the three values is set at this point, so each KEY=VALUE line is assigned directly and
+# the assertions below prove the trio came back filled.
 while IFS= read -r line; do
   case "$line" in
     GIT_CREDENTIAL_MANAGER=*) GIT_CREDENTIAL_MANAGER="${line#*=}" ;;
     GIT_NAME=*)               GIT_NAME="${line#*=}" ;;
     GIT_EMAIL=*)              GIT_EMAIL="${line#*=}" ;;
-    # wsl_interop_git_config emits exactly these three keys, so anything else is not a
-    # value to assign -- a blank line, or output that leaked onto stdout. Dropping it
-    # here costs nothing: a key that genuinely failed to arrive is caught by the
-    # assertions below, which is where a missing value is meant to surface.
+    # Anything else is a blank line or output that leaked onto stdout. Dropping it is safe: a
+    # key that failed to arrive surfaces in the assertions below.
     *)                        ;;
   esac
 done < <(wsl_interop_git_config)

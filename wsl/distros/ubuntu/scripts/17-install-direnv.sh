@@ -11,8 +11,8 @@ fi
 # package list.
 #
 # direnv publishes bare per-arch binaries and no checksums file, so these sums are computed
-# from the downloaded asset rather than copied from the publisher. They still reject a release
-# asset replaced after the fact. On upgrade, bump VERSION and recompute both with:
+# from the downloaded asset rather than copied from the publisher. They still reject an asset
+# replaced after the fact. On upgrade, bump VERSION and recompute both with:
 #   curl -fsSL https://github.com/direnv/direnv/releases/download/v<VERSION>/direnv.linux-<arch> | sha256sum
 VERSION=2.38.2
 

@@ -1,9 +1,10 @@
 #!/bin/bash
 # wsl-cache.sh — per-user, per-namespace plain-text cache helpers.
 #
-# Sourced (not executed) by provisioning scripts and runtime code that need to
-# persist and later read small plain-text values on disk. A cache entry is a
-# single file whose name is the cache-name and whose content is the cache string.
+# Sourced (not executed) by provisioning scripts and runtime code that persist and later
+# read small plain-text values on disk. A cache entry is a single file whose name is the
+# cache-name and whose content is the cache string. A leading underscore marks a function
+# that is not part of the public API.
 #
 # The two access patterns are asymmetric on purpose:
 #   * writes name their owner explicitly, so a caller running as root can write into a
@@ -16,17 +17,10 @@
 # XDG_CACHE_HOME is intentionally not consulted; homes come from getent passwd, so a
 # root-on-behalf-of-user write and a later user read compute the same path.
 #
-# It is installed as a durable runtime bundle at /usr/local/lib/wsl-cloud-init/.
-# Callers own `set -euo pipefail`; this file deliberately does not.
+# Installed as a durable runtime bundle at /usr/local/lib/wsl-cloud-init/. Callers own
+# `set -euo pipefail`; this file deliberately does not.
 #
 #   source /usr/local/lib/wsl-cloud-init/wsl-cache.sh
-#   wsl_cache_set "$(id -un)" zed wsl-interop "$path"
-#   path="$(wsl_cache_get zed wsl-interop)"
-#   age="$(wsl_cache_age zed wsl-interop)"  # seconds since write, or miss
-
-# ---------------------------------------------------------------------------
-# Private plumbing (leading underscore): not part of the public API.
-# ---------------------------------------------------------------------------
 
 # Resolve a user's home directory from the passwd database. Echoes the home path,
 # or fails with a message.
@@ -80,10 +74,6 @@ _wsl_cache_file() {
   printf '%s\n' "$home/.cache/wsl-cloud-init/$namespace/$name"
 }
 
-# ---------------------------------------------------------------------------
-# Public API: bash functions operating on <home>/.cache/wsl-cloud-init/<namespace>/.
-# ---------------------------------------------------------------------------
-
 # Create or replace a cache entry, owned by the given owner.
 #
 #   wsl_cache_set <owner> <name> <namespace> <cache>
@@ -91,12 +81,11 @@ _wsl_cache_file() {
 # <owner>     user that owns the cache directory and file (home resolved via getent).
 # <name>      cache entry name; becomes the on-disk filename.
 # <namespace> groups related entries under a subdirectory.
-# <cache>     text content written verbatim to the file (may span multiple lines, and
-#             may be empty — an empty string writes a 0-byte cache file).
+# <cache>     text content written verbatim to the file; may span multiple lines, and an
+#             empty string writes a 0-byte cache file, but the argument must be present.
 #
-# Writes <owner-home>/.cache/wsl-cloud-init/<namespace>/<name>. Both the directory
-# and the file are owned by <owner>. A missing argument is an error (an empty <cache>
-# is written, but the argument itself must be present).
+# Writes <owner-home>/.cache/wsl-cloud-init/<namespace>/<name>. Both the directory and the
+# file are owned by <owner>.
 wsl_cache_set() {
   local owner="$1" name="$2" namespace="$3" cache="$4"
 

@@ -39,11 +39,9 @@ if ($exists -and -not $Force) {
   exit 1
 }
 
-# Opt-in installations are provisioned by install.sh inside the distro: it derives the
-# Windows paths/identity and fetches secrets from Credential Manager at runtime,
-# and is also the sole validator of those prerequisites. So nothing secret or
-# Windows-derived is read here. A missing secret / git identity / VS Code surfaces
-# at first boot as a cloud-init failure (see /var/log/cloud-init-output.log).
+# No secret is read here: install.sh derives the Windows paths and fetches the credentials
+# inside the distro at runtime, and is the sole validator of those prerequisites. A missing
+# secret, git identity or VS Code surfaces at first boot in /var/log/cloud-init-output.log.
 
 $WindowsUsername = $env:USERNAME
 $TargetUser = $WindowsUsername.ToLower() -replace '[^a-z0-9_-]', ''
@@ -66,8 +64,6 @@ if (-not (git -C $RepoRoot branch -r --contains $CommitSha 2>$null)) {
 # The ref this instance is based on, recorded in /etc/wsl-cloud-init-release by the
 # in-distro 01-install-release-info.sh. It must be resolved here: checkout-ref.ps1 and
 # cloud-init both leave a detached HEAD, so a branch name is unrecoverable in the distro.
-# Prefer an exact tag, so a version laid down by checkout-ref.ps1 reads as 'v1.0.0' rather
-# than a bare SHA; a normal clone of a branch reads as that branch.
 #
 # `tag --points-at` rather than `describe --tags --exact-match`: describe fails loudly on an
 # untagged commit, and $ErrorActionPreference = "Stop" turns a native command's stderr into a
@@ -89,8 +85,6 @@ foreach ($pair in @(@{ Name = 'Ref'; Value = $Ref }, @{ Name = 'InstanceName'; V
 
 Write-Host "Provisioning $InstanceName from $Ref @ $($CommitSha.Substring(0, 8))"
 
-# Substitute template. The template carries no secrets and no derived Windows
-# paths: install.sh fetches/derives those at runtime inside the distro.
 $InstallClaudeCodeValue    = if ($InstallClaudeCode)    { "true" } else { "false" }
 $InstallGitConfigValue     = if ($InstallGitConfig)     { "true" } else { "false" }
 $InstallVsCodeInteropValue = if ($InstallVsCodeInterop) { "true" } else { "false" }
@@ -119,7 +113,6 @@ $userDataPath = "$userDataDir\$InstanceName.user-data"
 $template | Set-Content $userDataPath -NoNewline
 Write-Host "Generated user-data for $InstanceName"
 
-# Provision
 if ($exists) {
     Write-Host "Unregistering existing $InstanceName..."
     $result = Start-Process wsl -ArgumentList "--unregister", $InstanceName -Wait -PassThru -WindowStyle Hidden
@@ -142,52 +135,39 @@ Write-Host "[3/4] Waiting for cloud-init to finish..."
 # `cloud-init status --wait` emits one dot per poll and nothing else. Poll instead and print the
 # lines of /var/log/cloud-init-output.log that carry progress -- cloud-init's stage transitions,
 # the package upgrade summary and install.sh's per-step banners. Anything resembling an error is
-# printed whatever the filter says, so nothing alarming is ever hidden; -ShowAllOutput prints the
-# log verbatim, which is the setting to reach for when a provision is failing.
+# printed whatever the filter says, so nothing alarming is ever hidden.
 #
 # The `===> ` / `<=== ` prefixes come from wsl/distros/ubuntu/install.sh: the two files are
 # coupled and have to change together.
 $ShowLinePattern = "^===> |^<=== |^install\.sh: |^\d+ upgraded, |error|failed|Traceback|^E: "
 
-# cloud-init announces each stage with a banner carrying the package version, a wall-clock
-# timestamp and an uptime, e.g.
-#
-#   Cloud-init v. 26.1-0ubuntu2 running 'modules:config' at Tue, 28 Jul 2026 12:28:38 +0000. Up 8.28 seconds.
-#   Cloud-init v. 26.1-0ubuntu2 finished at Tue, 28 Jul 2026 12:29:39 +0000. Datasource DataSourceWSL.  Up 69.53 seconds
-#
-# Printed as-is that is actively misleading: the only number on it is /proc/uptime, and under WSL2
-# every distro shares one utility VM and one kernel, so it is the VM's uptime and has nothing to do
-# with how long this instance has been provisioning. Start a second instance on a machine that has
-# been up an hour and the first banner claims 3600 seconds.
-#
-# The uptimes are still useful as *differences*, which is what gets reported instead: subtracting
-# consecutive banners gives an exact per-stage duration, free of the 2s poll granularity. The
-# closing 'finished at' line supplies the end of the last stage. Both patterns stay tolerant of
-# spacing -- the finish line uses two spaces before `Up` and drops the trailing period.
+# The uptime on cloud-init's stage banner is /proc/uptime, and under WSL2 every distro shares one
+# utility VM, so as an absolute it is the VM's uptime and says nothing about this provision. Only
+# the difference between consecutive banners is meaningful, and that gives an exact per-stage
+# duration free of the 2s poll granularity; the closing 'finished at' banner ends the last stage.
+# Both patterns tolerate the spacing difference between the two: the finish line uses two spaces
+# before `Up` and drops the trailing period.
 $StageDurationStart  = "^Cloud-init v\.\s+\S+\s+running\s+'([^']+)'.*?\bUp\s+([\d.]+)\s+seconds"
 $StageDurationFinish = "^Cloud-init v\..*?\bfinished at\b.*?\bUp\s+([\d.]+)\s+seconds"
 
 # install.sh brackets each numbered script with these markers, carrying the step's own measured
-# duration so it does not have to be inferred from the poll interval. Kept as two lines in the log
-# so the file still reads sequentially; paired back into a single line for display.
+# duration so it does not have to be inferred from the poll interval.
 #
 # The duration is matched as `[^)]*` rather than `[\d.]+` so the marker is consumed whatever it
-# carries. A pattern that only accepted a well-formed number would drop a malformed one through
-# to the generic filter below, which prints it verbatim as nested content and leaves the step's
-# line open with no `-> ok` ever arriving. Matching loosely keeps the layout intact; a duration
-# that will not parse degrades to 0.0s.
+# carries. A pattern accepting only a well-formed number would drop a malformed one through to
+# the generic filter, leaving the step's line open with no `-> ok` ever arriving. A duration that
+# will not parse degrades to 0.0s.
 $StepDurationStart  = "^===> (.+)$"
 $StepDurationFinish = "^<=== \S+ ok \(([^)]*)s\)$"
 
-# Two lines the package manager's triggers emit on every single provision: systemd and dbus are
-# not fully up inside a WSL container while packages are configuring, so the post-install scripts
-# probing them fail harmlessly (they sit between "Processing triggers for systemd" and "Processing
-# triggers for dbus").
+# Two lines the package manager's triggers emit on every provision: systemd and dbus are not
+# fully up inside a WSL container while packages are configuring, so the post-install scripts
+# probing them fail harmlessly.
 #
-# Not redundant with $ShowLinePattern: both lines begin with "Failed", so both match its unanchored
-# `failed` alternative -- -match is case-insensitive -- and would print on every single provision
-# without this. Printing known-benign errors every time is how people learn to ignore the real
-# ones. Both patterns are anchored end to end so nothing broader is ever suppressed.
+# Not redundant with $ShowLinePattern: both begin with "Failed", so both match its unanchored
+# `failed` alternative and would print on every provision without this. Printing known-benign
+# errors every time is how people learn to ignore the real ones. Both patterns are anchored end
+# to end so nothing broader is ever suppressed.
 $HideLinePattern = "^Failed to get properties: Transport endpoint is not connected$" +
                    "|^Failed to connect to system scope bus via local transport: Connection refused$"
 
@@ -208,18 +188,12 @@ function Invoke-InDistro([string]$Command) {
 
 # Read the outcome cloud-init *recorded*, rather than the one `cloud-init status` reports now.
 #
-# Ubuntu's WSL image ends provisioning by touching /etc/cloud/cloud-init.disabled --
-# /usr/lib/wsl/wait-for-cloud-init, sourced from the OOBE command /usr/lib/wsl/wsl-setup -- so
-# cloud-init does not run again on every `wsl.exe -d <name>`, each of which is a fresh boot.
-# That script waits on `cloud-init status --wait` and touches the marker the moment cloud-init
-# finishes, well inside the 2s poll interval of the loop below, so a run that just succeeded is
-# usually first observed *after* the marker exists.
-#
-# From then on `cloud-init status` short-circuits on the marker and answers 'disabled' whatever
-# the run did, masking a failure exactly as thoroughly as a success -- which is why the marker
-# can never simply be read as "fine". status.json is untouched by any of it: it holds the
-# per-stage errors cloud-init itself wrote, and is the only trustworthy source once the marker
-# is there.
+# Ubuntu's WSL image touches /etc/cloud/cloud-init.disabled when provisioning ends, from
+# /usr/lib/wsl/wait-for-cloud-init, usually inside the 2s poll interval of the loop below. From
+# then on `cloud-init status` short-circuits on that marker and answers 'disabled' whatever the
+# run did, masking a failure as thoroughly as a success. status.json is untouched by any of it
+# and holds the per-stage errors cloud-init wrote, so it is the only trustworthy source once the
+# marker exists.
 #
 # Returns 'error', 'degraded done' or 'done', the vocabulary cloud-init's own extended_status
 # uses, or $null when the file cannot be read or parsed -- leaving the caller on its existing
@@ -257,20 +231,17 @@ $CloudInitLog = "/var/log/cloud-init-output.log"
 #
 # The offset must never be advanced by the number of elements returned. PowerShell splits native
 # command output on carriage returns as well as newlines, so `printf 'a\rb\nc\n'` arrives as three
-# elements for two lines. A real provisioning log is full of them: 634 of 1191 lines carry a `\r`,
-# 1023 in total, nearly all from the package manager's "(Reading database ... 5%\r10%\r...)"
-# progress. Counting elements would therefore overshoot on almost every poll, running the offset
-# past the end of the file with no way back and skipping whole install steps unread.
+# elements for two lines, and a provisioning log is full of `\r` from the package manager's
+# progress output. Counting elements would overshoot on almost every poll, running the offset past
+# the end of the file with no way back and skipping whole install steps unread.
 #
-# So the count comes from `wc -l` instead, and the offset is derived from that and never from the
-# payload. `wc -l` counts only newline-terminated lines, and the `sed` range stops at that count,
-# so a line still being written is left for the next poll rather than displayed half-formed.
+# So the count comes from `wc -l`, which counts only newline-terminated lines, and the `sed` range
+# stops at that count, so a line still being written waits for the next poll.
 #
-# Deliberately two calls rather than one clever shell one-liner. A `bash -c` sent through wsl.exe
-# does not survive assigning a shell variable and reading it back -- `x=abc; echo $x` comes back
-# empty -- so the count cannot be captured and reused inside the distro. Every other command in
-# this script is variable-free for the same reason. Both halves here interpolate on the PowerShell
-# side, so no `$` ever reaches bash.
+# Two calls rather than one: a `bash -c` sent through wsl.exe does not survive assigning a shell
+# variable and reading it back -- `x=abc; echo $x` comes back empty -- so the count cannot be
+# reused inside the distro. Every other command in this script is variable-free for the same
+# reason, and both halves here interpolate on the PowerShell side, so no `$` reaches bash.
 function Read-LogFrom([int]$FirstLine) {
     $countOut = @(Invoke-InDistro "wc -l < $CloudInitLog")
     $total = $null
@@ -281,9 +252,8 @@ function Read-LogFrom([int]$FirstLine) {
     if ($null -eq $total) { return @{ Total = $FirstLine - 1; Lines = @() } }
     if ($total -lt $FirstLine) { return @{ Total = $total; Lines = @() } }
 
-    # Both the command and the call are hoisted out of the hashtable on purpose. Written inline as
-    # `@{ Lines = @(Invoke-InDistro "sed -n $FirstLine,${total}p ...") }` the hashtable value
-    # collapses to a single line; assigning to a variable first preserves the whole range.
+    # Hoisted out of the hashtable on purpose: written inline, the hashtable value collapses to a
+    # single line, where assigning to a variable first preserves the whole range.
     $sedCommand = "sed -n " + $FirstLine + "," + $total + "p " + $CloudInitLog
     $payload = @(Invoke-InDistro $sedCommand)
     return @{ Total = $total; Lines = $payload }
@@ -302,16 +272,10 @@ function Format-Duration([double]$Seconds) {
     return ("{0}m{1:00}s" -f [int][Math]::Floor($span.TotalMinutes), $span.Seconds)
 }
 
-# Progress lines are written in two tempi: the label appears the moment the thing it names starts,
-# and "-> ok (duration)" is appended when it finishes, so something slow is visibly in progress
-# rather than simply absent. cloud-init's boot stages and install.sh's numbered steps are the same
-# construct at different depths, so they share one stack.
-#
-# A line cannot always be completed in place. modules:final holds the package upgrade and the whole
-# of install.sh -- well over a thousand log lines -- so when output arrives the open line is
-# terminated, the output streams live and indented beneath it, and the line is restated when it
-# closes. Waiting until the end to print anything would hide progress during exactly the stage
-# where the waiting happens.
+# A progress line is written in two parts: the label when the thing it names starts, then
+# "-> ok (duration)" appended when it finishes. cloud-init's stages and install.sh's steps are
+# the same construct at different depths, so they share one stack. A line that has output
+# streamed beneath it is terminated first and restated when it closes.
 #
 # Invariant: only the top of the stack can be unbroken, because opening a child always terminates
 # its parent's line first.
@@ -323,16 +287,13 @@ $pendingLines = [System.Collections.Generic.List[hashtable]]::new()
 $StageLabelWidth = 24
 $StepLabelWidth  = 38
 
-# Indent follows depth, so a label and the content nested under its parent line up: nothing open
-# gives 2, an open stage gives 6, an open stage plus step gives 10.
+# Indent follows depth, so content nested under a parent line lines up with its label.
 function Get-PendingIndent { return "  " + ("    " * $pendingLines.Count) }
 
-# Every line the display below emits goes out through here. Write-Host is the right cmdlet for it
-# -- this is a progress display, not data for a pipeline, and half of it is written without a
-# newline so the '-> ok' can land on the same line later, which Write-Output cannot do. The
-# convention that comes with Write-Host is that the function calling it carries the 'Show' verb;
-# one Show- prefixed helper satisfies that without renaming Split-/Complete-/Reset-PendingLine
-# after what they print rather than the stack bookkeeping they actually do.
+# Write-Host, not Write-Output: this is a progress display, and half of it is written without a
+# newline so a later '-> ok' can land on the same line. The 'Show' verb is what the Write-Host
+# convention asks of the function that calls it, and one such helper spares every caller the
+# rename.
 function Show-Line([string]$Text = '', [switch]$NoNewline) {
     Write-Host $Text -NoNewline:$NoNewline
 }
@@ -375,10 +336,6 @@ function Complete-PendingLine([string]$Kind, [double]$Seconds) {
 # Give up on open lines without inventing a duration for them -- install.sh dying mid-step never
 # writes its `<===`, and a failed run never writes cloud-init's 'finished' banner. The newline
 # still has to go out or the next line is glued onto the abandoned opener.
-#
-# Unwinding is by kind rather than by a depth number. A caller knows which kinds it wants
-# abandoned; it would have to derive a depth from the stack's current size, which names the same
-# entries only while the stack is exactly as deep as the caller assumes.
 function Reset-PendingLines([string[]]$Kinds) {
     while ($pendingLines.Count -and $pendingLines[$pendingLines.Count - 1].Kind -in $Kinds) {
         $idx = $pendingLines.Count - 1
@@ -387,22 +344,17 @@ function Reset-PendingLines([string[]]$Kinds) {
     }
 }
 
-# Abandon any open install.sh step, leaving an open stage alone.
 function Reset-OpenSteps { Reset-PendingLines @('step') }
 
-# Abandon everything, whatever it is.
 function Reset-AllPendingLines { Reset-PendingLines @('stage', 'step') }
 
 $stageUp = 0.0   # uptime from the open stage's banner; steps carry their own duration
 
-# The lines that drive the pending-line stack rather than being content for it: cloud-init's stage
-# banners and install.sh's step markers. They are handled here, apart from the filtering, so
-# neither half has to be read with the other in mind. Returns $true when the line was a marker and
-# has been rendered as one, which tells the caller not to fall through to the generic filter.
+# Returns $true when the line was one of cloud-init's stage banners or install.sh's step markers
+# and has been rendered as one, which tells the caller not to fall through to the generic filter.
 #
 # Nothing but that boolean may leave this function: an accidental value on the pipeline would be
-# read as "handled" and swallow the line. The stack calls it makes all return void, and the display
-# goes to the host, not the pipeline.
+# read as "handled" and swallow the line.
 function Update-PendingFromMarker([string]$Line) {
     if ($Line -match $StageDurationStart) {
         $name = $Matches[1]
@@ -420,8 +372,8 @@ function Update-PendingFromMarker([string]$Line) {
         return $true
     }
 
-    # install.sh's step markers, paired into one line the same way. The `===> ` / `<=== ` prefixes
-    # are its side of the contract; see wsl/distros/ubuntu/install.sh.
+    # The `===> ` / `<=== ` prefixes are install.sh's side of the contract; see
+    # wsl/distros/ubuntu/install.sh.
     if ($Line -match $StepDurationStart) {
         Reset-OpenSteps                                           # a step whose `<===` never came
         Open-PendingLine 'step' $Matches[1] $StepLabelWidth
@@ -430,9 +382,8 @@ function Update-PendingFromMarker([string]$Line) {
 
     if ($Line -match $StepDurationFinish) {
         # TryParse rather than the [double] cast used elsewhere here: it answers "is this a number
-        # at all" without throwing. It reads the current culture, which the cast does not, but that
-        # only matters for the fallback decision -- install.sh always writes a period, and anything
-        # unreadable is meant to land on 0 regardless.
+        # at all" without throwing. It reads the current culture, which only matters for the
+        # fallback decision -- anything unreadable is meant to land on 0 regardless.
         $seconds = 0.0
         if (-not [double]::TryParse($Matches[1], [ref]$seconds)) { $seconds = 0.0 }
         Complete-PendingLine 'step' $seconds
@@ -444,12 +395,10 @@ function Update-PendingFromMarker([string]$Line) {
 
 function Write-StreamedLines($Lines) {
     foreach ($line in $Lines) {
-        # -ShowAllOutput is the "show me exactly what the log says" mode, so it prints raw and
-        # skips the rewriting entirely; reformatting as well would double every line up.
+        # -ShowAllOutput prints the log verbatim; reformatting as well would double every line up.
         if ($ShowAllOutput) { Show-Line "  $line"; continue }
 
-        # Splitting on carriage returns (see Read-LogFrom) leaves empty fragments behind. They are
-        # harmless but carry nothing, so drop them before classifying.
+        # Splitting on carriage returns (see Read-LogFrom) leaves empty fragments behind.
         if (-not $line.Trim()) { continue }
 
         if (Update-PendingFromMarker $line) { continue }

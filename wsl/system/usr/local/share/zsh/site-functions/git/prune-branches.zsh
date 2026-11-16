@@ -24,27 +24,20 @@ Asks before each deletion:
     esac
   done
 
-  # Must be inside a git work tree.
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "prune-branches: not inside a git repository" >&2
     return 1
   fi
 
-  # Current branch (never deleted — you can't -D the checked-out branch); empty on
-  # detached HEAD, which is fine.
+  # Never deleted, since -D cannot remove the checked-out branch. Empty on detached HEAD.
   local current
   current="$(git symbolic-ref --quiet --short HEAD)"
 
-  # Refresh which branches are [gone] and drop stale origin/* refs. Passing --prune
-  # explicitly keeps this correct whether or not the user's git enables fetch.prune,
-  # so the function never relies on a particular config. -q keeps success quiet.
+  # --prune is passed explicitly so the result does not depend on the user's fetch.prune.
   git fetch --prune -q origin || return 1
 
-  # Gather candidates before prompting: the prompt can't live inside this read loop,
-  # since the loop's stdin is the for-each-ref stream (a `read` there would consume a
-  # branch line, not the keystroke). Each entry is "name<TAB>short-sha".
-  # Classify in one pass: name, upstream ref (empty when the branch tracks nothing),
-  # and the track marker ([gone] once the upstream is deleted); tab-separated (%09).
+  # Candidates are gathered before prompting because the loop's stdin is the for-each-ref
+  # stream, where a `read` would consume a branch line rather than the keystroke.
   local -a gone=()
   local name upstream track
   while IFS=$'\t' read -r name upstream track; do
@@ -73,10 +66,8 @@ Asks before each deletion:
     return 0
   fi
 
-  # Delete, prompting per branch. 'a' switches to delete-all; 'q' stops; anything else
-  # (incl. Enter) keeps the branch. -D (force) is required: a squash-merged branch isn't
-  # an ancestor of the default branch, so -d would refuse. The printed SHA is the
-  # recovery handle — git branch <name> <sha> brings it back until gc.
+  # -D is required: a squash-merged branch is not an ancestor of the default branch, so -d
+  # would refuse. The printed SHA is the recovery handle until gc runs.
   local -a deleted=()
   local assume_all=$assume_yes ans
   for entry in "${gone[@]}"; do

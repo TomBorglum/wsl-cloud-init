@@ -6,10 +6,9 @@ if command -v lazydocker >/dev/null 2>&1; then
   exit 3  # already installed; see install.sh
 fi
 
-# Pinned version + known-good checksums (from the release's checksums.txt). Pinning
-# keeps provisioning reproducible, and verifying an embedded hash means a tampered
-# release artifact is rejected even when the download itself succeeds. On upgrade,
-# bump VERSION and refresh both sums from:
+# The embedded sums come from the release's checksums.txt and reject a release artifact
+# replaced after the fact, even when the download itself succeeds. On upgrade, bump VERSION
+# and refresh both from:
 #   https://github.com/jesseduffield/lazydocker/releases/download/v<VERSION>/checksums.txt
 VERSION=0.25.2
 
@@ -24,8 +23,8 @@ esac
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 
-# --proto '=https' refuses any redirect that would downgrade to a clear-text
-# protocol, so the transfer stays HTTPS end to end.
+# --proto '=https' keeps the transfer HTTPS end to end, refusing a redirect that would
+# downgrade to a clear-text protocol.
 curl -fsSL --proto '=https' \
   "https://github.com/jesseduffield/lazydocker/releases/download/v${VERSION}/lazydocker_${VERSION}_Linux_${ARCH}.tar.gz" \
   -o "$tmp/lazydocker.tar.gz"

@@ -1,9 +1,6 @@
-# Override the oh-my-zsh `pj` plugin completion.
-#
-# The stock _pj offers the project list at every word position, so repeated
-# <Tab> keeps appending the same project name (`pj foo foo foo ...`). This
-# version only completes the project name in its actual argument slot, and
-# never offers the `open` subcommand itself — `pjo` is the shorthand for it.
+# Overrides the oh-my-zsh `pj` plugin completion, whose _pj offers the project list at every
+# word position, so repeated <Tab> appends the same name (`pj foo foo foo ...`). This version
+# completes a project name only in its actual argument slot.
 _pj() {
   local -a projects
   local basedir

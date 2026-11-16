@@ -69,25 +69,17 @@ packages:
   - gh
   - jq
 runcmd:
-  # Take ownership of the home directory before anything else runs: write_files/defer set
-  # ownership per-file, but this fixes any root-owned parent dirs cloud-init created and
-  # ensures install.sh (and its .zshenv append) operate on a user-owned tree.
+  # Before anything else runs: write_files/defer sets ownership per file, leaving any parent
+  # directory cloud-init created owned by root, and install.sh appends to .zshenv as the user.
   - chown -R __TARGET_USER__:__TARGET_USER__ /home/__TARGET_USER__
   - GIT_TERMINAL_PROMPT=0 git clone --filter=blob:none --sparse https://github.com/TomBorglum/wsl-cloud-init.git /opt/wsl-cloud-init
-  # Single source of truth for the sparse checkout: this is the only place that declares
-  # which paths the /opt checkout materializes. install.sh and the numbered install
-  # scripts assume every path they consume is already present here and add none of their
-  # own. `wsl/system` and `wsl/user` are pulled whole; the distros branch is narrowed to
-  # `scripts` so the sibling `cloud-init/` (holding user-data.template, which is rendered
-  # Windows-side by provision.ps1 and never read from this checkout) stays out. install.sh
-  # is named on its own. `windows/lib` holds the interop PowerShell helpers install.sh
-  # installs.
+  # The only place that declares which paths the /opt checkout materializes. install.sh and the
+  # numbered install scripts assume every path they consume is already present here and add none
+  # of their own. The distros branch is narrowed to `scripts` so the sibling `cloud-init/` stays
+  # out; provision.ps1 renders user-data.template Windows-side and never reads it from here.
   #
-  # --no-cone because cone mode always materializes every file at the repo root: /opt would
-  # carry README.md, CHANGELOG.md, LICENSE and friends -- noise for anyone who cds in -- and
-  # a root .envrc would fire direnv on every visit. Non-cone rules are gitignore-style: a
-  # leading `/` anchors to the repo root, a trailing `/` takes the directory recursively, and
-  # nothing appears unless a rule names it (so no ancestor files come along for free).
+  # --no-cone because cone mode always materializes every file at the repo root: /opt would carry
+  # README.md, CHANGELOG.md and friends, and a root .envrc would fire direnv on every visit.
   # Runs before `checkout __COMMIT__` so the working tree materializes at the pinned commit.
   - git -C /opt/wsl-cloud-init sparse-checkout set --no-cone '/wsl/system/' '/wsl/user/' '/wsl/distros/ubuntu/scripts/' '/wsl/distros/ubuntu/install.sh' '/windows/lib/'
   - git -C /opt/wsl-cloud-init checkout __COMMIT__
