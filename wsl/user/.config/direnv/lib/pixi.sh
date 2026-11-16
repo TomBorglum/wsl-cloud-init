@@ -89,10 +89,10 @@ EOF
       echo "direnv: created minimal pixi.toml — remember to commit it to git" >&2
     fi
   fi
-  # Re-run this directive whenever the manifest changes, so editing dependencies
-  # re-triggers `pixi install` — no manual `watch_file pixi.toml` in the .envrc.
-  # Idempotent: harmless if the .envrc still lists it explicitly.
-  watch_file pixi.toml
+  # Re-run this directive whenever the manifest or the lockfile changes, so editing
+  # dependencies re-triggers `pixi install` — no manual `watch_file` in the .envrc.
+  # Idempotent: harmless if the .envrc still lists them explicitly.
+  watch_file pixi.toml pixi.lock
   # PATH_add prepends, so the pinned version directory added second wins for `pixi` itself
   # while $PIXI_HOME/bin behind it still resolves `pixi global`'s shims. Adding the version
   # directory rather than relying on the symlink is what keeps this context on its own pin
@@ -100,8 +100,31 @@ EOF
   # version directory on PATH.
   PATH_add "$pixi_home/bin"
   PATH_add "$version_dir"
+  # Everything below this point can execute code the project supplies: a pypi source
+  # dependency builds during `pixi install`, and activation runs the packages' activate.d
+  # scripts plus the manifest's [activation] section. A pixi.toml or pixi.lock that changed
+  # under the user — a git pull, a branch switch — therefore needs a fresh `direnv allow`
+  # first. A project whose [activation] calls a script in the repository adds that path to its
+  # own .envrc, since this directive cannot know it. Requires direnv >= 2.38.0.
+  require_allowed pixi.toml
   "$version_bin" install --quiet || return 1
-  local env_bin
-  env_bin="$(pwd)/.pixi/envs/default/bin"
-  PATH_add "$env_bin"
+  # The lockfile is guarded here rather than beside the manifest because `direnv allow` errors
+  # on a required file that does not exist: listing it before the install that creates it would
+  # block every load of a project that has no pixi.lock yet, including one this directive has
+  # just scaffolded, and the lockfile would never come into being. A load that solves a new
+  # lockfile therefore stops short of activation until that lockfile is approved.
+  if [[ -f pixi.lock ]]; then
+    require_allowed pixi.lock
+  fi
+  # Activation is what separates this from a bare PATH_add: the activate.d scripts export what
+  # the packages configure themselves with, and conda-forge's rust sets the cargo linker
+  # variable that cargo hashes into every crate fingerprint, so a project entered through
+  # direnv and through `pixi run` otherwise rebuilds its whole tree each time it alternates.
+  # --shell bash because direnv evaluates an .envrc with bash, while the zsh hook emits
+  # compinit lines that do not parse there. The hook expands PATH as it writes it, so it has
+  # to follow both PATH_add calls for the pinned directories to survive behind the environment.
+  local hook
+  # Captured first: `eval "$(...)"` would report eval's status, not the hook's.
+  hook="$("$version_bin" shell-hook --shell bash --change-ps1 false --frozen --no-install)" || return 1
+  eval "$hook"
 }

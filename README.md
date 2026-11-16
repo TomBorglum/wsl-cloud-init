@@ -349,6 +349,39 @@ The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
 so a committed `.envrc` can drive CI as well as your shell.
 
+#### pixi environment activation
+
+`use pixi` activates the environment rather than only putting `.pixi/envs/default/bin` on `PATH`,
+which is what `pixi run` and `pixi shell` do. `CONDA_PREFIX`, `CONDA_DEFAULT_ENV`, the `PIXI_*`
+block and whatever the installed packages export from their own activation scripts are all present
+in the shell. A project entered through direnv and the same project entered through `pixi run`
+therefore see one environment. For a Rust project that is the difference between a warm and a cold
+build tree: conda-forge's `rust` package sets the cargo linker variable, cargo hashes the linker
+into every crate fingerprint, and both entry paths write to one `target/`, so alternating them
+without activation recompiles the whole dependency tree each time.
+
+Activation executes code — the installed packages' activation scripts, and the manifest's
+`[activation]` section — so `pixi.toml` and `pixi.lock` are authorised the way the `.envrc` is. A
+change to either, whether from `pixi add` or from a `git pull` or branch switch, blocks the next
+load:
+
+```
+direnv: pixi.lock requires approval. Run 'direnv allow' to approve.
+```
+
+`direnv allow` clears it. Approval tracks file contents, so `touch` alone changes nothing. A brand
+new project costs three approvals: the `.envrc`, then the scaffolded `pixi.toml`, then the
+`pixi.lock` that the first `pixi install` solves.
+
+A manifest whose `[activation]` section runs a script from the repository must list that script in
+the project's own `.envrc`, because the directive cannot know its path:
+
+```bash
+# .envrc
+use pixi 0.84.2
+require_allowed scripts/activate-extra.sh
+```
+
 #### pixi project templates
 
 pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name** after the
@@ -368,8 +401,9 @@ scaffolded and `pixi install` does not run, so a typo surfaces instead of silent
 minimal manifest. Once `pixi.toml` exists it is never overwritten, so the template name is only
 consulted on first scaffold.
 
-`use pixi` also watches `pixi.toml`, so editing dependencies re-runs `pixi install` on the next
-`cd` into the project. No separate `watch_file pixi.toml` line is needed in the `.envrc`.
+`use pixi` also watches `pixi.toml` and `pixi.lock`, so editing dependencies re-runs
+`pixi install` on the next `cd` into the project. No separate `watch_file` line is needed in the
+`.envrc`.
 
 ### Claude Code cloud sessions
 
