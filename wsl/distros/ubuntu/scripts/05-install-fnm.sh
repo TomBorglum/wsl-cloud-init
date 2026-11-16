@@ -8,6 +8,11 @@ if [[ -x "/home/$TARGET_USER/.fnm/fnm" ]]; then
   exit 3  # already installed; see install.sh
 fi
 
-curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install -o /tmp/fnm-install.sh
-sudo -u "$TARGET_USER" bash /tmp/fnm-install.sh --install-dir "/home/$TARGET_USER/.fnm" --skip-shell
-rm -f /tmp/fnm-install.sh
+# The trap is what removes the download: a failure in the install exits before any `rm` would run.
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 https://fnm.vercel.app/install -o "$tmp"
+# mktemp creates the file 0600 owned by root, and the installer below runs as $TARGET_USER.
+chown "$TARGET_USER" "$tmp"
+sudo -u "$TARGET_USER" bash "$tmp" --install-dir "/home/$TARGET_USER/.fnm" --skip-shell

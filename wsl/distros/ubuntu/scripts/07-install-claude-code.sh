@@ -22,9 +22,14 @@ fi
 CONTEXT7_API_KEY="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 : "${CONTEXT7_API_KEY:?CONTEXT7_API_KEY is required}"
 
-curl -fsSL --proto '=https' --tlsv1.2 https://claude.ai/install.sh -o /tmp/claude-install.sh
-sudo -u "$TARGET_USER" bash /tmp/claude-install.sh
-rm -f /tmp/claude-install.sh
+# The trap is what removes the download: a failure in the install exits before any `rm` would run.
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 https://claude.ai/install.sh -o "$tmp"
+# mktemp creates the file 0600 owned by root, and the installer below runs as $TARGET_USER.
+chown "$TARGET_USER" "$tmp"
+sudo -u "$TARGET_USER" bash "$tmp"
 
 sudo -u "$TARGET_USER" tee -a "/home/$TARGET_USER/.zshenv" > /dev/null << 'EOF'
 export PATH="$HOME/.local/bin:$PATH"
