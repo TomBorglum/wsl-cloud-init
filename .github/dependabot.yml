@@ -1,18 +1,13 @@
 version: 2
 updates:
-  # Keep GitHub Actions used in workflows up to date. This is the only manifest
-  # ecosystem present today; add others (e.g. docker, pip, npm) here if the repo
-  # gains those manifests later.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
     commit-message:
-      # "ci", not "deps": these actions run only in CI and never reach a
-      # provisioned environment, so their bumps must not cut a release of
-      # wsl-cloud-init. release-please treats "ci" as a hidden, non-releasable
-      # type. Tools that ARE shipped into the distro use "deps" instead (see
-      # update-lazydocker.yml), which is releasable and cuts a patch.
+      # "ci", not "deps": these actions run only in CI and never reach a provisioned
+      # environment, so their bumps must not cut a release. release-please treats "ci" as a
+      # hidden, non-releasable type, where the "deps" the shipped tools use cuts a patch.
       prefix: "ci"
     groups:
       actions:

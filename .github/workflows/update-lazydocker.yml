@@ -1,9 +1,8 @@
 name: Update lazydocker
 
-# Dependabot can't track a version pinned in a shell script, and wouldn't refresh
-# the embedded checksums anyway. This job does both: it bumps VERSION and both
-# per-arch SHA-256 sums from the release's checksums.txt, then opens a PR that
-# goes through the normal SonarCloud gate + branch rules before merge.
+# Dependabot cannot track a version pinned in a shell script, and would not refresh the
+# embedded checksums anyway, so this job bumps VERSION and both per-arch SHA-256 sums from
+# the release's checksums.txt.
 #
 # Authenticates as the wsl-cloud-init-bot GitHub App (Contents: read/write and Pull
 # requests: read/write) rather than with GITHUB_TOKEN, because events created by

@@ -96,9 +96,8 @@ Every report of a phase's state names it `Phase <n> of <total> — <name>` and g
 current `Status` value verbatim. This applies in step 11 and step 12 alike.
 
 Write `of <total>` always, including `Phase 1 of 1`. The count is what tells the reader whether
-anything follows. A bare `Phase 1` implies a sequence that a single-phase plan does not have, and
-reporting a one-phase plan in the vocabulary of gates and phases misleads about where the work
-stands.
+anything follows, and a bare `Phase 1` implies a sequence a single-phase plan does not have. Do
+not report a one-phase plan in the vocabulary of gates and phases.
 
 Use the `Status` value, never a synonym. A phase at a PR gate is `awaiting gate`, not
 "complete": the work is done and the merge is not. `complete` is written and reported only after
@@ -155,21 +154,20 @@ plan unwritable.
 Call `EnterPlanMode` unless the session is already in it. If it already is, continue in it
 rather than re-entering.
 
-Plan mode is what enforces this skill's restrictions: it routes every file-edit and shell-write
-tool past allow rules, so no write can be auto-approved while planning, and it supplies both the
-designated plan file path and the `ExitPlanMode` approval gate. The restriction comes from the
-mode, not from frontmatter.
+Plan mode is what enforces this skill's restrictions, not frontmatter: no write can be
+auto-approved while planning, and the mode supplies both the designated plan file path and the
+`ExitPlanMode` approval gate.
 
 Never pre-approve `ExitPlanMode`, whether through an `allowed-tools` entry here or an `allow`
 rule in settings. The plan-approval dialogue **is** `ExitPlanMode`'s permission prompt, so
 granting it replaces the plan review with a bare mode-switch confirmation and destroys the
 approval gate this skill exists to reach.
 
-This file carries no `allowed-tools` list at all. On an instance this repository provisions
-there is nothing left for one to grant: reads and read-only shell commands are already permitted
-inside plan mode, and Context7 is registered at user scope by `07-install-claude-code.sh`. A
-list of tools that would not have prompted anyway reads as load-bearing while doing nothing,
-which is how `ExitPlanMode` ends up added to it.
+This file carries no `allowed-tools` list, and must not gain one. On an instance this repository
+provisions there is nothing left to grant: reads and read-only shell commands are already
+permitted inside plan mode, and Context7 is registered at user scope by
+`07-install-claude-code.sh`. A list that grants nothing still reads as load-bearing, which is how
+`ExitPlanMode` ends up added to it.
 
 ### 4. Confirm the request
 

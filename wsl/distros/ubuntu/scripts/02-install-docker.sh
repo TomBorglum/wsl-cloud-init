@@ -33,18 +33,16 @@ EOF
 systemctl enable docker
 systemctl start docker
 
-# Docker is not just this script's payload -- bringing dockerd up creates the docker0 bridge
-# and rewrites the host's iptables rules, which briefly disrupts WSL's network. Every script
-# after this one downloads over that network, and a curl that starts during the churn fails
-# mid-transfer, taking the run down three steps away from the actual cause. `systemctl start`
-# returns on systemd's view of the unit, so wait here until the daemon is genuinely up and
-# answering before handing back to install.sh and letting the next script begin.
+# Bringing dockerd up creates the docker0 bridge and rewrites the host's iptables rules, which
+# briefly disrupts WSL's network. Every script after this one downloads over that network, and a
+# curl that starts during the churn fails mid-transfer, taking the run down three steps away from
+# the actual cause. So wait here until the daemon answers before handing back to install.sh.
 #
-# The wait is counted in poll iterations, not against a wall clock: a fresh instance boots
-# with an approximate CLOCK_REALTIME that time synchronisation corrects while this very
-# script runs (see the uptime_cs comment in install.sh), so $SECONDS can step mid-loop.
-# One poll per second, so the poll count is the timeout in seconds and the two cannot drift
-# apart in the message below.
+# The wait is counted in poll iterations, not against a wall clock: a fresh instance boots with
+# an approximate CLOCK_REALTIME that time synchronisation corrects while this very script runs
+# (see the uptime_cs comment in install.sh), so $SECONDS can step mid-loop. One poll per second,
+# so the poll count is the timeout in seconds and the two cannot drift apart in the message
+# below.
 DOCKER_WAIT_POLLS=60
 DOCKER_WAIT_INTERVAL=1
 
@@ -73,9 +71,8 @@ if [[ "$active" != "active" || "$sub" != "running" ]]; then
   exit 1
 fi
 
-# active/running is systemd's view of dockerd. This confirms the daemon is answering on its
-# socket, which is what the next script's network -- and the user's first `docker` command --
-# actually depend on.
+# active/running is only systemd's view of dockerd. What the next script's network and the user's
+# first `docker` command depend on is the daemon answering on its socket.
 ready=0
 for (( i = 0; i < DOCKER_WAIT_POLLS; i++ )); do
   if docker info >/dev/null 2>&1; then

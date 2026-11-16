@@ -4,23 +4,16 @@ set -euo pipefail
 # Record which version of this project the instance was provisioned from, as sourceable
 # KEY="value" pairs in the style of /etc/os-release.
 #
-# The file is written once, by cloud-init, and is immutable thereafter. cloud-init is the
-# only caller that exports WSL_CLOUD_INIT_REF (user-data.template's runcmd runs install.sh
-# directly as root), so that variable is what distinguishes a provisioning run from a manual
-# re-run such as:
+# The file is written once, by cloud-init, and is immutable thereafter. cloud-init is the only
+# caller that exports WSL_CLOUD_INIT_REF, so that variable is what distinguishes a provisioning
+# run from a manual re-run.
 #
-#   sudo INSTALL_GIT_CONFIG=true bash /opt/wsl-cloud-init/wsl/distros/ubuntu/install.sh
-#
-# On a re-run this script does not write: it *verifies* that /opt still sits at the commit
-# the file records, and fails if it does not. That is the "already installed" guard other
-# scripts spell as an early exit 3, inverted -- because a mismatch is not a no-op, it is an
-# attempt to upgrade a running instance in place.
-#
-# Upgrading in place is not supported. The other install scripts guard on the presence of
-# what they install (docker on PATH, ~/.sdkman, ...), so against a newer /opt most of them
-# would skip and only the few that rewrite their payload unconditionally would apply,
-# leaving an instance matching no commit and nothing to say so. Failing here, first, aborts
-# the whole run (install.sh stops on any non-zero script) before that can happen.
+# On a re-run this script verifies that /opt still sits at the commit the file records, and fails
+# if it does not, because a mismatch is an attempt to upgrade a running instance in place. The
+# other install scripts guard on the presence of what they install (docker on PATH, ~/.sdkman,
+# ...), so against a newer /opt most of them would skip and only the few that rewrite their
+# payload unconditionally would apply, leaving an instance matching no commit and nothing to say
+# so. Failing here, first, aborts the whole run before that can happen.
 
 RELEASE_FILE=/etc/wsl-cloud-init-release
 REPO=/opt/wsl-cloud-init
@@ -53,9 +46,8 @@ EOF
   exit 0
 fi
 
-# Re-run. Reaching here without the file means /opt was moved to a version that ships this
-# script onto an instance provisioned before it existed -- an in-place upgrade by another
-# name, since the older instance's own scripts/ has no 01-install-release-info.sh to run.
+# Reaching here without the file means /opt was moved to a version that ships this script onto
+# an instance provisioned before it existed -- an in-place upgrade by another name.
 if [[ ! -f "$RELEASE_FILE" ]]; then
   echo "$RELEASE_FILE is missing" >&2
   exit 1

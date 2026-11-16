@@ -4,14 +4,12 @@ shopt -s nullglob
 
 : "${TARGET_USER:?TARGET_USER is required}"
 
-# direnv functions (per-user), sourced from the sparse checkout declared in
-# user-data.template. Idempotent: each run re-installs the current set (install
-# overwrites), so re-running can add directives that were skipped before.
+# Each run re-installs the current set, so a re-run picks up directives added since
+# provisioning.
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.config/direnv/lib"
 
-# Runtime directives (fnm, pixi, sdk) always; the claude/ subdir (use_sonarqube_mcp) is
-# gated on INSTALL_CLAUDE_CODE since it only makes sense with Claude Code. Both install flat
-# into ~/.config/direnv/lib (direnv globs that dir non-recursively).
+# The claude/ subdir is gated on INSTALL_CLAUDE_CODE. Both sets install flat into
+# ~/.config/direnv/lib, which direnv globs non-recursively.
 src=/opt/wsl-cloud-init/wsl/user/.config/direnv/lib
 dirs=("$src")
 if [[ "${INSTALL_CLAUDE_CODE:-}" == "true" ]]; then

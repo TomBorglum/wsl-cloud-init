@@ -1,22 +1,18 @@
 # wsl-cloud-init
 
-An opinionated, cloud-init–driven way to provision a configured WSL Ubuntu developer environment from a single command.
+A cloud-init–driven way to provision a configured WSL Ubuntu developer environment from a single command.
 
 ## Overview
 
-Setting up a WSL environment by hand means installing tools, configuring the shell, wiring up
-Git credentials, and bridging Windows apps, repeated for every new instance.
-
-wsl-cloud-init replaces that with one repeatable step. It uses cloud-init to build a fresh WSL
-Ubuntu instance from a declarative config, with a curated set of tools, so every instance comes
-out the same.
+cloud-init builds a fresh WSL Ubuntu instance from a declarative config, with a curated set of
+tools, so every instance comes out the same.
 
 Provisioning runs from Windows: a PowerShell script renders a cloud-init template, installs the
 distro, and waits for setup to finish. On first boot cloud-init runs a series of scripts that
 build the environment and wire Windows tools — VS Code, Git Credential Manager — into the Linux
 shell.
 
-## What you get
+## What's installed
 
 Every provisioned instance gets the baseline below. Four additions are opt-in, each behind a
 provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`, `-InstallVsCodeInterop`, and
@@ -44,13 +40,12 @@ containers, images, and volumes.
 
 Opt-in via `-InstallGitConfig`: your Git identity, the credential helper, `gh` auth, and the
 Git shell helpers. Both `git` and `gh` authenticate through Windows
-**[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, reusing
-your existing Windows GitHub sign-in. One credential serves both, so there is no second token
-to create and no `gh auth login` to run.
+**[Git Credential Manager](https://github.com/git-ecosystem/git-credential-manager)**, from the
+one `git:https://github.com` credential it stores.
 
 ### Claude Code
 
-Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, pre-wired to the
+Opt-in via `-InstallClaudeCode`: the **Claude Code** CLI, wired to the
 **[Context7](https://context7.com)** MCP for current library docs.
 
 Settings ship with it, including the `Concise` output style, and so does a
@@ -66,9 +61,9 @@ Two skills come bundled, both invoked explicitly and never on Claude's own initi
   exploration to subagents and reviewing the finished plan against current practice before it
   reaches you for approval, then builds it once you approve.
 
-A `use sonarqube_mcp` direnv directive comes with it for the projects that want it. It gives
-them a read-only Sonar subagent that collects SonarQube Cloud issues on demand, without putting
-an MCP server in your main session. See
+A `use sonarqube_mcp` direnv directive comes with it. It gives a project a read-only Sonar
+subagent that collects SonarQube Cloud issues on demand, without putting an MCP server in your
+main session. See
 [the setup below](#optional-the-use-sonarqube_mcp-direnv-directive-private-repos).
 
 ### WSL interop
@@ -104,8 +99,7 @@ Installed from the cloud-init package list:
 
 ## Prerequisites
 
-The baseline environment needs two things on the Windows side; the Ubuntu environment is built
-for you:
+The baseline needs two things on the Windows side:
 
 - **An up-to-date WSL 2** — run `wsl --update`.
 - **Git for Windows** — `provision.ps1` runs local `git` to resolve the commit your checkout
@@ -116,8 +110,7 @@ Each opt-in flag needs additional Windows-side setup, described under
 
 ## Getting started
 
-Both steps run on **Windows**. This is the whole baseline path, with no accounts or secrets
-required.
+Both steps run on **Windows**. The baseline path needs no accounts and no secrets.
 
 ### 1. Clone this repository
 
@@ -139,7 +132,6 @@ powershell -ExecutionPolicy Bypass -File .\windows\scripts\provision.ps1 `
   -InstanceName dev
 ```
 
-`-ExecutionPolicy Bypass` runs the script without changing your machine's PowerShell policy.
 Every parameter is described under [Provisioning parameters](#provisioning-parameters).
 
 The script renders the cloud-init config, installs Ubuntu, waits for cloud-init to finish, then
@@ -195,8 +187,7 @@ costs your main session nothing: only the subagent's one-line description is eve
 and the Docker container (pulled once on first use) does not start until the subagent runs. The
 subagent is deliberately powerless: the Sonar server's tools are the only ones it has, so it
 cannot read your files, run commands or edit anything, and the server runs in read-only mode, so
-it cannot change an issue's status either. Every bit of reasoning and every write stays in your
-main session.
+it cannot change an issue's status either. Reasoning and writes stay in the main session.
 
 Add `use sonarqube_mcp` to a project's `.envrc` (like `use pixi` / `use sdk`) and run
 `direnv allow`. On first activation the directive scaffolds a **secret-free**
@@ -219,9 +210,8 @@ cmdkey /generic:wsl-cloud-init:SONARQUBE_ORG   /user:wsl-cloud-init /pass:<sonar
 | `wsl-cloud-init:SONARQUBE_TOKEN` | `wsl-cloud-init` | your SonarQube Cloud token |
 | `wsl-cloud-init:SONARQUBE_ORG` | `wsl-cloud-init` | your SonarQube Cloud organization key |
 
-Then, in the project you want it for, add `use sonarqube_mcp` to `.envrc` and run
-`direnv allow`. The first `claude` session there has to trust the folder — the prompt you accept
-on first use anyway — before the subagent's server will load.
+The first `claude` session in that project has to trust the folder before the subagent's server
+will load.
 
 Two notes for a mixed team. The agent file is portable: nothing in it is specific to a
 wsl-cloud-init instance, so any teammate who supplies `SONARQUBE_TOKEN` and `SONARQUBE_ORG`
@@ -308,8 +298,6 @@ sudo INSTALL_ZED_INTEROP=true INSTALL_ZED_CONFIG=true \
 
 ## Usage
 
-The commands and per-project setup below are included in the provisioned instance.
-
 ### direnv
 
 fnm, pixi, and SDKMAN are not on your global `PATH`. Each project activates the versions it needs
@@ -331,10 +319,9 @@ such as `22.14.0` or `21.0.2-tem`, not a partial like `22` or `lts`.
 `use pixi` also installs **pixi itself** at the version you pin, so the first `direnv allow` in a
 pixi project pauses while it downloads, and direnv notes that it is taking a while. Each version
 lands in its own directory under `~/.pixi/versions/`, the way SDKMAN and fnm keep theirs, and
-`~/.pixi/bin/pixi` is a symlink to the one the current project pins. Nothing is ever uninstalled,
-so switching back to a version you have used before is instant and needs no network. Reclaim one
-with `rm -rf ~/.pixi/versions/<version>` and it is re-downloaded the next time a project asks for
-it.
+`~/.pixi/bin/pixi` is a symlink to the one the current project pins. Nothing is uninstalled,
+so switching back to a version already present needs no network. Reclaim one with
+`rm -rf ~/.pixi/versions/<version>` and it is re-downloaded the next time a project asks for it.
 
 The version lives in the `.envrc` and nowhere else, so that is where you change it; editing it
 re-triggers the directive on the next prompt. `pixi self-update` is therefore not the way to move
@@ -342,8 +329,8 @@ a project to a new pixi: it rewrites the binary in place, and the next `direnv a
 pinned version back. A project that also wants the pin enforced outside direnv — a bare
 `pixi install`, or CI without this directive — can declare
 [`requires-pixi`](https://pixi.prefix.dev/latest/reference/pixi_manifest/) in its own
-`pixi.toml`; nothing here writes it for you. One rough edge: zsh completions are generated from
-whichever version was activated most recently, because they are loaded once per shell.
+`pixi.toml`; nothing here writes it for you. zsh completions are generated from whichever version
+was activated most recently, because they are loaded once per shell.
 
 The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
@@ -378,13 +365,13 @@ require_allowed scripts/activate-extra.sh
 
 #### pixi project templates
 
-pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name** after the
-version. When a project has no `pixi.toml` yet, `use pixi <version> <name>` scaffolds one from
+`use pixi` takes an optional **template name** after the version. When a project has no
+`pixi.toml` yet, `use pixi <version> <name>` scaffolds one from
 `~/.config/pixi/templates/<name>.toml`, substituting the project directory name, while a bare
 `use pixi <version>` writes the minimal `[workspace]`-only manifest. A `python` template ships by
 default: runtime deps plus an isolated `test` feature with pytest/basedpyright/ruff tasks and
 `default`/`prod` environments on a shared solve-group. Drop more `*.toml` files into that
-directory to add your own. First-time setup is two steps, because you create the `.envrc` by hand:
+directory to add your own. Create the `.envrc` by hand:
 
 ```bash
 echo 'use pixi 0.81.0 python' > .envrc && direnv allow
@@ -424,8 +411,8 @@ pj my-project   # cd into ~/projects/my-project
 
 ### clone-repo
 
-*Requires `-InstallGitConfig`.* Clone one of your GitHub repos into `~/projects/<name>` and drop
-you inside it. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
+*Requires `-InstallGitConfig`.* Clone one of your GitHub repos into `~/projects/<name>` and `cd`
+in. Tab-completion lists your repos; re-running just `cd`s into an existing checkout.
 
 ```bash
 clone-repo my-project                 # clones <you>/my-project
@@ -514,8 +501,6 @@ zed src/app.ts    # open a file
 
 ## Configuration
 
-What you can set when provisioning, and how the instance is derived.
-
 ### Provisioning parameters
 
 `windows/scripts/provision.ps1` takes:
@@ -567,8 +552,8 @@ Windows Credential Manager provides:
 | `wsl-cloud-init:SONARQUBE_ORG` | Read by direnv for the `use sonarqube_mcp` directive's Sonar subagent (installed with `-InstallClaudeCode`) — **only required if you use that directive** |
 | `git:https://github.com` | Your Windows GitHub sign-in, stored by Git Credential Manager. Both `git` and [`gh`](https://cli.github.com) reuse it — **only required with `-InstallGitConfig`**. Not created by us; sign in to GitHub on Windows so it exists. |
 
-`git` and `gh` authenticate from that single credential, so there is no second token to create
-and no `gh auth login` to run. When `gh`'s session stops working it re-reads the credential and
+`git` and `gh` authenticate from that single credential; neither needs a token of its own and
+`gh auth login` is never run. When `gh`'s session stops working it re-reads the credential and
 retries, so a token rotated in Windows Credential Manager takes effect on the next `gh` call.
 
 ### Target user
@@ -588,7 +573,7 @@ cat /etc/wsl-cloud-init-release
 ```
 
 Two fields identify the build. `COMMIT` is the authoritative identifier, the commit
-`/opt/wsl-cloud-init` is checked out at. `REF` is the friendliest name `provision.ps1` could give
+`/opt/wsl-cloud-init` is checked out at. `REF` is the most specific name `provision.ps1` could give
 that commit, resolved from the checkout it ran out of:
 
 | Provisioned from | `REF` |
@@ -629,7 +614,7 @@ less /var/log/cloud-init.log          # cloud-init's own log
 step it is on and captures that step's output, replaying it only if the step fails. A step that
 asked a question would therefore sit waiting on a prompt you cannot see, and one that put the
 terminal into raw mode would take `Ctrl-C` with it, leaving the terminal apparently locked up.
-Every step now runs with its stdin detached, so a step that wants input fails immediately and its
+Every step runs with its stdin detached, so a step that wants input fails immediately and its
 output is shown instead of hanging. To recover a session already stuck like that, kill the run
 from another shell (or `wsl --terminate <instance>` from Windows) and run `reset` to restore the
 terminal. Instances provisioned before this fix still carry the old scripts, and [in-place

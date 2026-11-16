@@ -14,14 +14,12 @@ create-branch() {
   fi
   local branch="$1"
 
-  # Must be inside a git work tree.
   if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "create-branch: not inside a git repository" >&2
     return 1
   fi
 
-  # Determine existence on both sides. gh's {owner}/{repo} placeholders resolve
-  # from the current repo's remote.
+  # gh's {owner}/{repo} placeholders resolve from the current repo's remote.
   local local_exists=false remote_exists=false
   git show-ref --verify --quiet "refs/heads/$branch" && local_exists=true
   gh api "repos/{owner}/{repo}/git/ref/heads/$branch" >/dev/null 2>&1 && remote_exists=true
@@ -36,10 +34,8 @@ create-branch() {
   # Create the ref on origin first, then check it out locally with tracking, so a
   # plain 'git push' just works (no -u needed).
   if $remote_exists; then
-    # Already on origin — skip creation and just check it out.
     echo "Already exists: $branch — checking it out"
   else
-    # Base the new branch on the repo's current default branch.
     local default sha
     default="$(gh api repos/{owner}/{repo} -q .default_branch 2>/dev/null)"
     if [[ -z "$default" ]]; then
@@ -55,7 +51,6 @@ create-branch() {
     echo "Created $branch off $default (tracking origin/$branch)"
   fi
 
-  # Bring it down and check out with tracking, then navigate to the repo root.
   git fetch -q origin "$branch" || return 1
   if $local_exists; then
     git switch -q "$branch" || return 1

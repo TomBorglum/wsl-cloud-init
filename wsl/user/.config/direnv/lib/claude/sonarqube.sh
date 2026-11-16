@@ -1,25 +1,14 @@
 #!/bin/bash
-# use_sonarqube_mcp — direnv directive that gives Claude a read-only SonarQube Cloud
-# subagent for the current project, so it can collect Sonar issues on demand (handy for
-# private repos whose SonarCloud dashboards aren't publicly reachable). Add
-# `use sonarqube_mcp` to a project's .envrc; both files it touches are secret-free and meant
-# to be committed and shared.
+# use_sonarqube_mcp — direnv directive that gives Claude a read-only SonarQube Cloud subagent
+# for the current project. The README documents what it is for and how to set it up.
 #
-# The server is declared *inline in the subagent definition*, not registered with the
-# session. That is the whole point: an inline server connects when the subagent starts and
-# disconnects when it finishes, so the main session carries only the subagent's one-line
-# description instead of the server's whole tool list on every request — and no container
-# runs until Sonar data is actually wanted. The subagent is also the narrowest thing that can
-# do the job: its tool allowlist is the Sonar server and nothing else (no file reads, no
-# shell, no edits), and SONARQUBE_READ_ONLY makes the server itself refuse every write. It
-# collects data; the session that delegated to it does the reasoning and the fixing.
+# The server is declared inline in the subagent definition rather than registered with the
+# session, so the main session carries only the subagent's one-line description and no
+# container runs until Sonar data is wanted. The subagent's tool allowlist is the Sonar server
+# and nothing else, and SONARQUBE_READ_ONLY makes the server refuse every write.
 #
-# On first use it scaffolds a .claude/agents/sonarqube.md whose env references
-# ${SONARQUBE_TOKEN:-} / ${SONARQUBE_ORG:-}, and on every load it exports those from Windows
-# Credential Manager so the server can authenticate. The secret never touches disk in the
-# project; direnv unsets the exports when you leave the directory. Nothing in the scaffolded
-# file is specific to this instance, so a teammate who supplies those two variables their own
-# way gets the same subagent from the repo.
+# The scaffolded file references ${SONARQUBE_TOKEN:-} / ${SONARQUBE_ORG:-} and never their
+# values, so no secret touches disk in the project.
 #
 # It runs in the direnv context, so it MUST NOT break the .envrc: every path returns (never
 # exits), and unmet prerequisites are reported as warnings rather than failures. A correctly
@@ -27,11 +16,10 @@
 IMAGE="sonarsource/sonarqube-mcp:1.22.0.3040"
 
 use_sonarqube_mcp() {
-  # 1. Scaffold ./.claude/agents/sonarqube.md once. There is no `claude` subcommand that
-  #    writes an agent file, so this is a plain heredoc — which also means the directive no
-  #    longer depends on `claude` being on PATH at all. Guard on the file's absence and never
-  #    rewrite it: this runs on every cd, and reformatting a tracked file each time would
-  #    leave every consuming repository permanently dirty.
+  # 1. Scaffold ./.claude/agents/sonarqube.md once. No `claude` subcommand writes an agent
+  #    file, so this is a plain heredoc, which also keeps the directive independent of
+  #    `claude` being on PATH. Never rewrite it: this runs on every cd, and reformatting a
+  #    tracked file each time would leave every consuming repository permanently dirty.
   #
   #    The heredoc is unquoted so $IMAGE expands; the two \${...} references are escaped so
   #    they reach the file literally, for Claude Code to expand from the environment exported
@@ -39,13 +27,9 @@ use_sonarqube_mcp() {
   #    default is passed through as the literal "${VAR}" text rather than an empty value,
   #    which the server would then try to authenticate with.
   #
-  #    The file pins no model and no effort level: which model runs a subagent is the host's
-  #    call, not the project's. On an instance this repo provisions, ~/.claude/settings.json
-  #    already runs every subagent on haiku at low effort — and its
-  #    CLAUDE_CODE_SUBAGENT_MODEL_FORCE makes Claude Code ignore a `model:` here outright, so
-  #    pinning one would be dead config that reads as though it did something. What this file
-  #    does pin is capability: the tool allowlist and the server's read-only mode, which is
-  #    what the collect-don't-reason contract actually rests on.
+  #    No model and no effort level are pinned: which model runs a subagent is the host's
+  #    call, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE in ~/.claude/settings.json makes Claude Code
+  #    ignore a `model:` here outright. What this file pins is capability.
   local agent_file=.claude/agents/sonarqube.md
   if [[ ! -f "$agent_file" ]]; then
     if ! mkdir -p "$(dirname "$agent_file")"; then

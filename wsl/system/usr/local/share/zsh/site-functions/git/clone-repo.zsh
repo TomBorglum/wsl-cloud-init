@@ -31,11 +31,9 @@ clone-repo() {
   gh repo clone "$spec" "$target" || return 1
   cd "$target"
 }
-# Path to the shared per-user cache library. Sourced only inside subshells (see
-# _clone-repo_cache) so its wsl_cache_* helpers never leak into the interactive shell.
 _clone_repo_cachelib=/usr/local/lib/wsl-cloud-init/wsl-cache.sh
-# Run a wsl_cache_* function in an isolated subshell so its helpers stay out of the
-# interactive shell. Cache reads echo to stdout; writes persist to disk regardless.
+# The subshell keeps the cache library's helpers out of the interactive shell. Reads echo to
+# stdout; writes persist to disk regardless.
 _clone-repo_cache() { ( source "$_clone_repo_cachelib" || return; "$@" ) }
 
 _clone-repo_complete() {
@@ -88,10 +86,8 @@ _clone-repo_complete() {
   [[ -n "$repolist" ]] || return
   local -a repos
   repos=(${(f)repolist})
-  # Enter interactive menu selection on the first Tab rather than dumping a static
-  # columnar list. A static listing taller than the terminal scrolls the prompt
-  # off-screen and becomes unusable; menu selection (enabled globally by oh-my-zsh's
-  # `menu select`) instead scrolls the matches in place, keeping the prompt visible.
+  # Menu selection rather than a static columnar list, which scrolls the prompt off-screen
+  # once it is taller than the terminal. oh-my-zsh's `menu select` enables it globally.
   compadd -- "${repos[@]}" && compstate[insert]=menu
 }
 compdef _clone-repo_complete clone-repo

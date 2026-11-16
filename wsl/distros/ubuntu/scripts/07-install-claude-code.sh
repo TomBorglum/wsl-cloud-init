@@ -15,10 +15,8 @@ if [[ -x "/home/$TARGET_USER/.local/bin/claude" ]]; then
   exit 3  # already installed; see install.sh
 fi
 
-# Resolve the Context7 API key from Windows Credential Manager via wsl_interop_credential
-# (all the PowerShell lives in wsl-interop.sh). The secret is fetched inside PowerShell
-# and returned on stdout; only the fetch code crosses the boundary, never the value. We are
-# committed to installing here, so it is fetched unconditionally.
+# The secret is fetched inside PowerShell: only the fetch code crosses the interop boundary,
+# never the value. Fetched unconditionally, since the install is already committed to here.
 CONTEXT7_API_KEY="$(wsl_interop_credential "wsl-cloud-init:CONTEXT7_API_KEY")"
 : "${CONTEXT7_API_KEY:?CONTEXT7_API_KEY is required}"
 
@@ -37,8 +35,7 @@ EOF
 
 sudo -u "$TARGET_USER" /home/"$TARGET_USER"/.local/bin/claude mcp add context7 https://mcp.context7.com/mcp --transport http --scope user --header "CONTEXT7_API_KEY: $CONTEXT7_API_KEY"
 
-# Claude settings, writing style, and skills (per-user), sourced from the sparse checkout declared in
-# user-data.template; cp -r for skills since that is a directory tree, not flat files
+# Copied as $TARGET_USER so the files land user-owned rather than root-owned.
 sudo -u "$TARGET_USER" mkdir -p "/home/$TARGET_USER/.claude/skills"
 sudo -u "$TARGET_USER" cp /opt/wsl-cloud-init/wsl/user/.claude/settings.json "/home/$TARGET_USER/.claude/settings.json"
 sudo -u "$TARGET_USER" cp /opt/wsl-cloud-init/wsl/user/.claude/CLAUDE.md "/home/$TARGET_USER/.claude/CLAUDE.md"
