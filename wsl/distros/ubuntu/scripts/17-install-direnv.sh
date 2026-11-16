@@ -23,8 +23,7 @@ case "$ARCH" in
   *) echo "Unsupported architecture for direnv: $ARCH" >&2; exit 1 ;;
 esac
 
-# mktemp rather than a fixed /tmp path: this runs as root, and a predictable name is a
-# symlink the download would follow.
+# The trap is what removes the download: a failed checksum exits before any `rm` would run.
 tmp="$(mktemp)"
 trap 'rm -f "$tmp"' EXIT
 
