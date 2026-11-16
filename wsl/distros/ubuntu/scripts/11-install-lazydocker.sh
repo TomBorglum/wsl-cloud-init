@@ -19,14 +19,18 @@ case "$(dpkg --print-architecture)" in
   *) echo "Unsupported architecture for lazydocker: $(dpkg --print-architecture)" >&2; exit 1 ;;
 esac
 
+# The trap is what removes the download and the unpacked binary: a failed checksum exits
+# before any `rm` would run.
+tmp="$(mktemp -d)"
+trap 'rm -rf "$tmp"' EXIT
+
 # --proto '=https' refuses any redirect that would downgrade to a clear-text
 # protocol, so the transfer stays HTTPS end to end.
 curl -fsSL --proto '=https' \
   "https://github.com/jesseduffield/lazydocker/releases/download/v${VERSION}/lazydocker_${VERSION}_Linux_${ARCH}.tar.gz" \
-  -o /tmp/lazydocker.tar.gz
+  -o "$tmp/lazydocker.tar.gz"
 
-echo "${SHA256}  /tmp/lazydocker.tar.gz" | sha256sum -c -
+echo "${SHA256}  ${tmp}/lazydocker.tar.gz" | sha256sum -c -
 
-tar -xzf /tmp/lazydocker.tar.gz -C /tmp lazydocker
-install -m 0755 /tmp/lazydocker /usr/local/bin/lazydocker
-rm -f /tmp/lazydocker.tar.gz /tmp/lazydocker
+tar -xzf "$tmp/lazydocker.tar.gz" -C "$tmp" lazydocker
+install -m 0755 "$tmp/lazydocker" /usr/local/bin/lazydocker
