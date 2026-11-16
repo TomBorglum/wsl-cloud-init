@@ -1,12 +1,12 @@
 # `wsl/` — the WSL guest side
 
-Everything that runs inside the WSL Linux instance lives here, mirroring `windows/`, which holds
-the PowerShell that runs on the Windows host. `wsl/` holds two kinds of thing:
+Everything that runs inside the WSL instance lives here; `windows/` holds the PowerShell that
+runs on the host. Two kinds of thing:
 
 - **`distros/`** — per-distro provisioning logic: the cloud-init entry point, the `install.sh`
   orchestrator, and the ordered `scripts/`. One subfolder per distro (`distros/ubuntu/`).
 - **`user/` and `system/`** — the files copied onto every distro, laid out as a destination
-  mirror. Under these two trees the source path equals the path the file lands at on a
+  mirror: under these two trees the source path equals the path the file lands at on a
   provisioned instance.
 
 ```
@@ -74,7 +74,7 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 `gh` wrapper re-sources it at runtime, so neither can depend on the `/opt` checkout still being
 present.
 
-## Three places the mirror is not literal
+## Where the mirror is not literal
 
 **`git/` is flattened.** The `git/` subfolder under `system/usr/local/share/zsh/site-functions/`
 is a source-side grouping, not a destination subdirectory. It holds the helpers installed only

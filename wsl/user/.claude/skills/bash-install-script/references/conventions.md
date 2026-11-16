@@ -1,8 +1,5 @@
 # Install script conventions
 
-These conventions make a tool-install script robust: strict mode, fail-fast on a
-bad environment, idempotent on re-runs, and self-contained.
-
 ## Output location and naming
 
 - The target **directory is supplied by the user** — there is no fixed location.
@@ -38,10 +35,8 @@ Every script begins with:
 set -euo pipefail
 ```
 
-`set -euo pipefail` fails fast: exit on any command error (`-e`), on an unset
-variable (`-u`), and on a failure anywhere in a pipeline (`-o pipefail`). Plain
-`set -e` alone would let a typo'd or missing env var expand to empty and do partial
-work against the wrong path.
+Plain `set -e` alone would let a typo'd or missing env var expand to empty and do
+partial work against the wrong path.
 
 ## Preconditions (fail fast)
 
@@ -79,8 +74,8 @@ say "ok" for both:
 `3` and `4` keep clear of `1` (generic error), `2` (misuse), and the `126+` range the
 shell reserves for "not executable" / "not found" / signals.
 
-One consequence worth stating in the script's own output: running a numbered script by
-hand can now exit non-zero without anything being wrong.
+Running a numbered script by hand therefore exits non-zero without anything being
+wrong.
 
 **This assumes a runner that reads those codes.** `wsl-cloud-init`'s
 `wsl/distros/ubuntu/install.sh` does: it captures each status with
@@ -102,7 +97,7 @@ Place the guard **as early as possible**, which depends on its detection method:
 - **Env-dependent** (a per-user path test referencing `$TARGET_USER`) — assert that
   var first, then run the guard, since the guard reads it.
 
-The bail-out itself is the same in either case:
+The bail-out is the same in either case:
 
 ```bash
 echo "<tool> already installed, skipping"
@@ -226,23 +221,34 @@ outside, and a download is allowed to take minutes.
 
 ## Download pattern
 
-Fetch to `/tmp`, run, then clean up:
+Fetch to a `mktemp` path and remove it from an EXIT trap:
 
 ```bash
-curl -fsSL --proto '=https' --tlsv1.2 <url> -o /tmp/<name>
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 <url> -o "$tmp"
 # ... use it ...
-rm -f /tmp/<name>
 ```
 
-`curl` flags: `-fsSL` (fail on error, silent, show errors, follow redirects) plus
-`--proto '=https' --tlsv1.2`. **Always include `--proto '=https'`** on any `curl`
-that downloads. With `-L`, a redirect from the `https://` URL to a plaintext
-`http://` one would otherwise be followed silently, downloading code over an
-insecure channel; `--proto '=https'` restricts the transfer, redirects included, to
-HTTPS, so such a downgrade fails loudly. `--tlsv1.2` floors the TLS version. This
-applies to **every** download `curl` in the script, including the keyring fetch in
-the apt pattern below. Static analyzers (e.g. SonarCloud) flag a bare
-`curl ... https://...` as a vulnerability for this reason.
+The trap, not a trailing `rm`, is what removes the download: under
+`set -euo pipefail` any failure between the two exits before an `rm` on the success
+path would run. Use `mktemp -d` with `trap 'rm -rf "$tmp"' EXIT` when more than one
+file is involved, such as an archive and what `tar` unpacks from it.
+
+`mktemp` creates the file `0600` owned by the caller. A root-run script that then
+executes the download as the target user must `chown "$TARGET_USER" "$tmp"` first,
+or `sudo -u` fails with `bash: /tmp/tmp.XXXXXXXXXX: Permission denied`. `chown`
+keeps the mode at `0600`, where `chmod 0644` would make the file world-readable.
+
+**Always include `--proto '=https'`** on any `curl` that downloads. With `-L`, a
+redirect from the `https://` URL to a plaintext `http://` one would otherwise be
+followed silently, downloading code over an insecure channel; `--proto '=https'`
+restricts the transfer, redirects included, to HTTPS, so such a downgrade fails
+loudly. `--tlsv1.2` floors the TLS version. This applies to **every** download
+`curl` in the script, including the keyring fetch in the apt pattern below. Static
+analyzers (e.g. SonarCloud) flag a bare `curl ... https://...` as a vulnerability
+for this reason.
 
 ## apt pattern
 
@@ -283,8 +289,7 @@ Prefer an install method that is self-contained, in this order:
 
 1. A native installer that **bundles its own runtime** (e.g. a vendor `install.sh`
    that ships a standalone binary instead of requiring a system-wide Node).
-2. A standalone / statically-linked binary download (the `/tmp` download pattern
-   above).
+2. A standalone / statically-linked binary download (the download pattern above).
 3. A plain apt package that has no runtime dependency of this kind.
 
 If the tool genuinely needs a runtime, that runtime is a **separate concern**,
@@ -310,9 +315,12 @@ if [[ -x "/home/$TARGET_USER/.tool/bin/tool" ]]; then
   exit 3  # already installed; see install.sh
 fi
 
-curl -fsSL --proto '=https' --tlsv1.2 https://example.sh/install.sh -o /tmp/tool-install.sh
-sudo -u "$TARGET_USER" bash /tmp/tool-install.sh
-rm -f /tmp/tool-install.sh
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+
+curl -fsSL --proto '=https' --tlsv1.2 https://example.sh/install.sh -o "$tmp"
+chown "$TARGET_USER" "$tmp"
+sudo -u "$TARGET_USER" bash "$tmp"
 ```
 
 ## Example: system-wide installer (apt repo)

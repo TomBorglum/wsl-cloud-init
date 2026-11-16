@@ -23,28 +23,26 @@ ideally under ~72 characters.
 
 ## Types
 
-These are the types configured in [`release-please-config.json`](release-please-config.json).
-A type does two independent things: it selects the changelog section the change
-appears under, and it decides whether the change can cut a release on its own,
-because release-please treats any commit in a **visible** (non-hidden) section as
-a *releasable unit*. Only `feat`, `fix`, and `deps` are visible, so only those
-plus any breaking change cut releases; every other type is hidden and rides along.
+The types configured in [`release-please-config.json`](release-please-config.json).
+A type picks the changelog section and decides whether the change can cut a
+release on its own: a commit in a visible section is a *releasable unit*, and a
+commit in a hidden section rides along, triggering no release and appearing in no
+notes.
 
 | Type | Example | Changelog section | Cuts a release? |
 | --- | --- | --- | --- |
 | `feat` | `feat: add openSUSE distro template` | Features | yes — **minor** (1.1.0) |
 | `fix` | `fix: correct WSL path conversion` | Bug Fixes | yes — **patch** (1.0.1) |
 | `deps` | `deps: bump lazydocker to v0.24.1` | Dependencies | yes — **patch** (1.0.1) |
-| `perf` | `perf: skip a redundant interop call` | *(hidden)* | no — rides along¹ |
-| `revert` | `revert: undo the sdkman pin` | *(hidden)* | no — rides along¹ |
-| `docs` | `docs: clarify the opt-in features` | *(hidden)* | no — rides along¹ |
-| `chore` | `chore: tidy script comments` | *(hidden)* | no — rides along¹ |
-| `ci` | `ci: pin actions by sha` | *(hidden)* | no — rides along¹ |
-| `build` `refactor` `style` `test` | `refactor: extract a helper` | *(hidden)* | no — rides along¹ |
+| `perf` | `perf: skip a redundant interop call` | *(hidden)* | no — rides along |
+| `revert` | `revert: undo the sdkman pin` | *(hidden)* | no — rides along |
+| `docs` | `docs: clarify the opt-in features` | *(hidden)* | no — rides along |
+| `chore` | `chore: tidy script comments` | *(hidden)* | no — rides along |
+| `ci` | `ci: pin actions by sha` | *(hidden)* | no — rides along |
+| `build` `refactor` `style` `test` | `refactor: extract a helper` | *(hidden)* | no — rides along |
 
-¹ **Rides along**: triggers no release on its own and, being hidden, does not
-appear in the notes either. A PR containing only ride-along types opens no
-release PR until a `feat`/`fix`/`deps` lands.
+A PR containing only ride-along types opens no release PR until a
+`feat`/`fix`/`deps` lands.
 
 > **Visibility = releasability.** Un-hiding a section in
 > `release-please-config.json` makes commits of that type start cutting releases.
@@ -55,9 +53,9 @@ release PR until a `feat`/`fix`/`deps` lands.
 
 **If the change alters what a user receives when they provision, it's `deps:` (or
 `feat`/`fix`); if it only touches the build or CI, it's `ci:`/`chore:`.** The
-lazydocker auto-update workflow therefore uses `deps:`, because bumping a shipped
-tool cuts a patch release, while Dependabot's GitHub Actions bumps use `ci:`,
-because they never reach a provisioned environment.
+lazydocker and direnv auto-update workflows use `deps:`, because bumping a
+shipped tool cuts a patch release, while Dependabot's GitHub Actions bumps use
+`ci:`, because they never reach a provisioned environment.
 
 ## Breaking changes
 
@@ -85,9 +83,7 @@ branch's own commit messages. Therefore:
 A PR titled `Update docker script` has no type, so it is invisible to
 release-please and will neither appear in the changelog nor bump the version.
 Title it `fix: ...` / `feat: ...` instead. This holds however many commits the
-branch carries, because `squash_merge_commit_title` is `PR_TITLE`. GitHub's
-default, `COMMIT_OR_PR_TITLE`, takes the subject from the *commit* when a branch
-has exactly one, so a single sloppy commit subject would quietly cut no release.
+branch carries, because `squash_merge_commit_title` is `PR_TITLE`.
 
 The one thing release-please still reads from a squash commit's body is a
 `BREAKING CHANGE:` footer. That body is the branch's own commit messages
@@ -116,10 +112,10 @@ else only ride-along types         →  no release
 
 ## Branch names
 
-release-please ignores branch names entirely; it reads only commit subjects and
-PR titles on `main`. Its own release branch, `release-please--branches--main`, is
-the exception, and it manages that one itself. Branch names are a human
-convention. Mirror the commit type for readability:
+release-please reads commit subjects and PR titles on `main`, never branch names.
+Its own release branch, `release-please--branches--main`, is the exception, and it
+manages that one itself. Branch names are a human convention; mirror the commit
+type:
 
 ```
 <type>/<short-kebab-description>
@@ -157,8 +153,8 @@ Check before committing:
 git grep -nP '[^\x00-\x7F]' -- '*.ps1'   # must print nothing
 ```
 
-This applies only to `.ps1`. Markdown, shell, and template files are UTF-8 and may use these
-characters freely, as this document does.
+This applies only to `.ps1`. Markdown, shell and template files are UTF-8 and may use these
+characters freely.
 
 ## direnv directives
 
@@ -170,31 +166,28 @@ The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
 and in a Claude Code cloud session through
 [`TomBorglum/claude-cloud-bootstrap`](https://github.com/TomBorglum/claude-cloud-bootstrap). Both
-are maintained and released independently of this repository, and both carry their own copies:
-the actions one a deliberately different CI-only implementation, the cloud one a vendored copy of
-these. Keeping those in step is a maintainer duty there, not a gate here, so a change to a
+carry their own copies: the actions one a deliberately different CI-only implementation, the cloud
+one a vendored copy of these. Keeping those in step is a maintainer duty there, not a gate here, so a change to a
 directive in this repository does not have to answer for either.
 
-pixi is the odd one out, deliberately. `use_pixi` installs its own tool rather than relying on
-provisioning having done it, as a first step toward directives that stand alone on an instance
-this repo never provisioned. `use_fnm` and `use_sdk` still depend on `05-install-fnm.sh` and
-`04-install-sdkman.sh`.
+`use_pixi` installs its own tool rather than relying on provisioning having done it, so it stands
+alone on an instance this repo never provisioned. `use_fnm` and `use_sdk` still depend on
+`05-install-fnm.sh` and `04-install-sdkman.sh`.
 
-Because it owns the install, it also owns the **version store**: `use pixi <version> [template]`
-puts each pinned pixi in `~/.pixi/versions/<version>/bin` and points `~/.pixi/bin/pixi` at the one
-the active context wants, which is the path `pixi-completion.zsh` evaluates. Two details there are
-load-bearing. The store entry is guarded on the version the binary *reports*, not on its presence,
-so a `pixi self-update` inside an active context is undone by the next `direnv allow` rather than
-surviving at a path the directive would otherwise accept. And `PATH_add` gets the version
-directory, not just `~/.pixi/bin`, so a second terminal activating a differently pinned project
-cannot change what this one runs — the same reason `use_fnm` and `use_sdk` put a version directory
+Owning the install means owning the **version store**: `use pixi <version> [template]` puts each
+pinned pixi in `~/.pixi/versions/<version>/bin` and points `~/.pixi/bin/pixi` at the one the
+active context wants, which is the path `pixi-completion.zsh` evaluates. The store entry is
+guarded on the version the binary *reports*, not on its presence, so a `pixi self-update` inside
+an active context is undone by the next `direnv allow` rather than surviving at a path the
+directive would otherwise accept. `PATH_add` gets the version directory, not just `~/.pixi/bin`,
+so a second terminal activating a differently pinned project cannot change what this one runs — the same reason `use_fnm` and `use_sdk` put a version directory
 on `PATH` instead of a shared `current` symlink.
 
 The pin lives in the `.envrc` and is not mirrored into `pixi.toml` as `requires-pixi`. Keeping the
 two in step would mean rewriting a tracked manifest on every bump, a larger licence than the
 scaffold-once one `use_sonarqube_mcp` takes below.
 
-Each directive is **generic over its argument**, so most additions cost nothing. `use_sdk`
+Each directive is **generic over its argument**. `use_sdk`
 passes `<candidate> <version>` straight to SDKMAN and exposes the result the same way for
 **every** candidate: the bin on `PATH`, plus SDKMAN's `<CANDIDATE>_HOME` (`JAVA_HOME`,
 `MAVEN_HOME`, …) derived as `${candidate^^}_HOME`. `use sdk maven 3.9.6`, `use sdk gradle

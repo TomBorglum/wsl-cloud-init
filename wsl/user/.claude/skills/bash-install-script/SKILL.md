@@ -7,16 +7,12 @@ disable-model-invocation: true
 
 # bash-install-script
 
-Scaffold a new install script that installs one tool, with a strict header, fail-fast
-preconditions, an already-installed guard for idempotency, a clear root-vs-per-user
-execution context, and a self-contained install method.
+**One tool per script — always.** Another tool gets its own
+`NN-install-<tool-name>.sh` rather than being bundled here.
 
-**One tool per script — always.** A bash install script installs exactly one tool;
-multi-tool scripts are not used. Another tool gets its own `NN-install-<tool-name>.sh`
-rather than being bundled here.
-
-The full convention list with annotated examples lives in `references/conventions.md`.
-Read it before writing the script.
+Read `references/conventions.md` before writing the script. It holds the full
+convention list, annotated root and per-user examples, the exit-code contract, and
+the self-contained / no-transient-dependency rule.
 
 ## Workflow
 
@@ -30,7 +26,7 @@ Read it before writing the script.
      runtime (node/python/java) as a transient dependency. Prefer a native installer
      that bundles its runtime, or a standalone binary, over an `npm -g` / `pip` /
      `apt nodejs` style method. A runtime the tool needs is a separate concern with its
-     own install script; do not install it here. See `references/conventions.md`.
+     own install script; do not install it here.
    - Whether it installs **system-wide** (as root) or **per-user** (under a user's home).
    - Whether the target directory's runner honours the **exit-code contract** (`0` did
      the work, `3` already installed, `4` not selected). `wsl-cloud-init`'s
@@ -90,10 +86,11 @@ Read it before writing the script.
    - **Env-dependent guard** (per-user path test using `$TARGET_USER`): assert the var
      it needs first, then the guard, then the install body.
 
-   Apply the download/apt patterns and `/tmp` cleanup documented in
-   `references/conventions.md`, which has annotated examples for both root and per-user
-   installs. Apply its **"Self-contained installs (no transient dependencies)"** rule:
-   never pull a shared runtime in as a side effect.
+   Apply the download and apt patterns in `references/conventions.md`: a `mktemp` path
+   removed by an EXIT trap, never a fixed `/tmp` path, and `chown "$TARGET_USER"` on a
+   download a root-run script executes as that user. Apply its **"Self-contained
+   installs (no transient dependencies)"** rule: never pull a shared runtime in as a
+   side effect.
 
    After writing the file, set its mode to `644` (non-executable). These scripts are run
    with `bash <script>`, not invoked directly, so the executable bit is unnecessary. See
@@ -108,9 +105,3 @@ Read it before writing the script.
    vulnerability by static analysis. Note to the user that full runtime verification
    requires the real target environment, since these scripts assume their intended
    user/root context and a fresh system.
-
-## Reference
-
-- `references/conventions.md` — the full convention list with annotated root and
-  per-user examples, the exit-code contract, and the self-contained /
-  no-transient-dependency rule.
