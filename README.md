@@ -26,9 +26,7 @@ provisioning flag: `-InstallClaudeCode`, `-InstallGitConfig`, `-InstallVsCodeInt
 
 Zsh is the default shell, set up with **[Oh My Zsh](https://ohmyz.sh)** — autosuggestions plus
 the git, docker, z, sudo, and pj plugins — and **[direnv](https://direnv.net)** for
-per-directory environment loading. direnv is installed from a pinned release binary with a
-verified checksum, not from the package list: `use pixi` needs 2.38.0 or newer, which the
-Ubuntu archive does not carry.
+per-directory environment loading.
 
 ### Language runtimes
 
