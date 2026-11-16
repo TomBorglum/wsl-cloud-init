@@ -89,10 +89,9 @@ EOF
       echo "direnv: created minimal pixi.toml — remember to commit it to git" >&2
     fi
   fi
-  # Re-run this directive whenever the manifest changes, so editing dependencies
-  # re-triggers `pixi install` — no manual `watch_file pixi.toml` in the .envrc.
-  # Idempotent: harmless if the .envrc still lists it explicitly.
-  watch_file pixi.toml
+  # Watched here even though require_allowed watches what it guards: the pixi.lock guard below
+  # is conditional on the file existing. Idempotent against an .envrc that also lists them.
+  watch_file pixi.toml pixi.lock
   # PATH_add prepends, so the pinned version directory added second wins for `pixi` itself
   # while $PIXI_HOME/bin behind it still resolves `pixi global`'s shims. Adding the version
   # directory rather than relying on the symlink is what keeps this context on its own pin
@@ -100,8 +99,23 @@ EOF
   # version directory on PATH.
   PATH_add "$pixi_home/bin"
   PATH_add "$version_dir"
+  # Everything below executes code the project supplies: `pixi install` builds a pypi source
+  # dependency, and activation runs the packages' activate.d scripts and the manifest's
+  # [activation] section. A manifest or lockfile that changed under the user is re-approved
+  # before any of that runs. Requires direnv >= 2.38.0.
+  require_allowed pixi.toml
   "$version_bin" install --quiet || return 1
-  local env_bin
-  env_bin="$(pwd)/.pixi/envs/default/bin"
-  PATH_add "$env_bin"
+  # Guarded after the install, not beside the manifest: `direnv allow` errors on a required
+  # file that does not exist, so listing pixi.lock before the install that creates it blocks
+  # every load of a project without one, including one just scaffolded above.
+  if [[ -f pixi.lock ]]; then
+    require_allowed pixi.lock
+  fi
+  # --shell bash: direnv evaluates an .envrc with bash, and the zsh hook emits compinit lines
+  # that do not parse there. The hook expands PATH as it writes it, so it has to follow both
+  # PATH_add calls for the pinned directories to survive behind the environment.
+  local hook
+  # Captured first: `eval "$(...)"` would report eval's status, not the hook's.
+  hook="$("$version_bin" shell-hook --shell bash --change-ps1 false --frozen --no-install)" || return 1
+  eval "$hook"
 }

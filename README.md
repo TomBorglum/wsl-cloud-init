@@ -349,6 +349,33 @@ The same directives are available on a GitHub Actions runner through
 [`TomBorglum/actions/setup-direnv`](https://github.com/TomBorglum/actions/tree/main/setup-direnv),
 so a committed `.envrc` can drive CI as well as your shell.
 
+#### pixi environment activation
+
+`use pixi` activates the environment, as `pixi run` and `pixi shell` do. `CONDA_PREFIX`,
+`CONDA_DEFAULT_ENV`, the `PIXI_*` block and the exports of the installed packages' own activation
+scripts are present in the shell, so the same environment is reached either way.
+
+Activation executes the installed packages' activation scripts and the manifest's `[activation]`
+section, so `pixi.toml` and `pixi.lock` are authorised like the `.envrc`. A change to either,
+from `pixi add` or from a `git pull` or branch switch, blocks the next load:
+
+```
+direnv: pixi.lock requires approval. Run 'direnv allow' to approve.
+```
+
+`direnv allow` clears it. Approval tracks file contents, so `touch` alone changes nothing. A new
+project takes three approvals: the `.envrc`, the scaffolded `pixi.toml`, then the `pixi.lock` the
+first `pixi install` solves.
+
+A manifest whose `[activation]` section runs a script from the repository lists that script in the
+project's own `.envrc`; the directive cannot know its path:
+
+```bash
+# .envrc
+use pixi 0.84.2
+require_allowed scripts/activate-extra.sh
+```
+
 #### pixi project templates
 
 pixi is a polyglot workspace manager, so `use pixi` takes an optional **template name** after the
@@ -368,8 +395,9 @@ scaffolded and `pixi install` does not run, so a typo surfaces instead of silent
 minimal manifest. Once `pixi.toml` exists it is never overwritten, so the template name is only
 consulted on first scaffold.
 
-`use pixi` also watches `pixi.toml`, so editing dependencies re-runs `pixi install` on the next
-`cd` into the project. No separate `watch_file pixi.toml` line is needed in the `.envrc`.
+`use pixi` also watches `pixi.toml` and `pixi.lock`, so editing dependencies re-runs
+`pixi install` on the next `cd` into the project. No separate `watch_file` line is needed in the
+`.envrc`.
 
 ### Claude Code cloud sessions
 
