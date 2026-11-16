@@ -351,30 +351,24 @@ so a committed `.envrc` can drive CI as well as your shell.
 
 #### pixi environment activation
 
-`use pixi` activates the environment rather than only putting `.pixi/envs/default/bin` on `PATH`,
-which is what `pixi run` and `pixi shell` do. `CONDA_PREFIX`, `CONDA_DEFAULT_ENV`, the `PIXI_*`
-block and whatever the installed packages export from their own activation scripts are all present
-in the shell. A project entered through direnv and the same project entered through `pixi run`
-therefore see one environment. For a Rust project that is the difference between a warm and a cold
-build tree: conda-forge's `rust` package sets the cargo linker variable, cargo hashes the linker
-into every crate fingerprint, and both entry paths write to one `target/`, so alternating them
-without activation recompiles the whole dependency tree each time.
+`use pixi` activates the environment, as `pixi run` and `pixi shell` do. `CONDA_PREFIX`,
+`CONDA_DEFAULT_ENV`, the `PIXI_*` block and the exports of the installed packages' own activation
+scripts are present in the shell, so the same environment is reached either way.
 
-Activation executes code — the installed packages' activation scripts, and the manifest's
-`[activation]` section — so `pixi.toml` and `pixi.lock` are authorised the way the `.envrc` is. A
-change to either, whether from `pixi add` or from a `git pull` or branch switch, blocks the next
-load:
+Activation executes the installed packages' activation scripts and the manifest's `[activation]`
+section, so `pixi.toml` and `pixi.lock` are authorised like the `.envrc`. A change to either,
+from `pixi add` or from a `git pull` or branch switch, blocks the next load:
 
 ```
 direnv: pixi.lock requires approval. Run 'direnv allow' to approve.
 ```
 
-`direnv allow` clears it. Approval tracks file contents, so `touch` alone changes nothing. A brand
-new project costs three approvals: the `.envrc`, then the scaffolded `pixi.toml`, then the
-`pixi.lock` that the first `pixi install` solves.
+`direnv allow` clears it. Approval tracks file contents, so `touch` alone changes nothing. A new
+project takes three approvals: the `.envrc`, the scaffolded `pixi.toml`, then the `pixi.lock` the
+first `pixi install` solves.
 
-A manifest whose `[activation]` section runs a script from the repository must list that script in
-the project's own `.envrc`, because the directive cannot know its path:
+A manifest whose `[activation]` section runs a script from the repository lists that script in the
+project's own `.envrc`; the directive cannot know its path:
 
 ```bash
 # .envrc
