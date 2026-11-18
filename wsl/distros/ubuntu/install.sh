@@ -13,6 +13,43 @@ set -euo pipefail
 REPO=/opt/wsl-cloud-init
 SCRIPTS_DIR="$REPO/wsl/distros/ubuntu/scripts"
 
+# The glob is collected into an array first so the step count is known up front (and so
+# the count never comes from parsing `ls`). The listing and the run loop share it.
+scripts=("$SCRIPTS_DIR"/*.sh)
+total=${#scripts[@]}
+
+# The flag column of --list. conventions.md requires a whole-script gate to be the guard at the
+# very top of the script, so the first `!=` match is that gate and not a later one such as
+# 14-install-zed-interop.sh's INSTALL_ZED_CONFIG. A `==` guard gates only a subdirectory.
+# sed rather than grep | head: under pipefail a reader that exits early can fail the assignment.
+list_gate() {
+  local script=$1 flag
+  flag="$(sed -n '/^if \[\[ "${\(INSTALL_[A-Z_]*\):-}" != "true" \]\]; then.*/{s//\1/p;q;}' "$script")"
+  if [[ -z "$flag" ]]; then
+    flag="$(sed -n '/^if \[\[ "${\(INSTALL_[A-Z_]*\):-}" == "true" \]\]; then.*/{s//\1 (partial)/p;q;}' "$script")"
+  fi
+  printf '%s' "${flag:-—}"
+}
+
+# Parsed before the interop bootstrap below, which writes to /usr/local/lib and needs root:
+# --list must run nothing.
+if (( $# > 0 )); then
+  if [[ "$1" == "--list" && $# -eq 1 ]]; then
+    n=0
+    for script in "${scripts[@]}"; do
+      n=$((n + 1))
+      label="$(printf '[%02d/%02d] %s' "$n" "$total" "$(basename "$script")")"
+      printf '%-38s %s\n' "$label" "$(list_gate "$script")"
+    done
+    exit 0
+  fi
+  # $2 when $1 is --list, since --list itself is not the argument at fault.
+  if [[ "$1" == "--list" ]]; then bad=$2; else bad=$1; fi
+  echo "install.sh: unknown argument: $bad" >&2
+  echo "usage: install.sh [--list]" >&2
+  exit 2
+fi
+
 # A bootstrap rather than a numbered script: install.sh sources the lib itself to derive
 # POWERSHELL, and the gh wrapper re-sources it at runtime to re-authenticate after a
 # Windows-side token rotation, so neither can depend on the /opt checkout being present or
@@ -115,10 +152,6 @@ format_duration() {
   fi
 }
 
-# The glob is collected into an array first so the step count is known up front (and so
-# the count never comes from parsing `ls`).
-scripts=("$SCRIPTS_DIR"/*.sh)
-total=${#scripts[@]}
 i=0
 run_start=$(uptime_cs)
 for script in "${scripts[@]}"; do
