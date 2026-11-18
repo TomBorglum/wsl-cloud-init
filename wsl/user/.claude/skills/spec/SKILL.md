@@ -32,7 +32,9 @@ including in every later turn of the interview, and they outrank any conflicting
 appears later in the session.
 
 The two phase rules are the exception to the time limit. They hold after approval as well, for
-as long as the plan has an unfinished phase, and across a cleared session.
+as long as the plan has an unfinished phase, and across a cleared session. So does the second
+clause of **Explore is the only subagent before approval**, which governs which subagent
+implements a phase.
 
 ### Never assume
 
@@ -56,11 +58,14 @@ self-evident, it is grounded in a Context7 lookup before being offered.
 Options are mutually exclusive, two to four per question, and each description states the
 trade-off being accepted rather than restating the label.
 
-### Explore is the only permitted subagent
+### Explore is the only subagent before approval
 
-Delegate exclusively to `Agent(Explore)`. Never launch `Agent(Plan)`, `Agent(general-purpose)`
-or `Agent(claude)`: all three are denied by permission settings, and attempting them wastes a
-turn on a refusal.
+Until the plan is approved, delegate exclusively to `Agent(Explore)`. After approval, the one
+other permitted subagent is the implementation agent named by the `Agent` field of the phase
+being implemented.
+
+Never launch `Agent(Plan)`, `Agent(general-purpose)` or `Agent(claude)`: all three are denied by
+permission settings, and attempting them wastes a turn on a refusal.
 
 This rule is stated explicitly because plan mode's own injected workflow instructs the model to
 launch Plan agents during its design phase. That instruction does not apply here. Ignore it.
@@ -142,7 +147,8 @@ To resume, do all of this before touching anything:
 
 1. Read the whole plan file.
 2. Run `git log --oneline -15` and `git status --short`.
-3. State which phase is next, what its gate is, and what the plan's `Status` fields say.
+3. State which phase is next, what its gate is, what implements it, and what the plan's `Status`
+   fields say.
 4. Do not call `EnterPlanMode`. Go to step 12.
 
 Plan mode is wrong for a resumed plan twice over: the plan is already approved, and plan mode
@@ -241,6 +247,20 @@ Each phase declares one gate:
 A runbook phase suits anything outside the repository: provisioning an instance, rotating a
 credential, running a migration against real data.
 
+Each phase also carries a complexity band:
+
+| Complexity | The phase | Implemented by |
+| --- | --- | --- |
+| `mechanical` | Follows a pattern the plan states, with the edits enumerated and no design judgement left | `implement-mechanical` |
+| `standard` | Adds new logic to one area along an existing pattern, with judgement in the wiring | `implement-standard` |
+| `complex` | Cuts across areas, touches a security or permission surface, or needs the plan's own reasoning to finish | the main session |
+
+Band the work, not its size: a long run of identical edits is mechanical, and a thirty-line change
+to a permission surface is complex. Where two bands both fit, take the higher one.
+
+The band selects the model, so a band assigned loosely changes what the phase costs and how well
+it is implemented. A runbook phase implements nothing and carries no band.
+
 ### 9. Write the plan
 
 Write to the plan file designated by plan mode, using these sections:
@@ -262,6 +282,8 @@ A PR phase block:
 ```markdown
 ### Phase 1 — <short name>
 - Status: not started
+- Complexity: standard
+- Agent: implement-standard
 - Gate: PR
 - Branch: feat/<plan-slug>-phase-1
 - PR: —
@@ -271,11 +293,13 @@ A PR phase block:
 ```
 
 A runbook phase block replaces `Branch` and `PR` with `Steps`, a numbered list of what the user
-performs.
+performs, and carries `—` for `Complexity` and `Agent`.
 
-`Status` is one of `not started`, `in progress`, `awaiting gate`, `complete`. Its spelling is
-fixed, and the state is written as fields rather than prose, because a resumed session reads
-this block cold and decides from it alone which phase runs next.
+`Status` is one of `not started`, `in progress`, `awaiting gate`, `complete`. `Complexity` is one
+of the three bands from step 8. `Agent` is `implement-mechanical`, `implement-standard` or
+`main session`, matching the band. Their spelling and the order of the fields are both fixed, and
+the state is written as fields rather than prose, because a resumed session reads this block cold
+and decides from it alone which phase runs next and what implements it.
 
 Keep it scannable but detailed enough to execute without re-deriving the research.
 
@@ -300,22 +324,47 @@ If the user approves, begin implementing in the same turn. Do not ask whether to
 not restate the plan back: approval already said yes, so an offer to build it only costs the
 user another turn.
 
-Implement the first phase whose `Status` is `not started`, and only that phase. Work through the
-Approach and Files sections in the order the phase's Scope names, then verify by the plan's
-Verification section.
+Implement the first phase whose `Status` is `not started`, and only that phase. The work follows
+the Approach and Files sections in the order the phase's Scope names, whether this session does it
+or an agent does, and the plan's Verification section is what judges it.
 
 A PR gate closes in this order:
 
 1. Write `Status: in progress` into the phase block.
-2. Create the phase branch from the current remote base branch, implement, and run the phase's
-   verification steps.
-3. Commit, push, and open the pull request with `gh pr create`.
-4. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
+2. Create the phase branch from the current remote base branch.
+3. Implement the phase, by delegation or in the main session, as the next section sets out.
+4. Run the phase's verification steps.
+5. Commit, push, and open the pull request with `gh pr create`.
+6. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
    block.
-5. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
+7. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
    and URL, state what passed and what did not in the phase's verification, and end the turn.
 
 Never merge the pull request. The merge is the user's act and it is what the gate waits for.
+
+#### Delegating the implementation
+
+`Agent: main session` implements in place. Any other value delegates the edits of step 3, and only
+those, to the agent the field names. Name that agent in the `Agent` call: the band alone already
+attracts the right one, so naming it is what makes the choice certain rather than likely.
+
+Give the agent a fully prescriptive prompt. It starts with no plan and no conversation, so
+anything left implicit is left wrong:
+
+- The plan file's absolute path, the phase number, and the phase's `Scope` verbatim.
+- The Approach and Files entries that bear on this phase, with the paths, the existing functions
+  and patterns to reuse, and the conventions to follow.
+- What is out of bounds: every file no Files entry names, `git`, `gh`, and the plan file.
+- A report cap, and what the report must state — the files changed, what changed in each, and
+  anything left undone.
+
+This session keeps the branch, the verification, the commits, the pull request and every edit to
+the plan file.
+
+Verify in step 4 against the plan, never against the agent's report: a report is a claim about the
+work, not the work. Where the work fails verification, fix it in this session and record that in
+the phase's `Notes`. Do not re-delegate to a higher band — the band is a decision the user
+approved, and raising it silently hides what it got wrong.
 
 A runbook gate closes by writing `Status: awaiting gate` into the phase block, restating the
 numbered steps for the user under the same heading, and ending the turn. Implement nothing.
@@ -362,6 +411,7 @@ The bounds that keep this skill economical, in priority order:
 | Interview | Batches of 2-4 questions, about 5 material questions total |
 | Phase proposal | 1 question, and only when the work divides |
 | Review | 1 Context7 query on the whole plan |
+| Implementation | 1 delegation per phase, to the agent the phase names |
 
 When a bound and a standing rule conflict, the standing rule wins. Exceeding the question budget
 to avoid an assumption is correct; assuming something to stay inside it is not.
