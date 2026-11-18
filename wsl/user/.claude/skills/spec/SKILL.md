@@ -247,7 +247,7 @@ Each phase declares one gate:
 A runbook phase suits anything outside the repository: provisioning an instance, rotating a
 credential, running a migration against real data.
 
-Each phase also carries a complexity band, which decides what implements it:
+Each phase also carries a complexity band:
 
 | Complexity | The phase | Implemented by |
 | --- | --- | --- |
@@ -258,8 +258,8 @@ Each phase also carries a complexity band, which decides what implements it:
 Band the work, not its size: a long run of identical edits is mechanical, and a thirty-line change
 to a permission surface is complex. Where two bands both fit, take the higher one.
 
-The band selects the model, so a band assigned loosely changes both what the phase costs and how
-well it is implemented. A runbook phase implements nothing and carries no band.
+The band selects the model, so a band assigned loosely changes what the phase costs and how well
+it is implemented. A runbook phase implements nothing and carries no band.
 
 ### 9. Write the plan
 
@@ -345,12 +345,11 @@ Never merge the pull request. The merge is the user's act and it is what the gat
 #### Delegating the implementation
 
 `Agent: main session` implements in place. Any other value delegates the edits of step 3, and only
-those, to the agent the field names. Name that agent in the `Agent` call rather than describing
-the work and letting it route: the band in the phase block already attracts the right agent, and
-naming it is what makes the choice certain.
+those, to the agent the field names. Name that agent in the `Agent` call: the band alone already
+attracts the right one, so naming it is what makes the choice certain rather than likely.
 
-Give the agent a fully prescriptive prompt. It starts with no plan and no conversation, and its
-model is deliberately cheaper than this session's, so anything left implicit is left wrong:
+Give the agent a fully prescriptive prompt. It starts with no plan and no conversation, so
+anything left implicit is left wrong:
 
 - The plan file's absolute path, the phase number, and the phase's `Scope` verbatim.
 - The Approach and Files entries that bear on this phase, with the paths, the existing functions
@@ -360,13 +359,12 @@ model is deliberately cheaper than this session's, so anything left implicit is 
   anything left undone.
 
 This session keeps the branch, the verification, the commits, the pull request and every edit to
-the plan file. Delegation moves the editing, not the gate.
+the plan file.
 
 Verify in step 4 against the plan, never against the agent's report: a report is a claim about the
-work, and a cheaper model's claim is exactly what verification exists to check. Where the work
-fails verification, fix it in this session and record that in the phase's `Notes`. Do not
-re-delegate to a higher band — the plan's banding is a decision the user approved, and silently
-raising it hides what the band got wrong.
+work, not the work. Where the work fails verification, fix it in this session and record that in
+the phase's `Notes`. Do not re-delegate to a higher band — the band is a decision the user
+approved, and raising it silently hides what it got wrong.
 
 A runbook gate closes by writing `Status: awaiting gate` into the phase block, restating the
 numbered steps for the user under the same heading, and ending the turn. Implement nothing.
