@@ -19,6 +19,7 @@ wsl/
 ├── user/                                   # → /home/$TARGET_USER/   (installed owned by the user)
 │   ├── .claude/CLAUDE.md                       → ~/.claude/CLAUDE.md
 │   ├── .claude/settings.json                   → ~/.claude/settings.json
+│   ├── .claude/agents/…                        → ~/.claude/agents/
 │   ├── .claude/skills/…                        → ~/.claude/skills/
 │   ├── .config/direnv/lib/*.sh                 → ~/.config/direnv/lib/
 │   └── .config/pixi/templates/*.toml           → ~/.config/pixi/templates/
@@ -58,6 +59,7 @@ Under cloud-init the same run reports through `===> ` / `<=== ` marker lines ins
 | --- | --- | --- | --- |
 | `user/.claude/CLAUDE.md` | `~/.claude/CLAUDE.md` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/settings.json` | `~/.claude/settings.json` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
+| `user/.claude/agents/` | `~/.claude/agents/` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.claude/skills/` | `~/.claude/skills/` | `distros/ubuntu/scripts/07-install-claude-code.sh` | `INSTALL_CLAUDE_CODE` |
 | `user/.config/direnv/lib/` | `~/.config/direnv/lib/` | `distros/ubuntu/scripts/13-install-direnv-functions.sh` | — |
 | `user/.config/pixi/templates/` | `~/.config/pixi/templates/` | `distros/ubuntu/scripts/15-install-pixi-templates.sh` | — |

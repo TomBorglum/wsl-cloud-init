@@ -27,9 +27,8 @@ use_sonarqube_mcp() {
   #    default is passed through as the literal "${VAR}" text rather than an empty value,
   #    which the server would then try to authenticate with.
   #
-  #    No model and no effort level are pinned: which model runs a subagent is the host's
-  #    call, and CLAUDE_CODE_SUBAGENT_MODEL_FORCE in ~/.claude/settings.json makes Claude Code
-  #    ignore a `model:` here outright. What this file pins is capability.
+  #    The model and effort are pinned to the cheapest tier because this agent only relays tool
+  #    output, and the host's CLAUDE_CODE_SUBAGENT_MODEL default can move.
   local agent_file=.claude/agents/sonarqube.md
   if [[ ! -f "$agent_file" ]]; then
     if ! mkdir -p "$(dirname "$agent_file")"; then
@@ -43,6 +42,8 @@ description: >-
   descriptions and measures — and returns it verbatim. Use it when Sonar findings are
   needed, especially for a private repo whose dashboard is not publicly reachable. It
   reports data only; it never diagnoses, prioritises or fixes.
+model: claude-haiku-5-5
+effort: low
 tools: mcp__sonarqube__*
 omitClaudeMd: true
 mcpServers:

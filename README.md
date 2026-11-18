@@ -61,6 +61,18 @@ Two skills come bundled, both invoked explicitly and never on Claude's own initi
   exploration to subagents and reviewing the finished plan against current practice before it
   reaches you for approval, then builds it once you approve.
 
+Three subagent definitions ship alongside them, in `~/.claude/agents/`:
+
+| Agent | Model | Effort | Purpose |
+| --- | --- | --- | --- |
+| `Explore` | Haiku 5.5 | low | Codebase search. It overrides the built-in `Explore`, which otherwise runs on the main session's model |
+| `implement-mechanical` | Haiku 5.5 | medium | Implementing a plan phase whose edits and pattern the plan already enumerates |
+| `implement-standard` | Sonnet 5.5 | high | Implementing a plan phase that adds new logic to one area along an existing pattern |
+
+The two `implement-*` agents take one approved plan phase each, and leave the branch, the commits
+and the pull request to the session that delegated to them. Change the `model` and `effort` fields
+in a file to move that tier; a subagent without a `model` field of its own runs on Haiku.
+
 A `use sonarqube_mcp` direnv directive comes with it. It gives a project a read-only Sonar
 subagent that collects SonarQube Cloud issues on demand, without putting an MCP server in your
 main session. See
