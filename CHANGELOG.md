@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.3.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.2.0...v3.3.0) (2026-11-28)
+
+
+### Features
+
+* ship tiered implementation subagents ([#131](https://github.com/TomBorglum/wsl-cloud-init/issues/131)) ([2351464](https://github.com/TomBorglum/wsl-cloud-init/commit/2351464d95041a4c981221eb2c4abfecc01f3585))
+* **spec:** estimate phase complexity and delegate the implementation ([#134](https://github.com/TomBorglum/wsl-cloud-init/issues/134)) ([fc3904d](https://github.com/TomBorglum/wsl-cloud-init/commit/fc3904d4f08afd5277a662220ebce9c25bb9f65c))
+* **spec:** slice feature phases into small shippable PRs ([#136](https://github.com/TomBorglum/wsl-cloud-init/issues/136)) ([df6373a](https://github.com/TomBorglum/wsl-cloud-init/commit/df6373acc885deb29a1393c7140e375657b84987))
+
 ## [3.2.0](https://github.com/TomBorglum/wsl-cloud-init/compare/v3.1.0...v3.2.0) (2026-11-16)
 
 
