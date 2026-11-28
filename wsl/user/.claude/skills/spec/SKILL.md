@@ -6,9 +6,9 @@ description: >-
   or "plan a new feature". It interviews the user, researches current documentation with
   Context7, delegates codebase exploration to Explore agents, reviews the result against best
   practices, and produces a plan for approval. Once the plan is approved it implements it,
-  splitting large work into phases that are each gated by a merged PR or a runbook the user
-  performs. Given the path to an existing plan file instead of a feature, it resumes that plan
-  from its next unfinished phase.
+  slicing the work into phases that each ship a working deliverable, gated by a merged PR or a
+  runbook the user performs. Given the path to an existing plan file instead of a feature, it
+  resumes that plan from its next unfinished phase.
 argument-hint: <feature to specify, or a plan file to resume>
 disable-model-invocation: true
 ---
@@ -31,7 +31,7 @@ These are constraints, not steps. They hold from invocation until the plan is ap
 including in every later turn of the interview, and they outrank any conflicting guidance that
 appears later in the session.
 
-The two phase rules are the exception to the time limit. They hold after approval as well, for
+The three phase rules are the exception to the time limit. They hold after approval as well, for
 as long as the plan has an unfinished phase, and across a cleared session. So does the second
 clause of **Explore is the only subagent before approval**, which governs which subagent
 implements a phase.
@@ -94,6 +94,15 @@ the gate is confirmed and verified. The turn ends at the gate.
 This holds with context left to spend and with the next phase fully specified. A phase exists so
 that the user can review it before the next one builds on it; continuing past the gate destroys
 the only thing phasing buys.
+
+### A feature phase stays thin
+
+A phase whose `Kind` is `feature` opens no pull request while it changes more than ten files, or
+while its `Deliverable` no longer stands on its own. It stops before the commit, and a narrower
+boundary is proposed instead.
+
+This holds when the work is finished and the verification passes. An oversized pull request is
+what phasing exists to prevent, and it cannot be taken back once the user is reading it.
 
 ### A phase is reported as n of total
 
@@ -233,9 +242,51 @@ merging it on its own leaves the repository working, testable and no worse off t
 If it does not divide, ask nothing and give the plan a single phase. Size alone is not a
 boundary: a long change with no shippable midpoint is one phase.
 
-If it does divide, ask once with `AskUserQuestion`, offering the proposed boundaries and always
-including a single-phase option. Three phases is already a lot; prefer the coarsest split that
-still gives the user a reviewable gate.
+Every phase declares a change kind, and the kind decides how the work divides:
+
+| Kind | The phase | Divided |
+| --- | --- | --- |
+| `feature` | Brings new functionality | Into the thinnest vertical slices that each work alone |
+| `uniform` | Repeats one known edit: a rename, a sweep, a refactor that preserves behaviour | By the edit, across as many files as it reaches |
+
+A change that is both is never one phase. Split it, with the `uniform` phase ahead of the
+`feature` phases that build on it. The reviewer then reads a diff of one known shape, followed
+by a small diff of new behaviour, rather than one diff carrying both. A `uniform` phase carries
+the tests that prove the behaviour unchanged.
+
+Tests for existing code, and test-infrastructure work, may be a phase of their own. Place such a
+phase ahead of the refactor whose behaviour it pins.
+
+#### Slicing a feature
+
+A `feature` phase is one vertical slice: one self-contained capability, working end to end when
+it merges, with the tests that prove it. Slice it as thin as it will go while all of these hold:
+
+- Merging it alone ships something. Name what the repository does afterwards that it did not do
+  before; that sentence is the phase's `Deliverable`.
+- The repository works once this phase merges, not only once the last one does.
+- A reviewer can judge it without knowing what the later phases will do.
+- Nothing lands without its caller. A new function, file, flag or interface arrives in the same
+  phase as the code that uses it.
+
+Phase 1 is the thinnest end-to-end path that works for one real case, wired to a real entry
+point. Later phases widen it: the second input, the error path, the remaining platform. Never
+plan a phase that only lays foundations, and never leave the wiring to a final phase.
+
+Size follows from the slice; it does not set it. Roughly 100 changed lines reviews comfortably
+and 1000 does not, and the number of files touched weighs as much as the lines. Past ten changed
+files a `feature` phase is not thin: re-slice it, or record in the phase's `Notes` why it cannot
+be split.
+
+Nothing caps the number of phases and nothing prefers fewer. Where a feature slices into more
+than about five, say so and ask whether to narrow the feature before planning them all.
+
+If the work divides, ask once with `AskUserQuestion`. Each option names the phases in order and
+what each delivers. Offer the thin slicing first, and a coarser split only where a coarser split
+is defensible. A single-phase option belongs in the list only when the work has no shippable
+midpoint.
+
+#### Gates
 
 Each phase declares one gate:
 
@@ -246,6 +297,8 @@ Each phase declares one gate:
 
 A runbook phase suits anything outside the repository: provisioning an instance, rotating a
 credential, running a migration against real data.
+
+#### Complexity
 
 Each phase also carries a complexity band:
 
@@ -282,22 +335,26 @@ A PR phase block:
 ```markdown
 ### Phase 1 — <short name>
 - Status: not started
+- Kind: feature
+- Deliverable: what the repository does once this merges that it did not do before
 - Complexity: standard
 - Agent: implement-standard
 - Gate: PR
 - Branch: feat/<plan-slug>-phase-1
 - PR: —
 - Verified: —
-- Scope: what this phase delivers, and which Verification steps cover it
+- Scope: what this phase implements, and which Verification steps cover it
 - Notes: —
 ```
 
 A runbook phase block replaces `Branch` and `PR` with `Steps`, a numbered list of what the user
-performs, and carries `—` for `Complexity` and `Agent`.
+performs, keeps `Deliverable`, and carries `—` for `Kind`, `Complexity` and `Agent`.
 
-`Status` is one of `not started`, `in progress`, `awaiting gate`, `complete`. `Complexity` is one
-of the three bands from step 8. `Agent` is `implement-mechanical`, `implement-standard` or
-`main session`, matching the band. Their spelling and the order of the fields are both fixed, and
+`Status` is one of `not started`, `in progress`, `awaiting gate`, `complete`. `Kind` is
+`feature` or `uniform`, from step 8. `Deliverable` is one sentence naming what works once the
+phase merges, and is what the gate is judged against. `Complexity` is one of the three bands
+from step 8. `Agent` is `implement-mechanical`, `implement-standard` or `main session`, matching
+the band. Their spelling and the order of the fields are both fixed, and
 the state is written as fields rather than prose, because a resumed session reads this block cold
 and decides from it alone which phase runs next and what implements it.
 
@@ -334,11 +391,16 @@ A PR gate closes in this order:
 2. Create the phase branch from the current remote base branch.
 3. Implement the phase, by delegation or in the main session, as the next section sets out.
 4. Run the phase's verification steps.
-5. Commit, push, and open the pull request with `gh pr create`.
-6. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
+5. Count the changed files and re-read the phase's `Deliverable`. A `feature` phase over ten
+   changed files, or one whose deliverable no longer stands on its own, stops here under
+   **A feature phase stays thin**: record the count in `Notes`, propose a narrower boundary, and
+   end the turn with nothing committed and `Status: in progress`.
+6. Commit, push, and open the pull request with `gh pr create`.
+7. Write `Status: awaiting gate`, the branch name, and the PR number and URL into the phase
    block.
-7. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
-   and URL, state what passed and what did not in the phase's verification, and end the turn.
+8. Report under the heading `Phase <n> of <total> — <name>: awaiting gate`, give the PR number
+   and URL and the count of changed files, state what passed and what did not in the phase's
+   verification, and end the turn.
 
 Never merge the pull request. The merge is the user's act and it is what the gate waits for.
 
