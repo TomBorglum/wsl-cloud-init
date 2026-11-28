@@ -60,7 +60,9 @@ Two skills come bundled, both invoked explicitly and never on Claude's own initi
 - **`/spec`** specifies a new feature through a bounded interview, delegating codebase
   exploration to subagents and reviewing the finished plan against current practice before it
   reaches you for approval, then builds it once you approve. Each phase of the plan records a
-  complexity band and the agent that implements it, before approval.
+  complexity band and the agent that implements it, before approval. A phase that brings new
+  functionality is sliced to one working vertical, so each pull request stays inside what a
+  reviewer can hold at once.
 
 Three subagent definitions ship alongside them, in `~/.claude/agents/`:
 
